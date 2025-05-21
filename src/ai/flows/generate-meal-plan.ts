@@ -1,3 +1,4 @@
+
 // This file is machine-generated - do not edit!
 
 'use server';
@@ -46,21 +47,22 @@ const prompt = ai.definePrompt({
   name: 'generateMealPlanPrompt',
   input: {schema: GenerateMealPlanInputSchema},
   output: {schema: GenerateMealPlanOutputSchema},
-  prompt: `You are a registered dietician specializing in meal plans for Type 2 Diabetes.
+  prompt: `Vous êtes un diététicien agréé spécialisé dans les plans de repas pour le diabète de type 2.
 
-  Based on the available foods and recent diabetic research, create a daily meal plan.
-  The meal plan should include recipes for breakfast, morning snack, lunch, afternoon snack, and dinner.
+  En fonction des aliments disponibles et des recherches récentes sur le diabète, créez un plan de repas quotidien EN FRANÇAIS.
+  Le plan de repas doit inclure des recettes EN FRANÇAIS pour le petit-déjeuner, la collation du matin, le déjeuner, la collation de l'après-midi et le dîner.
 
-  Available Foods: {{{availableFoods}}}
-  Diabetic Research Summary: {{{diabeticResearchSummary}}}
+  Aliments Disponibles : {{{availableFoods}}}
+  Résumé de la Recherche sur le Diabète : {{{diabeticResearchSummary}}}
 
-  Ensure that each meal and snack is appropriate for a Type 2 Diabetic, considering factors like carbohydrate content, glycemic index, and portion size.
+  Assurez-vous que chaque repas et collation soit approprié pour un diabétique de type 2, en tenant compte de facteurs tels que la teneur en glucides, l'indice glycémique et la taille des portions.
+  Toutes les descriptions et les recettes doivent être rédigées EN FRANÇAIS.
 
-  Breakfast:
-  Morning Snack:
-  Lunch:
-  Afternoon Snack:
-  Dinner:`,
+  Petit-déjeuner:
+  Collation du Matin:
+  Déjeuner:
+  Collation de l'Après-midi:
+  Dîner:`,
 });
 
 const generateMealPlanFlow = ai.defineFlow(
@@ -74,3 +76,4 @@ const generateMealPlanFlow = ai.defineFlow(
     return output!;
   }
 );
+
