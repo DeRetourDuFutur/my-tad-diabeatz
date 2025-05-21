@@ -34,21 +34,35 @@ const GenerateMealPlanInputSchema = z.object({
 });
 export type GenerateMealPlanInput = z.infer<typeof GenerateMealPlanInputSchema>;
 
-const MealItemSchema = z.object({
-  title: z.string().describe("Le nom ou le titre du plat/repas."),
-  preparationTime: z.string().describe("Le temps de préparation estimé pour le plat/repas (par exemple, 'Environ 20 minutes')."),
-  ingredients: z.string().describe("La liste des ingrédients nécessaires pour la recette. Chaque ingrédient doit être sur une nouvelle ligne, précédé d'un tiret (par exemple, '- 100g de poulet\\n- 1/2 oignon')."),
-  recipe: z.string().describe("La recette détaillée, avec chaque étape numérotée et sur une nouvelle ligne (par exemple, '1. Couper les légumes.\\n2. Cuire le poulet...')."),
-  tips: z.string().optional().describe("Conseils, astuces ou notes supplémentaires concernant ce plat/repas. Ce champ est optionnel.")
+// This schema represents a single dish/component of a meal
+const MealComponentSchema = z.object({
+  title: z.string().describe("Le nom ou le titre du plat/composant (ex: 'Salade de concombres', 'Saumon grillé aux herbes', 'Compote de pommes sans sucre ajouté')."),
+  preparationTime: z.string().describe("Le temps de préparation estimé pour ce plat/composant (par exemple, 'Environ 15 minutes')."),
+  ingredients: z.string().describe("La liste des ingrédients nécessaires pour ce plat/composant. Chaque ingrédient doit être sur une nouvelle ligne, précédé d'un tiret."),
+  recipe: z.string().describe("La recette détaillée pour ce plat/composant, avec chaque étape numérotée et sur une nouvelle ligne."),
+  tips: z.string().optional().describe("Conseils, astuces ou notes supplémentaires concernant ce plat/composant. Ce champ est optionnel.")
+});
+
+const BreakfastSchema = z.object({
+  mainItem: MealComponentSchema.describe("Détails structurés pour l'élément principal du petit-déjeuner."),
+  waterToDrink: z.string().describe("Quantité d'eau recommandée à boire avec le petit-déjeuner (ex: '1 grand verre d'eau (250ml)')."),
+});
+
+const LunchDinnerSchema = z.object({
+  starter: MealComponentSchema.optional().describe("Détails structurés pour l'entrée (optionnel)."),
+  mainCourse: MealComponentSchema.describe("Détails structurés pour le plat principal, incluant son accompagnement."),
+  cheese: MealComponentSchema.optional().describe("Détails structurés pour le fromage (optionnel)."),
+  dessert: MealComponentSchema.optional().describe("Détails structurés pour le dessert (optionnel)."),
+  waterToDrink: z.string().describe("Quantité d'eau recommandée à boire avec le repas (ex: '2 verres d'eau (500ml)').")
 });
 
 const DailyMealPlanSchema = z.object({
   dayIdentifier: z.string().describe("Identifiant du jour (par exemple, 'Jour 1', 'Lundi')."),
-  breakfast: MealItemSchema.describe('Détails structurés pour le petit-déjeuner.'),
-  morningSnack: MealItemSchema.optional().describe('Détails structurés pour la collation du matin (optionnel).'),
-  lunch: MealItemSchema.describe('Détails structurés pour le déjeuner.'),
-  afternoonSnack: MealItemSchema.optional().describe('Détails structurés pour la collation de l\'après-midi (optionnel).'),
-  dinner: MealItemSchema.describe('Détails structurés pour le dîner.'),
+  breakfast: BreakfastSchema.describe('Détails structurés pour le petit-déjeuner.'),
+  morningSnack: MealComponentSchema.optional().describe('Détails structurés pour la collation du matin (optionnel, suivant MealComponentSchema).'),
+  lunch: LunchDinnerSchema.describe('Détails structurés pour le déjeuner.'),
+  afternoonSnack: MealComponentSchema.optional().describe('Détails structurés pour la collation de l\'après-midi (optionnel, suivant MealComponentSchema).'),
+  dinner: LunchDinnerSchema.describe('Détails structurés pour le dîner.'),
 });
 
 const GenerateMealPlanOutputSchema = z.object({
@@ -70,13 +84,28 @@ const prompt = ai.definePrompt({
 
   Générez un plan repas EN FRANÇAIS pour la durée spécifiée : {{{planDuration}}}.
   Pour CHAQUE JOUR de cette durée, créez un plan quotidien.
-  Chaque plan quotidien ("DailyMealPlanSchema") doit avoir un "dayIdentifier" (par exemple, "Jour 1", "Jour 2", etc.).
-  Pour chaque repas et collation de chaque jour (petit-déjeuner, collation du matin (optionnel), déjeuner, collation de l'après-midi (optionnel), dîner), fournissez les éléments suivants, structurés en JSON :
-  1.  Un "title" (titre) clair et concis pour le plat ou le repas.
-  2.  Un "preparationTime" (temps de préparation) estimé (par exemple, "Environ 30 minutes").
-  3.  Une liste d'"ingredients" (ingrédients) nécessaires. Chaque ingrédient doit être sur une nouvelle ligne, idéalement précédé d'un tiret et d'un espace (ex: "- 100g de saumon\\n- 1 courgette").
+  Chaque plan quotidien ("DailyMealPlanSchema") doit avoir un "dayIdentifier" (par exemple, "Jour 1", "Lundi").
+
+  Pour le PETIT-DÉJEUNER ("BreakfastSchema") de chaque jour :
+  - Fournissez un "mainItem" (élément principal) détaillé selon "MealComponentSchema".
+  - Spécifiez "waterToDrink" (quantité d'eau à boire, ex: "1 grand verre d'eau (250ml)").
+
+  Pour le DÉJEUNER et le DÎNER ("LunchDinnerSchema") de chaque jour :
+  - Fournissez "starter" (entrée, optionnelle) selon "MealComponentSchema".
+  - Fournissez "mainCourse" (plat principal AVEC son accompagnement clairement inclus dans sa description/recette) selon "MealComponentSchema".
+  - Fournissez "cheese" (fromage, optionnel) selon "MealComponentSchema".
+  - Fournissez "dessert" (dessert, optionnel) selon "MealComponentSchema".
+  - Spécifiez "waterToDrink" (quantité d'eau à boire pour le repas, ex: "2 verres d'eau (500ml)").
+
+  Pour les COLLATIONS (morningSnack, afternoonSnack), si présentes :
+  - Elles sont optionnelles et doivent suivre "MealComponentSchema" (pas de sous-plats comme entrée/plat/dessert). Il n'est pas nécessaire de spécifier "waterToDrink" pour les collations.
+
+  Chaque "MealComponentSchema" (utilisé pour chaque plat/composant/collation) doit contenir :
+  1.  Un "title" (titre) clair et concis.
+  2.  Un "preparationTime" (temps de préparation) estimé (par exemple, "Environ 20 minutes").
+  3.  Une liste d'"ingredients" (ingrédients) nécessaires. Chaque ingrédient doit être sur une NOUVELLE LIGNE, idéalement précédé d'un tiret et d'un espace (ex: "- 100g de saumon\\n- 1 courgette").
   4.  Une "recipe" (recette) détaillée. CHAQUE étape doit être NUMÉROTÉE et commencer sur une NOUVELLE LIGNE (ex: "1. Lavez les légumes.\\n2. Faites cuire le poisson à la vapeur...").
-  5.  Des "tips" (conseils) pertinents et utiles, ou des astuces pour ce repas. Ce champ "tips" est optionnel; s'il n'y a pas de conseil spécifique, vous pouvez omettre ce champ ou le laisser vide. Les collations (morningSnack, afternoonSnack) sont optionnelles et peuvent être omises si non pertinentes pour un jour donné.
+  5.  Des "tips" (conseils) pertinents et utiles. Ce champ "tips" est optionnel.
 
   Aliments Disponibles (ceux à utiliser) :
   {{{availableFoods}}}
@@ -90,24 +119,18 @@ const prompt = ai.definePrompt({
 
   Résumé de la Recherche sur le Diabète : {{{diabeticResearchSummary}}}
 
-  Assurez-vous que chaque repas et collation soit approprié pour un diabétique de type 2, en tenant compte de facteurs tels que la teneur en glucides, l'indice glycémique et la taille des portions.
+  Assurez-vous que chaque plat, composant de repas et collation soit approprié pour un diabétique de type 2, en tenant compte de facteurs tels que la teneur en glucides, l'indice glycémique et la taille des portions.
   Toutes les descriptions, titres, recettes et conseils doivent être rédigés EN FRANÇAIS.
 
   Le format de sortie DOIT être un objet JSON valide respectant le schéma "GenerateMealPlanOutputSchema", contenant un tableau "days". Chaque élément du tableau "days" doit respecter "DailyMealPlanSchema".
-  Exemple de structure pour UN jour dans le tableau "days":
-  {
-    "dayIdentifier": "Jour 1",
-    "breakfast": {
-      "title": "Exemple de Titre de Petit Déjeuner",
-      "preparationTime": "Environ 10 minutes",
-      "ingredients": "- 1 tranche de pain complet\\n- 1/2 avocat mûr\\n- 1 c.à.c de graines de chia\\n- Une pincée de sel et de poivre",
-      "recipe": "1. Griller la tranche de pain complet jusqu'à ce qu'elle soit dorée.\\n2. Pendant ce temps, écraser l'avocat à la fourchette dans un petit bol. Assaisonner avec le sel et le poivre.\\n3. Étaler l'avocat écrasé sur le pain grillé.\\n4. Saupoudrer de graines de chia.",
-      "tips": "Pour plus de protéines, ajoutez un œuf poché sur le dessus."
-    },
-    "lunch": { ... },
-    "dinner": { ... }
+  Exemple de structure pour le déjeuner d'UN jour:
+  "lunch": {
+    "starter": { "title": "...", "preparationTime": "...", "ingredients": "...", "recipe": "...", "tips": "..." }, // Optionnel
+    "mainCourse": { "title": "Plat Principal avec Accompagnement", "preparationTime": "...", "ingredients": "...", "recipe": "...", "tips": "..." },
+    "cheese": { "title": "...", "preparationTime": "...", "ingredients": "...", "recipe": "...", "tips": "..." }, // Optionnel
+    "dessert": { "title": "...", "preparationTime": "...", "ingredients": "...", "recipe": "...", "tips": "..." }, // Optionnel
+    "waterToDrink": "Environ 500ml d'eau"
   }
-  Si planDuration est "3 jours", le tableau "days" contiendra 3 objets de ce type.
   `,
 });
 

@@ -1,10 +1,6 @@
 
-import type { GenerateMealPlanOutput as GenkitMealPlanOutput } from '@/ai/flows/generate-meal-plan';
-
-// We redefine or infer types here for use in UI components to decouple them slightly from the direct Genkit output type if needed,
-// or to extend them. For now, StoredMealPlan will be very close to GenkitMealPlanOutput.
-
-export type MealItem = {
+// This represents a single dish or component of a meal
+export type MealComponent = {
   title: string;
   preparationTime: string;
   ingredients: string;
@@ -12,13 +8,26 @@ export type MealItem = {
   tips?: string;
 };
 
+export type Breakfast = {
+  mainItem: MealComponent;
+  waterToDrink: string;
+};
+
+export type LunchDinner = {
+  starter?: MealComponent;
+  mainCourse: MealComponent;
+  cheese?: MealComponent;
+  dessert?: MealComponent;
+  waterToDrink: string;
+};
+
 export type DailyMealPlan = {
   dayIdentifier: string;
-  breakfast: MealItem;
-  morningSnack?: MealItem;
-  lunch: MealItem;
-  afternoonSnack?: MealItem;
-  dinner: MealItem;
+  breakfast: Breakfast;
+  morningSnack?: MealComponent; // Snacks are single components
+  lunch: LunchDinner;
+  afternoonSnack?: MealComponent; // Snacks are single components
+  dinner: LunchDinner;
 };
 
 export interface GenerateMealPlanOutput {
@@ -30,4 +39,3 @@ export interface StoredMealPlan extends GenerateMealPlanOutput {
   name: string;
   createdAt: string; // ISO date string
 }
-
