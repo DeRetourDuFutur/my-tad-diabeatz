@@ -38,7 +38,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import useLocalStorage from "@/hooks/use-local-storage";
-import type { FoodCategory } from "@/lib/food-data"; 
+import type { FoodCategory, FoodItem } from "@/lib/food-data"; 
 import { initialFoodCategories } from "@/lib/food-data"; 
 
 
@@ -156,6 +156,28 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     }
   }
 
+  const renderNutritionalInfo = (item: FoodItem) => {
+    const infos = [
+      item.calories,
+      item.carbs && `Glucides: ${item.carbs}`,
+      item.sugars && `dont Sucres: ${item.sugars}`,
+      item.protein && `Protéines: ${item.protein}`,
+      item.fat && `Lipides: ${item.fat}`,
+      item.fiber && `Fibres: ${item.fiber}`,
+      item.sodium && `Sel/Sodium: ${item.sodium}`,
+    ].filter(Boolean); // Filter out undefined values
+
+    if (infos.length === 0 && !item.notes) return null;
+
+    return (
+      <div className="mt-1 pl-2 text-xs text-muted-foreground space-y-0.5">
+        {infos.map((info, index) => <div key={index}>{info}</div>)}
+        {item.notes && <div className="italic">{item.notes}</div>}
+      </div>
+    );
+  };
+
+
   return (
     <Card className="shadow-lg">
       <CardHeader>
@@ -232,45 +254,50 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                       <AccordionContent className="pt-1 pb-2 px-2">
                         <ul className="space-y-2 pl-2">
                           {category.items.map(item => (
-                            <li key={item.id} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-2 py-1.5 border-b border-border/50 last:border-b-0">
-                              <span className="text-sm">{item.name} <span className="text-xs text-muted-foreground">{item.ig}</span></span>
+                            <li key={item.id} className="py-1.5 border-b border-border/50 last:border-b-0">
+                              <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-2">
+                                <div>
+                                  <span className="text-sm">{item.name} <span className="text-xs text-muted-foreground">{item.ig}</span></span>
+                                  {renderNutritionalInfo(item)}
+                                </div>
 
-                              <div className="flex items-center space-x-1 justify-self-end">
-                                <Checkbox
-                                  id={`${item.id}-favorite`}
-                                  checked={item.isFavorite}
-                                  onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isFavorite", !!checked)}
-                                  aria-label={`Marquer ${item.name} comme favori`}
-                                  disabled={item.isDisliked || item.isAllergenic}
-                                />
-                                <Label htmlFor={`${item.id}-favorite`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${ (item.isDisliked || item.isAllergenic) ? 'opacity-50 cursor-not-allowed' : ''}`} title="Favori">
-                                  <Star className="h-3.5 w-3.5" />
-                                </Label>
-                              </div>
+                                <div className="flex items-center space-x-1 justify-self-end">
+                                  <Checkbox
+                                    id={`${item.id}-favorite`}
+                                    checked={item.isFavorite}
+                                    onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isFavorite", !!checked)}
+                                    aria-label={`Marquer ${item.name} comme favori`}
+                                    disabled={item.isDisliked || item.isAllergenic}
+                                  />
+                                  <Label htmlFor={`${item.id}-favorite`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${ (item.isDisliked || item.isAllergenic) ? 'opacity-50 cursor-not-allowed' : ''}`} title="Favori">
+                                    <Star className="h-3.5 w-3.5" />
+                                  </Label>
+                                </div>
 
-                              <div className="flex items-center space-x-1 justify-self-end">
-                                <Checkbox
-                                  id={`${item.id}-disliked`}
-                                  checked={item.isDisliked}
-                                  onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isDisliked", !!checked)}
-                                  aria-label={`Marquer ${item.name} comme non aimé`}
-                                  disabled={item.isFavorite}
-                                />
-                                <Label htmlFor={`${item.id}-disliked`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${item.isFavorite ? 'opacity-50 cursor-not-allowed' : ''}`} title="Je n'aime pas">
-                                  <ThumbsDown className="h-3.5 w-3.5" />
-                                </Label>
-                              </div>
-                              <div className="flex items-center space-x-1 justify-self-end">
-                                <Checkbox
-                                  id={`${item.id}-allergenic`}
-                                  checked={item.isAllergenic}
-                                  onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isAllergenic", !!checked)}
-                                  aria-label={`Marquer ${item.name} comme allergène`}
-                                  disabled={item.isFavorite}
-                                />
-                                <Label htmlFor={`${item.id}-allergenic`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${item.isFavorite ? 'opacity-50 cursor-not-allowed' : ''}`} title="Allergie/Intolérance">
-                                  <AlertTriangle className="h-3.5 w-3.5" />
-                                </Label>
+                                <div className="flex items-center space-x-1 justify-self-end">
+                                  <Checkbox
+                                    id={`${item.id}-disliked`}
+                                    checked={item.isDisliked}
+                                    onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isDisliked", !!checked)}
+                                    aria-label={`Marquer ${item.name} comme non aimé`}
+                                    disabled={item.isFavorite}
+                                  />
+                                  <Label htmlFor={`${item.id}-disliked`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${item.isFavorite ? 'opacity-50 cursor-not-allowed' : ''}`} title="Je n'aime pas">
+                                    <ThumbsDown className="h-3.5 w-3.5" />
+                                  </Label>
+                                </div>
+                                <div className="flex items-center space-x-1 justify-self-end">
+                                  <Checkbox
+                                    id={`${item.id}-allergenic`}
+                                    checked={item.isAllergenic}
+                                    onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isAllergenic", !!checked)}
+                                    aria-label={`Marquer ${item.name} comme allergène`}
+                                    disabled={item.isFavorite}
+                                  />
+                                  <Label htmlFor={`${item.id}-allergenic`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${item.isFavorite ? 'opacity-50 cursor-not-allowed' : ''}`} title="Allergie/Intolérance">
+                                    <AlertTriangle className="h-3.5 w-3.5" />
+                                  </Label>
+                                </div>
                               </div>
                             </li>
                           ))}
