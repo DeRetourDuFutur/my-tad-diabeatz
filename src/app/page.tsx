@@ -2,8 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { GenerateMealPlanOutput } from "@/ai/flows/generate-meal-plan";
-import type { StoredMealPlan } from "@/lib/types";
+import type { GenerateMealPlanOutput, StoredMealPlan } from "@/lib/types"; // Updated import
 import { AppHeader } from "@/components/app-header";
 import { MealPlanForm } from "@/components/meal-plan-form";
 import { MealPlanDisplay } from "@/components/meal-plan-display";
@@ -14,7 +13,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from "lucide-react";
 
-// Define initialSavedPlansValue outside the component to ensure a stable reference.
 const initialSavedPlansValue: StoredMealPlan[] = [];
 
 export default function HomePage() {
@@ -37,15 +35,15 @@ export default function HomePage() {
   }, []);
 
 
-  const handleMealPlanGenerated = (mealPlan: GenerateMealPlanOutput) => {
+  const handleMealPlanGenerated = (mealPlan: GenerateMealPlanOutput, planName?: string) => {
     setCurrentMealPlan(mealPlan);
-    setCurrentMealPlanId(null); // It's a new, unsaved plan
-    setCurrentMealPlanName(""); // Clear name for new plan
+    setCurrentMealPlanId(null); 
+    setCurrentMealPlanName(planName || ""); 
     setAiError(null);
   };
 
   const handleOpenSaveDialog = () => {
-    if (!currentMealPlan) {
+    if (!currentMealPlan || !currentMealPlan.days || currentMealPlan.days.length === 0) {
       toast({
         title: "Aucun Plan à Sauvegarder",
         description: "Veuillez d'abord générer un plan repas.",
@@ -63,23 +61,23 @@ export default function HomePage() {
     
     let planToSave: StoredMealPlan;
 
-    if (existingPlanIndex !== -1) { // Updating existing plan
+    if (existingPlanIndex !== -1) { 
       planToSave = {
         ...savedPlansFromStorage[existingPlanIndex],
-        ...currentMealPlan, // Update with potentially new meal details
-        name, // Update name
-        createdAt: new Date().toISOString(), // Update timestamp
+        days: currentMealPlan.days, 
+        name, 
+        createdAt: new Date().toISOString(), 
       };
       const updatedPlans = [...savedPlansFromStorage];
       updatedPlans[existingPlanIndex] = planToSave;
       setSavedPlansInStorage(updatedPlans);
       toast({ title: "Plan Mis à Jour!", description: `Le plan repas "${name}" a été mis à jour.` });
-    } else { // Saving new plan
+    } else { 
       const newId = crypto.randomUUID();
       planToSave = {
         id: newId,
         name,
-        ...currentMealPlan,
+        days: currentMealPlan.days,
         createdAt: new Date().toISOString(),
       };
       setSavedPlansInStorage([...savedPlansFromStorage, planToSave].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
@@ -93,8 +91,8 @@ export default function HomePage() {
   const handleLoadPlan = (planId: string) => {
     const planToLoad = savedPlansFromStorage.find(p => p.id === planId);
     if (planToLoad) {
-      const { id, name, createdAt, ...mealData } = planToLoad;
-      setCurrentMealPlan(mealData);
+      const { id, name, createdAt, ...mealData } = planToLoad; // mealData is { days: [...] }
+      setCurrentMealPlan(mealData as GenerateMealPlanOutput); // Cast as GenerateMealPlanOutput
       setCurrentMealPlanId(id);
       setCurrentMealPlanName(name);
       toast({ title: "Plan Chargé", description: `Le plan repas "${name}" est affiché.` });
@@ -111,18 +109,15 @@ export default function HomePage() {
     toast({ title: "Plan Supprimé", description: "Le plan repas a été supprimé.", variant: "destructive" });
   };
   
-  // Sort plans by date initially
   useEffect(() => {
-    // Ensure prevPlans is an array before attempting to sort
     setSavedPlansInStorage(prevPlans => 
       Array.isArray(prevPlans) 
         ? [...prevPlans].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) 
         : initialSavedPlansValue
     );
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run once on mount
+  }, []); 
 
-  // Determine which plans to display to avoid hydration mismatch
   const displayableSavedPlans = hasMounted ? savedPlansFromStorage : initialSavedPlansValue;
 
   return (
@@ -130,7 +125,6 @@ export default function HomePage() {
       <AppHeader />
       <main className="flex-grow container mx-auto p-4 md:p-6 lg:p-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column */}
           <div className="lg:col-span-1 space-y-6">
             <MealPlanForm onMealPlanGenerated={handleMealPlanGenerated} />
             <SavedMealPlans
@@ -140,7 +134,6 @@ export default function HomePage() {
             />
           </div>
 
-          {/* Right Column */}
           <div className="lg:col-span-2">
             {aiError && (
               <Alert variant="destructive" className="mb-4">
@@ -161,7 +154,7 @@ export default function HomePage() {
         isOpen={isSaveDialogOpen}
         onOpenChange={setIsSaveDialogOpen}
         onSave={handleSavePlan}
-        initialName={currentMealPlanName || (currentMealPlan ? `Mon Plan ${new Date().toLocaleDateString('fr-FR')}`: "")}
+        initialName={currentMealPlanName || (currentMealPlan?.days?.length ? `Mon Plan ${new Date().toLocaleDateString('fr-FR')}`: "")}
       />
        <footer className="text-center p-4 text-sm text-muted-foreground border-t">
         © {new Date().getFullYear()} DiabEatz. Tous droits réservés.

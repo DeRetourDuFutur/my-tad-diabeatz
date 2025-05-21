@@ -1,6 +1,4 @@
 
-// This file is machine-generated - do not edit!
-
 'use server';
 
 /**
@@ -15,6 +13,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const GenerateMealPlanInputSchema = z.object({
+  planName: z.string().optional().describe("Le nom optionnel donné au plan repas par l'utilisateur avant la génération."),
   availableFoods: z
     .string()
     .describe(
@@ -31,6 +30,7 @@ const GenerateMealPlanInputSchema = z.object({
     .describe(
       'A summary of recent diabetic research and best practices for meal planning.'
     ),
+  planDuration: z.string().describe("La durée pour laquelle générer le plan de repas (par exemple, '1 jour', '3 jours', '1 semaine').")
 });
 export type GenerateMealPlanInput = z.infer<typeof GenerateMealPlanInputSchema>;
 
@@ -42,12 +42,17 @@ const MealItemSchema = z.object({
   tips: z.string().optional().describe("Conseils, astuces ou notes supplémentaires concernant ce plat/repas. Ce champ est optionnel.")
 });
 
-const GenerateMealPlanOutputSchema = z.object({
+const DailyMealPlanSchema = z.object({
+  dayIdentifier: z.string().describe("Identifiant du jour (par exemple, 'Jour 1', 'Lundi')."),
   breakfast: MealItemSchema.describe('Détails structurés pour le petit-déjeuner.'),
-  morningSnack: MealItemSchema.describe('Détails structurés pour la collation du matin.'),
+  morningSnack: MealItemSchema.optional().describe('Détails structurés pour la collation du matin (optionnel).'),
   lunch: MealItemSchema.describe('Détails structurés pour le déjeuner.'),
-  afternoonSnack: MealItemSchema.describe('Détails structurés pour la collation de l\'après-midi.'),
+  afternoonSnack: MealItemSchema.optional().describe('Détails structurés pour la collation de l\'après-midi (optionnel).'),
   dinner: MealItemSchema.describe('Détails structurés pour le dîner.'),
+});
+
+const GenerateMealPlanOutputSchema = z.object({
+  days: z.array(DailyMealPlanSchema).describe("Liste des plans journaliers pour la durée spécifiée.")
 });
 export type GenerateMealPlanOutput = z.infer<typeof GenerateMealPlanOutputSchema>;
 
@@ -63,17 +68,19 @@ const prompt = ai.definePrompt({
   output: {schema: GenerateMealPlanOutputSchema},
   prompt: `Vous êtes un diététicien agréé spécialisé dans les plans de repas pour le diabète de type 2.
 
-  En fonction des aliments disponibles (ceux que l'utilisateur aime et peut manger) et des recherches récentes sur le diabète, créez un plan de repas quotidien EN FRANÇAIS.
-  Le plan de repas doit inclure pour chaque section (petit-déjeuner, collation du matin, déjeuner, collation de l'après-midi, dîner) les éléments suivants, structurés en JSON :
+  Générez un plan repas EN FRANÇAIS pour la durée spécifiée : {{{planDuration}}}.
+  Pour CHAQUE JOUR de cette durée, créez un plan quotidien.
+  Chaque plan quotidien ("DailyMealPlanSchema") doit avoir un "dayIdentifier" (par exemple, "Jour 1", "Jour 2", etc.).
+  Pour chaque repas et collation de chaque jour (petit-déjeuner, collation du matin (optionnel), déjeuner, collation de l'après-midi (optionnel), dîner), fournissez les éléments suivants, structurés en JSON :
   1.  Un "title" (titre) clair et concis pour le plat ou le repas.
   2.  Un "preparationTime" (temps de préparation) estimé (par exemple, "Environ 30 minutes").
   3.  Une liste d'"ingredients" (ingrédients) nécessaires. Chaque ingrédient doit être sur une nouvelle ligne, idéalement précédé d'un tiret et d'un espace (ex: "- 100g de saumon\\n- 1 courgette").
   4.  Une "recipe" (recette) détaillée. CHAQUE étape doit être NUMÉROTÉE et commencer sur une NOUVELLE LIGNE (ex: "1. Lavez les légumes.\\n2. Faites cuire le poisson à la vapeur...").
-  5.  Des "tips" (conseils) pertinents et utiles, ou des astuces pour ce repas. Ce champ "tips" est optionnel; s'il n'y a pas de conseil spécifique, vous pouvez omettre ce champ ou le laisser vide.
+  5.  Des "tips" (conseils) pertinents et utiles, ou des astuces pour ce repas. Ce champ "tips" est optionnel; s'il n'y a pas de conseil spécifique, vous pouvez omettre ce champ ou le laisser vide. Les collations (morningSnack, afternoonSnack) sont optionnelles et peuvent être omises si non pertinentes pour un jour donné.
 
   Aliments Disponibles (ceux à utiliser) :
   {{{availableFoods}}}
-  Important: Les aliments suivis de la mention "(favori)" sont particulièrement appréciés par l'utilisateur. Essayez de les intégrer plus souvent dans le plan repas, tout en assurant la variété et l'équilibre nutritionnel.
+  Important: Les aliments suivis de la mention "(favori)" sont particulièrement appréciés par l'utilisateur. Essayez de les intégrer plus souvent dans le plan repas, tout en assurant la variété et l'équilibre nutritionnel. Variez les repas d'un jour à l'autre si la durée du plan est supérieure à 1 jour.
 
   {{#if foodsToAvoid}}
   Aliments à ÉVITER ABSOLUMENT (ne pas utiliser dans le plan, car non aimés ou allergènes) :
@@ -86,15 +93,21 @@ const prompt = ai.definePrompt({
   Assurez-vous que chaque repas et collation soit approprié pour un diabétique de type 2, en tenant compte de facteurs tels que la teneur en glucides, l'indice glycémique et la taille des portions.
   Toutes les descriptions, titres, recettes et conseils doivent être rédigés EN FRANÇAIS.
 
-  Le format de sortie DOIT être un objet JSON valide respectant le schéma fourni. Pour chaque clé de repas (breakfast, morningSnack, lunch, afternoonSnack, dinner), la valeur doit être un objet contenant les clés "title", "preparationTime", "ingredients", "recipe", et optionnellement "tips".
-  Exemple pour un repas:
-  "breakfast": {
-    "title": "Exemple de Titre de Petit Déjeuner",
-    "preparationTime": "Environ 10 minutes",
-    "ingredients": "- 1 tranche de pain complet\\n- 1/2 avocat mûr\\n- 1 c.à.c de graines de chia\\n- Une pincée de sel et de poivre",
-    "recipe": "1. Griller la tranche de pain complet jusqu'à ce qu'elle soit dorée.\\n2. Pendant ce temps, écraser l'avocat à la fourchette dans un petit bol. Assaisonner avec le sel et le poivre.\\n3. Étaler l'avocat écrasé sur le pain grillé.\\n4. Saupoudrer de graines de chia.",
-    "tips": "Pour plus de protéines, ajoutez un œuf poché sur le dessus. Vous pouvez aussi ajouter quelques gouttes de jus de citron à l'avocat pour éviter qu'il ne noircisse."
+  Le format de sortie DOIT être un objet JSON valide respectant le schéma "GenerateMealPlanOutputSchema", contenant un tableau "days". Chaque élément du tableau "days" doit respecter "DailyMealPlanSchema".
+  Exemple de structure pour UN jour dans le tableau "days":
+  {
+    "dayIdentifier": "Jour 1",
+    "breakfast": {
+      "title": "Exemple de Titre de Petit Déjeuner",
+      "preparationTime": "Environ 10 minutes",
+      "ingredients": "- 1 tranche de pain complet\\n- 1/2 avocat mûr\\n- 1 c.à.c de graines de chia\\n- Une pincée de sel et de poivre",
+      "recipe": "1. Griller la tranche de pain complet jusqu'à ce qu'elle soit dorée.\\n2. Pendant ce temps, écraser l'avocat à la fourchette dans un petit bol. Assaisonner avec le sel et le poivre.\\n3. Étaler l'avocat écrasé sur le pain grillé.\\n4. Saupoudrer de graines de chia.",
+      "tips": "Pour plus de protéines, ajoutez un œuf poché sur le dessus."
+    },
+    "lunch": { ... },
+    "dinner": { ... }
   }
+  Si planDuration est "3 jours", le tableau "days" contiendra 3 objets de ce type.
   `,
 });
 

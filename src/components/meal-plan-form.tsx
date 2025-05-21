@@ -15,13 +15,14 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription, // Added FormDescription here
+  FormDescription,
 } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star } from "lucide-react";
+import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star, CalendarDays } from "lucide-react";
 import { useState } from "react";
 import {
   Accordion,
@@ -29,18 +30,26 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import useLocalStorage from "@/hooks/use-local-storage";
-import type { FoodCategory, FoodItem } from "@/lib/food-data"; // Import types
-import { initialFoodCategories } from "@/lib/food-data"; // Import initial data
+import type { FoodCategory } from "@/lib/food-data"; 
+import { initialFoodCategories } from "@/lib/food-data"; 
 
 
-// Schema for react-hook-form, only for fields directly managed by it
 const formSchema = z.object({
+  planName: z.string().optional(),
+  planDuration: z.string().min(1, { message: "Veuillez sélectionner une durée." }),
   diabeticResearchSummary: z.string().min(20, { message: "Veuillez fournir un résumé de recherche pertinent." }),
 });
 
 type MealPlanFormProps = {
-  onMealPlanGenerated: (mealPlan: GenerateMealPlanOutput) => void;
+  onMealPlanGenerated: (mealPlan: GenerateMealPlanOutput, planName?: string) => void;
 };
 
 const defaultResearchSummary = "Concentrez-vous sur les grains entiers, les protéines maigres, les graisses saines et beaucoup de légumes non amylacés. Contrôlez l'apport en glucides à chaque repas et collation. Privilégiez les aliments à faible indice glycémique. Assurez un apport suffisant en fibres. Le contrôle des portions est essentiel. Des horaires de repas réguliers aident à gérer la glycémie.";
@@ -48,7 +57,6 @@ const defaultResearchSummary = "Concentrez-vous sur les grains entiers, les prot
 export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  // Use useLocalStorage to persist foodCategories state
   const [foodCategories, setFoodCategories] = useLocalStorage<FoodCategory[]>(
     "diabeatz-food-preferences",
     initialFoodCategories
@@ -57,6 +65,8 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      planName: "",
+      planDuration: "1 jour",
       diabeticResearchSummary: defaultResearchSummary,
     },
   });
@@ -72,7 +82,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                   ? {
                       ...item,
                       [type]: checked,
-                      // Ensure logic for exclusive choices
                       ...(type === "isFavorite" && checked && { isDisliked: false, isAllergenic: false }),
                       ...(type === "isDisliked" && checked && { isFavorite: false }),
                       ...(type === "isAllergenic" && checked && { isFavorite: false }),
@@ -123,12 +132,14 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
 
     try {
       const mealPlanInput: GenerateMealPlanInput = {
+        planName: values.planName,
         availableFoods: availableFoodsForAI,
         foodsToAvoid: foodsToAvoidForAI.length > 0 ? foodsToAvoidForAI : undefined,
         diabeticResearchSummary: values.diabeticResearchSummary,
+        planDuration: values.planDuration,
       };
       const result = await generateMealPlan(mealPlanInput);
-      onMealPlanGenerated(result);
+      onMealPlanGenerated(result, values.planName);
       toast({
         title: "Plan Repas Généré!",
         description: "Votre nouveau plan repas est prêt.",
@@ -140,9 +151,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         description: "Impossible de générer le plan repas. Veuillez réessayer.",
         variant: "destructive",
       });
-      // Resetting foodCategories to initial might be too aggressive.
-      // Consider just showing an error or allowing retry.
-      // setFoodCategories(initialFoodCategories);
     } finally {
       setIsLoading(false);
     }
@@ -156,12 +164,58 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
           Créateur de Plan Repas AI
         </CardTitle>
         <CardDescription>
-          Personnalisez votre liste d'aliments et fournissez un résumé des recherches pour générer un plan repas quotidien.
+          Personnalisez vos préférences et générez un plan repas adapté.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <FormField
+              control={form.control}
+              name="planName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nom du Plan Repas (optionnel)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ex: Mon plan semaine prochaine" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    Donnez un nom à votre plan pour le retrouver facilement.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="planDuration"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Durée du Plan Repas</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />
+                        <SelectValue placeholder="Sélectionner une durée" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="1 jour">1 jour</SelectItem>
+                      <SelectItem value="3 jours">3 jours</SelectItem>
+                      <SelectItem value="5 jours">5 jours</SelectItem>
+                      <SelectItem value="1 semaine">1 semaine</SelectItem>
+                      <SelectItem value="2 semaines">2 semaines</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Choisissez pour combien de temps le plan doit être généré.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <div className="space-y-4">
               <Label className="text-lg font-semibold">Vos Préférences Alimentaires</Label>
               <p className="text-sm text-muted-foreground">
@@ -267,3 +321,4 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     </Card>
   );
 }
+
