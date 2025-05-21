@@ -4,13 +4,13 @@
 import type { GenerateMealPlanOutput } from "@/ai/flows/generate-meal-plan";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChefHat, Save, Utensils, Lightbulb } from "lucide-react";
+import { ChefHat, Save, Utensils, Lightbulb, Clock, ClipboardList } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 type MealPlanDisplayProps = {
   mealPlan: GenerateMealPlanOutput | null;
   mealPlanName?: string;
-  onSavePlan: () => void; 
+  onSavePlan: () => void;
 };
 
 const mealTypes = [
@@ -56,25 +56,57 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
           <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
             {mealTypes.map((mealType) => {
               const mealDetails = mealPlan[mealType.key];
-              if (!mealDetails) return null; // Should not happen with new schema if AI behaves
+              if (!mealDetails || !mealDetails.title) return null; 
+
+              let hasPreviousContent = false;
 
               return (
                 <Card key={mealType.key} className="flex flex-col bg-card shadow-md">
                   <CardHeader>
                     <CardTitle className="flex items-center text-xl">
                       <Utensils className="mr-3 h-6 w-6 text-primary" />
-                      {mealDetails.title || mealType.title}
+                      {mealDetails.title}
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="flex-grow space-y-4">
-                    <div>
-                      <h4 className="font-semibold mb-1.5 text-md text-foreground/90">Recette :</h4>
-                      <p className="text-sm whitespace-pre-wrap leading-relaxed">
-                        {mealDetails.recipe || "Aucune recette fournie."}
-                      </p>
-                    </div>
+                  <CardContent className="flex-grow space-y-3">
+                    {mealDetails.preparationTime && (
+                      <div>
+                        <h4 className="font-semibold mb-1.5 text-md text-foreground/90 flex items-center">
+                          <Clock className="mr-2 h-5 w-5 text-primary" />
+                          Temps de préparation :
+                        </h4>
+                        <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                          {mealDetails.preparationTime}
+                        </p>
+                        { (hasPreviousContent = true) }
+                      </div>
+                    )}
+
+                    {mealDetails.ingredients && (
+                       <div className={`${hasPreviousContent ? 'pt-3 border-t border-border/70' : ''}`}>
+                        <h4 className="font-semibold mb-1.5 text-md text-foreground/90 flex items-center">
+                          <ClipboardList className="mr-2 h-5 w-5 text-primary" />
+                          Ingrédients :
+                        </h4>
+                        <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                          {mealDetails.ingredients}
+                        </p>
+                        { (hasPreviousContent = true) }
+                      </div>
+                    )}
+                    
+                    {mealDetails.recipe && (
+                      <div className={`${hasPreviousContent ? 'pt-3 border-t border-border/70' : ''}`}>
+                        <h4 className="font-semibold mb-1.5 text-md text-foreground/90">Recette :</h4>
+                        <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                          {mealDetails.recipe}
+                        </p>
+                        { (hasPreviousContent = true) }
+                      </div>
+                    )}
+
                     {mealDetails.tips && mealDetails.tips.trim() !== "" && (
-                      <div className="pt-3 border-t border-border/70">
+                      <div className={`${hasPreviousContent ? 'pt-3 border-t border-border/70' : ''}`}>
                         <h4 className="font-semibold mb-1.5 text-md text-foreground/90 flex items-center">
                           <Lightbulb className="mr-2 h-5 w-5 text-accent" />
                           Conseils :
