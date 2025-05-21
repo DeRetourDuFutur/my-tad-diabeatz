@@ -11,7 +11,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -21,8 +20,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star } from "lucide-react"; // Added Star
-import { useState, useEffect } from "react";
+import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star } from "lucide-react";
+import { useState } from "react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 // Schema for react-hook-form, only for fields directly managed by it
 const formSchema = z.object({
@@ -39,7 +44,7 @@ interface FoodItem {
   id: string;
   name: string;
   ig: string;
-  isFavorite: boolean; // New property
+  isFavorite: boolean;
   isDisliked: boolean;
   isAllergenic: boolean;
 }
@@ -305,54 +310,60 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                 Cochez les cases pour marquer les aliments comme favoris, non aimés ou allergènes.
                 Seuls les aliments non marqués comme "non aimé" ou "allergène" seront considérés.
               </p>
-              <div className="space-y-3 max-h-[400px] overflow-y-auto p-1 rounded-md border">
-                {foodCategories.map(category => (
-                  <div key={category.categoryName} className="p-2 rounded-md bg-card/50">
-                    <h4 className="font-semibold mb-2 text-md text-primary">{category.categoryName}</h4>
-                    <ul className="space-y-2 pl-2">
-                      {category.items.map(item => (
-                        <li key={item.id} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-2 py-1 border-b border-border/50 last:border-b-0">
-                          <span className="text-sm">{item.name} <span className="text-xs text-muted-foreground">{item.ig}</span></span>
-                          
-                          <div className="flex items-center space-x-1 justify-self-end">
-                            <Checkbox
-                              id={`${item.id}-favorite`}
-                              checked={item.isFavorite}
-                              onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isFavorite", !!checked)}
-                              aria-label={`Marquer ${item.name} comme favori`}
-                            />
-                            <Label htmlFor={`${item.id}-favorite`} className="text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer" title="Favori">
-                              <Star className="h-3.5 w-3.5" />
-                            </Label>
-                          </div>
+              <div className="max-h-[400px] overflow-y-auto p-1 rounded-md border">
+                <Accordion type="multiple" collapsible className="w-full">
+                  {foodCategories.map(category => (
+                    <AccordionItem value={category.categoryName} key={category.categoryName} className="border-b-0 last:border-b-0">
+                      <AccordionTrigger className="py-3 px-2 text-md font-semibold text-primary hover:no-underline hover:bg-muted/50 rounded-md">
+                        {category.categoryName}
+                      </AccordionTrigger>
+                      <AccordionContent className="pt-1 pb-2 px-2">
+                        <ul className="space-y-2 pl-2">
+                          {category.items.map(item => (
+                            <li key={item.id} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-2 py-1.5 border-b border-border/50 last:border-b-0">
+                              <span className="text-sm">{item.name} <span className="text-xs text-muted-foreground">{item.ig}</span></span>
+                              
+                              <div className="flex items-center space-x-1 justify-self-end">
+                                <Checkbox
+                                  id={`${item.id}-favorite`}
+                                  checked={item.isFavorite}
+                                  onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isFavorite", !!checked)}
+                                  aria-label={`Marquer ${item.name} comme favori`}
+                                />
+                                <Label htmlFor={`${item.id}-favorite`} className="text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer" title="Favori">
+                                  <Star className="h-3.5 w-3.5" />
+                                </Label>
+                              </div>
 
-                          <div className="flex items-center space-x-1 justify-self-end">
-                            <Checkbox
-                              id={`${item.id}-disliked`}
-                              checked={item.isDisliked}
-                              onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isDisliked", !!checked)}
-                              aria-label={`Marquer ${item.name} comme non aimé`}
-                            />
-                            <Label htmlFor={`${item.id}-disliked`} className="text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer" title="Je n'aime pas">
-                              <ThumbsDown className="h-3.5 w-3.5" />
-                            </Label>
-                          </div>
-                           <div className="flex items-center space-x-1 justify-self-end">
-                            <Checkbox
-                              id={`${item.id}-allergenic`}
-                              checked={item.isAllergenic}
-                              onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isAllergenic", !!checked)}
-                              aria-label={`Marquer ${item.name} comme allergène`}
-                            />
-                            <Label htmlFor={`${item.id}-allergenic`} className="text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer" title="Allergie/Intolérance">
-                              <AlertTriangle className="h-3.5 w-3.5" />
-                            </Label>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
+                              <div className="flex items-center space-x-1 justify-self-end">
+                                <Checkbox
+                                  id={`${item.id}-disliked`}
+                                  checked={item.isDisliked}
+                                  onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isDisliked", !!checked)}
+                                  aria-label={`Marquer ${item.name} comme non aimé`}
+                                />
+                                <Label htmlFor={`${item.id}-disliked`} className="text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer" title="Je n'aime pas">
+                                  <ThumbsDown className="h-3.5 w-3.5" />
+                                </Label>
+                              </div>
+                              <div className="flex items-center space-x-1 justify-self-end">
+                                <Checkbox
+                                  id={`${item.id}-allergenic`}
+                                  checked={item.isAllergenic}
+                                  onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isAllergenic", !!checked)}
+                                  aria-label={`Marquer ${item.name} comme allergène`}
+                                />
+                                <Label htmlFor={`${item.id}-allergenic`} className="text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer" title="Allergie/Intolérance">
+                                  <AlertTriangle className="h-3.5 w-3.5" />
+                                </Label>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
               </div>
             </div>
 
@@ -369,9 +380,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                       {...field}
                     />
                   </FormControl>
-                  <FormDescription>
-                    Fournissez un bref résumé des meilleures pratiques ou des recherches récentes sur l'alimentation pour diabétiques de type 2.
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -395,3 +403,5 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     </Card>
   );
 }
+
+    
