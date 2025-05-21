@@ -18,7 +18,7 @@ const GenerateMealPlanInputSchema = z.object({
   availableFoods: z
     .string()
     .describe(
-      'A comma-separated list of foods available for use in the meal plan.'
+      "Une liste d'aliments préférés. Chaque aliment peut être sur une nouvelle ligne ou les aliments peuvent être séparés par des virgules."
     ),
   diabeticResearchSummary: z
     .string()
@@ -31,8 +31,8 @@ export type GenerateMealPlanInput = z.infer<typeof GenerateMealPlanInputSchema>;
 const MealItemSchema = z.object({
   title: z.string().describe("Le nom ou le titre du plat/repas."),
   preparationTime: z.string().describe("Le temps de préparation estimé pour le plat/repas (par exemple, 'Environ 20 minutes')."),
-  ingredients: z.string().describe("La liste des ingrédients nécessaires pour la recette. Chaque ingrédient doit être sur une nouvelle ligne, précédé d'un tiret (par exemple, '- 100g de poulet\n- 1/2 oignon')."),
-  recipe: z.string().describe("La recette détaillée, avec chaque étape numérotée et sur une nouvelle ligne (par exemple, '1. Couper les légumes.\n2. Cuire le poulet...')."),
+  ingredients: z.string().describe("La liste des ingrédients nécessaires pour la recette. Chaque ingrédient doit être sur une nouvelle ligne, précédé d'un tiret (par exemple, '- 100g de poulet\\n- 1/2 oignon')."),
+  recipe: z.string().describe("La recette détaillée, avec chaque étape numérotée et sur une nouvelle ligne (par exemple, '1. Couper les légumes.\\n2. Cuire le poulet...')."),
   tips: z.string().optional().describe("Conseils, astuces ou notes supplémentaires concernant ce plat/repas. Ce champ est optionnel.")
 });
 
@@ -57,7 +57,7 @@ const prompt = ai.definePrompt({
   output: {schema: GenerateMealPlanOutputSchema},
   prompt: `Vous êtes un diététicien agréé spécialisé dans les plans de repas pour le diabète de type 2.
 
-  En fonction des aliments disponibles et des recherches récentes sur le diabète, créez un plan de repas quotidien EN FRANÇAIS.
+  En fonction des aliments disponibles (qui peuvent être listés un par ligne ou séparés par des virgules) et des recherches récentes sur le diabète, créez un plan de repas quotidien EN FRANÇAIS.
   Le plan de repas doit inclure pour chaque section (petit-déjeuner, collation du matin, déjeuner, collation de l'après-midi, dîner) les éléments suivants, structurés en JSON :
   1.  Un "title" (titre) clair et concis pour le plat ou le repas.
   2.  Un "preparationTime" (temps de préparation) estimé (par exemple, "Environ 30 minutes").

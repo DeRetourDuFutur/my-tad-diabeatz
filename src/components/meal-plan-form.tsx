@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { GenerateMealPlanInput, GenerateMealPlanOutput } from "@/ai/flows/generate-meal-plan";
@@ -24,7 +25,21 @@ type MealPlanFormProps = {
 };
 
 const defaultResearchSummary = "Concentrez-vous sur les grains entiers, les protéines maigres, les graisses saines et beaucoup de légumes non amylacés. Contrôlez l'apport en glucides à chaque repas et collation. Privilégiez les aliments à faible indice glycémique. Assurez un apport suffisant en fibres. Le contrôle des portions est essentiel. Des horaires de repas réguliers aident à gérer la glycémie.";
-const defaultAvailableFoods = "Avoine, œufs, épinards, poitrine de poulet, saumon, quinoa, brocoli, amandes, baies, yaourt grec, pain de blé entier, lentilles, avocat, huile d'olive, patates douces.";
+const defaultAvailableFoods = `Avoine
+œufs
+épinards
+poitrine de poulet
+saumon
+quinoa
+brocoli
+amandes
+baies
+yaourt grec
+pain de blé entier
+lentilles
+avocat
+huile d'olive
+patates douces`;
 
 export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   const [isLoading, setIsLoading] = useState(false);
@@ -85,13 +100,18 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                   <FormLabel>Aliments Disponibles</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Ex: poulet, brocoli, quinoa, pommes..."
-                      className="min-h-[100px] resize-y"
+                      placeholder="Ex:
+poulet
+brocoli
+quinoa
+pommes
+(un aliment par ligne)"
+                      className="min-h-[120px] resize-y"
                       {...field}
                     />
                   </FormControl>
                   <FormDescription>
-                    Listez les aliments que vous avez sous la main, séparés par des virgules.
+                    Liste des aliments que vous aimez.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
