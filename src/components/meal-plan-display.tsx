@@ -1,15 +1,16 @@
+
 "use client";
 
 import type { GenerateMealPlanOutput } from "@/ai/flows/generate-meal-plan";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChefHat, Save, Utensils } from "lucide-react";
+import { ChefHat, Save, Utensils, Lightbulb } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 type MealPlanDisplayProps = {
   mealPlan: GenerateMealPlanOutput | null;
   mealPlanName?: string;
-  onSavePlan: () => void; // Callback to initiate saving process (e.g., open dialog for name)
+  onSavePlan: () => void; 
 };
 
 const mealTypes = [
@@ -51,27 +52,46 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
         </div>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-[calc(100vh-280px)] lg:h-auto lg:max-h-[calc(100vh-220px)] pr-4">
-          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
-            {mealTypes.map((mealType) => (
-              <Card key={mealType.key} className="flex flex-col">
-                <CardHeader>
-                  <CardTitle className="flex items-center text-lg">
-                    <Utensils className="mr-2 h-5 w-5 text-primary" />
-                    {mealType.title}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="flex-grow">
-                  <p className="text-sm whitespace-pre-wrap">
-                    {mealPlan[mealType.key] || "Aucune recette fournie."}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
+        <ScrollArea className="h-[calc(100vh-280px)] lg:h-auto lg:max-h-[calc(100vh-220px)] pr-4 -mr-4">
+          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+            {mealTypes.map((mealType) => {
+              const mealDetails = mealPlan[mealType.key];
+              if (!mealDetails) return null; // Should not happen with new schema if AI behaves
+
+              return (
+                <Card key={mealType.key} className="flex flex-col bg-card shadow-md">
+                  <CardHeader>
+                    <CardTitle className="flex items-center text-xl">
+                      <Utensils className="mr-3 h-6 w-6 text-primary" />
+                      {mealDetails.title || mealType.title}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex-grow space-y-4">
+                    <div>
+                      <h4 className="font-semibold mb-1.5 text-md text-foreground/90">Recette :</h4>
+                      <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                        {mealDetails.recipe || "Aucune recette fournie."}
+                      </p>
+                    </div>
+                    {mealDetails.tips && mealDetails.tips.trim() !== "" && (
+                      <div className="pt-3 border-t border-border/70">
+                        <h4 className="font-semibold mb-1.5 text-md text-foreground/90 flex items-center">
+                          <Lightbulb className="mr-2 h-5 w-5 text-accent" />
+                          Conseils :
+                        </h4>
+                        <p className="text-sm whitespace-pre-wrap text-muted-foreground leading-relaxed">
+                          {mealDetails.tips}
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </ScrollArea>
       </CardContent>
-      <CardFooter className="text-xs text-muted-foreground">
+      <CardFooter className="text-xs text-muted-foreground pt-4 border-t">
         <p>Ce plan repas est généré par IA et doit être examiné par un professionnel de santé ou un diététicien.</p>
       </CardFooter>
     </Card>
