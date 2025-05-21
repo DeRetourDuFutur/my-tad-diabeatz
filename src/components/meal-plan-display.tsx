@@ -54,19 +54,20 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
       <CardContent>
         <ScrollArea className="h-[calc(100vh-280px)] lg:h-auto lg:max-h-[calc(100vh-220px)] pr-4 -mr-4">
           <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
-            {mealTypes.map((mealType) => {
-              const mealDetails = mealPlan[mealType.key];
+            {mealTypes.map((mealTypeInfo) => {
+              const mealDetails = mealPlan[mealTypeInfo.key];
               if (!mealDetails || !mealDetails.title) return null; 
 
               let hasPreviousContent = false;
 
               return (
-                <Card key={mealType.key} className="flex flex-col bg-card shadow-md">
+                <Card key={mealTypeInfo.key} className="flex flex-col bg-card shadow-md">
                   <CardHeader>
                     <CardTitle className="flex items-center text-xl">
                       <Utensils className="mr-3 h-6 w-6 text-primary" />
                       {mealDetails.title}
                     </CardTitle>
+                    <CardDescription className="text-sm text-muted-foreground pt-1">{mealTypeInfo.title}</CardDescription>
                   </CardHeader>
                   <CardContent className="flex-grow space-y-3">
                     {mealDetails.preparationTime && (
