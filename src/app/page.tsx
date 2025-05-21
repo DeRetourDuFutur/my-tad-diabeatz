@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -13,12 +14,15 @@ import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from "lucide-react";
 
+// Define initialSavedPlansValue outside the component to ensure a stable reference.
+const initialSavedPlansValue: StoredMealPlan[] = [];
+
 export default function HomePage() {
   const [currentMealPlan, setCurrentMealPlan] = useState<GenerateMealPlanOutput | null>(null);
   const [currentMealPlanId, setCurrentMealPlanId] = useState<string | null>(null);
   const [currentMealPlanName, setCurrentMealPlanName] = useState<string>("");
   
-  const [savedPlans, setSavedPlans] = useLocalStorage<StoredMealPlan[]>("diabeatz-meal-plans", []);
+  const [savedPlans, setSavedPlans] = useLocalStorage<StoredMealPlan[]>("diabeatz-meal-plans", initialSavedPlansValue);
   const { toast } = useToast();
 
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
@@ -101,7 +105,8 @@ export default function HomePage() {
   
   // Sort plans by date initially
   useEffect(() => {
-    setSavedPlans(prevPlans => [...prevPlans].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+    // Ensure prevPlans is an array before attempting to sort
+    setSavedPlans(prevPlans => Array.isArray(prevPlans) ? [...prevPlans].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) : []);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Run once on mount
 
