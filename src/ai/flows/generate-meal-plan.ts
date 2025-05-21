@@ -18,7 +18,13 @@ const GenerateMealPlanInputSchema = z.object({
   availableFoods: z
     .string()
     .describe(
-      "Une liste d'aliments préférés. Chaque aliment peut être sur une nouvelle ligne ou les aliments peuvent être séparés par des virgules."
+      "Une liste d'aliments préférés et disponibles que l'utilisateur peut manger. Chaque aliment peut être sur une nouvelle ligne ou les aliments peuvent être séparés par des virgules."
+    ),
+  foodsToAvoid: z
+    .string()
+    .optional()
+    .describe(
+      "Une liste d'aliments à éviter ABSOLUMENT car l'utilisateur ne les aime pas ou y est allergique/intolérant. Chaque aliment sur une nouvelle ligne."
     ),
   diabeticResearchSummary: z
     .string()
@@ -57,7 +63,7 @@ const prompt = ai.definePrompt({
   output: {schema: GenerateMealPlanOutputSchema},
   prompt: `Vous êtes un diététicien agréé spécialisé dans les plans de repas pour le diabète de type 2.
 
-  En fonction des aliments disponibles (qui peuvent être listés un par ligne ou séparés par des virgules) et des recherches récentes sur le diabète, créez un plan de repas quotidien EN FRANÇAIS.
+  En fonction des aliments disponibles (ceux que l'utilisateur aime et peut manger) et des recherches récentes sur le diabète, créez un plan de repas quotidien EN FRANÇAIS.
   Le plan de repas doit inclure pour chaque section (petit-déjeuner, collation du matin, déjeuner, collation de l'après-midi, dîner) les éléments suivants, structurés en JSON :
   1.  Un "title" (titre) clair et concis pour le plat ou le repas.
   2.  Un "preparationTime" (temps de préparation) estimé (par exemple, "Environ 30 minutes").
@@ -65,7 +71,15 @@ const prompt = ai.definePrompt({
   4.  Une "recipe" (recette) détaillée. CHAQUE étape doit être NUMÉROTÉE et commencer sur une NOUVELLE LIGNE (ex: "1. Lavez les légumes.\\n2. Faites cuire le poisson à la vapeur...").
   5.  Des "tips" (conseils) pertinents et utiles, ou des astuces pour ce repas. Ce champ "tips" est optionnel; s'il n'y a pas de conseil spécifique, vous pouvez omettre ce champ ou le laisser vide.
 
-  Aliments Disponibles : {{{availableFoods}}}
+  Aliments Disponibles (ceux à utiliser) :
+  {{{availableFoods}}}
+
+  {{#if foodsToAvoid}}
+  Aliments à ÉVITER ABSOLUMENT (ne pas utiliser dans le plan, car non aimés ou allergènes) :
+  {{{foodsToAvoid}}}
+  Il est IMPÉRATIF de ne PAS inclure ces aliments dans le plan repas.
+  {{/if}}
+
   Résumé de la Recherche sur le Diabète : {{{diabeticResearchSummary}}}
 
   Assurez-vous que chaque repas et collation soit approprié pour un diabétique de type 2, en tenant compte de facteurs tels que la teneur en glucides, l'indice glycémique et la taille des portions.
@@ -95,3 +109,4 @@ const generateMealPlanFlow = ai.defineFlow(
   }
 );
 
+    

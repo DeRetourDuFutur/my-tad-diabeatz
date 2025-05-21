@@ -8,16 +8,28 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Wand2 } from "lucide-react";
-import { useState } from "react";
+import { Loader2, Wand2, AlertTriangle,ThumbsDown } from "lucide-react";
+import { useState, useEffect } from "react";
 
+// Schema for react-hook-form, only for fields directly managed by it
 const formSchema = z.object({
-  availableFoods: z.string().min(10, { message: "Veuillez lister au moins quelques aliments disponibles." }),
   diabeticResearchSummary: z.string().min(20, { message: "Veuillez fournir un résumé de recherche pertinent." }),
+  // availableFoods will be constructed from the interactive list, so we make it optional here
+  // or keep it and set its value manually before AI call if needed by Zod pre-validation.
+  // For simplicity, we'll construct it directly for the AI call and not include it in Zod schema for now.
 });
 
 type MealPlanFormProps = {
@@ -26,54 +38,146 @@ type MealPlanFormProps = {
 
 const defaultResearchSummary = "Concentrez-vous sur les grains entiers, les protéines maigres, les graisses saines et beaucoup de légumes non amylacés. Contrôlez l'apport en glucides à chaque repas et collation. Privilégiez les aliments à faible indice glycémique. Assurez un apport suffisant en fibres. Le contrôle des portions est essentiel. Des horaires de repas réguliers aident à gérer la glycémie.";
 
-const defaultAvailableFoods = `**Fruits**
-Avocat (IG: <15)
-Fraises (IG: ~40)
+interface FoodItem {
+  id: string;
+  name: string;
+  ig: string;
+  isDisliked: boolean;
+  isAllergenic: boolean;
+}
 
-**Légumes**
-Brocoli (IG: <15)
-Épinards (IG: <15)
-Patates douces (cuites) (IG: ~50)
+interface FoodCategory {
+  categoryName: string;
+  items: FoodItem[];
+}
 
-**Fruits à coque et Graines**
-Amandes (IG: 0)
+const initialFoodCategories: FoodCategory[] = [
+  {
+    categoryName: "Fruits",
+    items: [
+      { id: "fruit1", name: "Avocat", ig: "(IG: <15)", isDisliked: false, isAllergenic: false },
+      { id: "fruit2", name: "Fraises", ig: "(IG: ~40)", isDisliked: false, isAllergenic: false },
+      { id: "fruit3", name: "Pomme", ig: "(IG: ~38)", isDisliked: false, isAllergenic: false },
+      { id: "fruit4", name: "Orange", ig: "(IG: ~43)", isDisliked: false, isAllergenic: false },
+    ],
+  },
+  {
+    categoryName: "Légumes",
+    items: [
+      { id: "veg1", name: "Brocoli", ig: "(IG: <15)", isDisliked: false, isAllergenic: false },
+      { id: "veg2", name: "Carotte (crue)", ig: "(IG: ~16)", isDisliked: false, isAllergenic: false },
+      { id: "veg3", name: "Courgette", ig: "(IG: <15)", isDisliked: false, isAllergenic: false },
+      { id: "veg4", name: "Épinards", ig: "(IG: <15)", isDisliked: false, isAllergenic: false },
+      { id: "veg5", name: "Patates douces (cuites)", ig: "(IG: ~50)", isDisliked: false, isAllergenic: false },
+    ],
+  },
+  {
+    categoryName: "Fruits à coque et Graines",
+    items: [
+      { id: "nut1", name: "Amandes", ig: "(IG: 0)", isDisliked: false, isAllergenic: false },
+    ],
+  },
+  {
+    categoryName: "Céréales, Grains et Féculents",
+    items: [
+      { id: "grain1", name: "Avoine (flocons)", ig: "(IG: ~55)", isDisliked: false, isAllergenic: false },
+      { id: "grain2", name: "Pain de blé entier (100%)", ig: "(IG: ~51)", isDisliked: false, isAllergenic: false },
+      { id: "grain3", name: "Quinoa (cuit)", ig: "(IG: ~53)", isDisliked: false, isAllergenic: false },
+    ],
+  },
+  {
+    categoryName: "Légumineuses",
+    items: [
+      { id: "legume1", name: "Lentilles (vertes/brunes, cuites)", ig: "(IG: ~30)", isDisliked: false, isAllergenic: false },
+    ],
+  },
+  {
+    categoryName: "Viandes, Poissons et Œufs",
+    items: [
+      { id: "meat1", name: "Œufs", ig: "(IG: 0)", isDisliked: false, isAllergenic: false },
+      { id: "meat2", name: "Poitrine de poulet", ig: "(IG: 0)", isDisliked: false, isAllergenic: false },
+      { id: "meat3", name: "Saumon", ig: "(IG: 0)", isDisliked: false, isAllergenic: false },
+    ],
+  },
+  {
+    categoryName: "Produits Laitiers et Alternatives",
+    items: [
+      { id: "dairy1", name: "Yaourt grec (nature, sans sucre)", ig: "(IG: ~15)", isDisliked: false, isAllergenic: false },
+    ],
+  },
+  {
+    categoryName: "Matières Grasses",
+    items: [
+      { id: "fat1", name: "Huile d'olive", ig: "(IG: 0)", isDisliked: false, isAllergenic: false },
+    ],
+  },
+].map(category => ({
+  ...category,
+  items: category.items.sort((a, b) => a.name.localeCompare(b.name))
+}));
 
-**Céréales, Grains et Féculents**
-Avoine (flocons) (IG: ~55)
-Pain de blé entier (100%) (IG: ~51)
-Quinoa (cuit) (IG: ~53)
-
-**Légumineuses**
-Lentilles (vertes/brunes, cuites) (IG: ~30)
-
-**Viandes, Poissons et Œufs**
-Œufs (IG: 0)
-Poitrine de poulet (IG: 0)
-Saumon (IG: 0)
-
-**Produits Laitiers et Alternatives**
-Yaourt grec (nature, sans sucre) (IG: ~15)
-
-**Matières Grasses**
-Huile d'olive (IG: 0)`;
 
 export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const [foodCategories, setFoodCategories] = useState<FoodCategory[]>(initialFoodCategories);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      availableFoods: defaultAvailableFoods,
       diabeticResearchSummary: defaultResearchSummary,
     },
   });
 
+  const handleFoodPreferenceChange = (categoryId: string, itemId: string, type: "isDisliked" | "isAllergenic", checked: boolean) => {
+    setFoodCategories(prevCategories =>
+      prevCategories.map(category =>
+        category.categoryName === categoryId
+          ? {
+              ...category,
+              items: category.items.map(item =>
+                item.id === itemId ? { ...item, [type]: checked } : item
+              ),
+            }
+          : category
+      )
+    );
+  };
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
+
+    const likedFoodsList: string[] = [];
+    const foodsToAvoidList: string[] = [];
+
+    foodCategories.forEach(category => {
+      category.items.forEach(item => {
+        const foodEntry = `${item.name} ${item.ig}`;
+        if (item.isDisliked || item.isAllergenic) {
+          foodsToAvoidList.push(foodEntry + (item.isDisliked && item.isAllergenic ? " (non aimé et allergène)" : item.isDisliked ? " (non aimé)" : " (allergène)"));
+        } else {
+          likedFoodsList.push(foodEntry);
+        }
+      });
+    });
+
+    if (likedFoodsList.length === 0) {
+      toast({
+        title: "Aucun aliment sélectionné",
+        description: "Veuillez sélectionner au moins un aliment que vous aimez et auquel vous n'êtes pas allergique.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    const availableFoodsForAI = likedFoodsList.join("\n");
+    const foodsToAvoidForAI = foodsToAvoidList.join("\n");
+
     try {
       const mealPlanInput: GenerateMealPlanInput = {
-        availableFoods: values.availableFoods,
+        availableFoods: availableFoodsForAI,
+        foodsToAvoid: foodsToAvoidForAI.length > 0 ? foodsToAvoidForAI : undefined,
         diabeticResearchSummary: values.diabeticResearchSummary,
       };
       const result = await generateMealPlan(mealPlanInput);
@@ -102,41 +206,56 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
           Créateur de Plan Repas AI
         </CardTitle>
         <CardDescription>
-          Entrez vos aliments disponibles et un résumé des recherches pour générer un plan repas quotidien.
+          Personnalisez votre liste d'aliments et fournissez un résumé des recherches pour générer un plan repas quotidien.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="availableFoods"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Aliments Disponibles</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Ex:
-**Fruits**
-Pomme (IG: ~38)
-Orange (IG: ~43)
+            <div className="space-y-4">
+              <Label className="text-lg font-semibold">Vos Préférences Alimentaires</Label>
+              <p className="text-sm text-muted-foreground">
+                Cochez les cases correspondantes pour les aliments que vous n'aimez pas ou auxquels vous êtes allergique.
+                Seuls les aliments non cochés ici seront considérés comme disponibles.
+              </p>
+              <div className="space-y-3 max-h-[400px] overflow-y-auto p-1 rounded-md border">
+                {foodCategories.map(category => (
+                  <div key={category.categoryName} className="p-2 rounded-md bg-card/50">
+                    <h4 className="font-semibold mb-2 text-md text-primary">{category.categoryName}</h4>
+                    <ul className="space-y-2 pl-2">
+                      {category.items.map(item => (
+                        <li key={item.id} className="grid grid-cols-[1fr_auto_auto] items-center gap-x-2 py-1 border-b border-border/50 last:border-b-0">
+                          <span className="text-sm">{item.name} <span className="text-xs text-muted-foreground">{item.ig}</span></span>
+                          <div className="flex items-center space-x-1 justify-self-end">
+                            <Checkbox
+                              id={`${item.id}-disliked`}
+                              checked={item.isDisliked}
+                              onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isDisliked", !!checked)}
+                              aria-label={`Marquer ${item.name} comme non aimé`}
+                            />
+                            <Label htmlFor={`${item.id}-disliked`} className="text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer" title="Je n'aime pas">
+                              <ThumbsDown className="h-3.5 w-3.5" />
+                            </Label>
+                          </div>
+                           <div className="flex items-center space-x-1 justify-self-end">
+                            <Checkbox
+                              id={`${item.id}-allergenic`}
+                              checked={item.isAllergenic}
+                              onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isAllergenic", !!checked)}
+                              aria-label={`Marquer ${item.name} comme allergène`}
+                            />
+                            <Label htmlFor={`${item.id}-allergenic`} className="text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer" title="Allergie/Intolérance">
+                              <AlertTriangle className="h-3.5 w-3.5" />
+                            </Label>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
 
-**Légumes**
-Carotte (crue) (IG: ~16)
-Courgette (IG: <15)
-
-(un aliment par ligne, avec son IG si connu, groupé par catégorie)"
-                      className="min-h-[200px] resize-y"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Liste des aliments que vous aimez.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
             <FormField
               control={form.control}
               name="diabeticResearchSummary"
