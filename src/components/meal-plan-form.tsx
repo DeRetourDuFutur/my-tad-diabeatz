@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -311,7 +312,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                 Seuls les aliments non marqués comme "non aimé" ou "allergène" seront considérés.
               </p>
               <div className="max-h-[400px] overflow-y-auto p-1 rounded-md border">
-                <Accordion type="multiple" collapsible className="w-full">
+                <Accordion type="multiple" className="w-full">
                   {foodCategories.map(category => (
                     <AccordionItem value={category.categoryName} key={category.categoryName} className="border-b-0 last:border-b-0">
                       <AccordionTrigger className="py-3 px-2 text-md font-semibold text-primary hover:no-underline hover:bg-muted/50 rounded-md">
@@ -403,5 +404,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     </Card>
   );
 }
+
+    
 
     
