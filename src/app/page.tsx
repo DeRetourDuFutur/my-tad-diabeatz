@@ -22,11 +22,19 @@ export default function HomePage() {
   const [currentMealPlanId, setCurrentMealPlanId] = useState<string | null>(null);
   const [currentMealPlanName, setCurrentMealPlanName] = useState<string>("");
   
-  const [savedPlans, setSavedPlans] = useLocalStorage<StoredMealPlan[]>("diabeatz-meal-plans", initialSavedPlansValue);
+  const [savedPlansFromStorage, setSavedPlansInStorage] = useLocalStorage<StoredMealPlan[]>(
+    "diabeatz-meal-plans", 
+    initialSavedPlansValue
+  );
   const { toast } = useToast();
 
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [hasMounted, setHasMounted] = useState(false);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
 
   const handleMealPlanGenerated = (mealPlan: GenerateMealPlanOutput) => {
@@ -51,20 +59,20 @@ export default function HomePage() {
   const handleSavePlan = (name: string) => {
     if (!currentMealPlan) return;
 
-    const existingPlanIndex = currentMealPlanId ? savedPlans.findIndex(p => p.id === currentMealPlanId) : -1;
+    const existingPlanIndex = currentMealPlanId ? savedPlansFromStorage.findIndex(p => p.id === currentMealPlanId) : -1;
     
     let planToSave: StoredMealPlan;
 
     if (existingPlanIndex !== -1) { // Updating existing plan
       planToSave = {
-        ...savedPlans[existingPlanIndex],
+        ...savedPlansFromStorage[existingPlanIndex],
         ...currentMealPlan, // Update with potentially new meal details
         name, // Update name
         createdAt: new Date().toISOString(), // Update timestamp
       };
-      const updatedPlans = [...savedPlans];
+      const updatedPlans = [...savedPlansFromStorage];
       updatedPlans[existingPlanIndex] = planToSave;
-      setSavedPlans(updatedPlans);
+      setSavedPlansInStorage(updatedPlans);
       toast({ title: "Plan Mis à Jour!", description: `Le plan repas "${name}" a été mis à jour.` });
     } else { // Saving new plan
       const newId = crypto.randomUUID();
@@ -74,7 +82,7 @@ export default function HomePage() {
         ...currentMealPlan,
         createdAt: new Date().toISOString(),
       };
-      setSavedPlans([...savedPlans, planToSave].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+      setSavedPlansInStorage([...savedPlansFromStorage, planToSave].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
       setCurrentMealPlanId(newId);
       toast({ title: "Plan Sauvegardé!", description: `Le plan repas "${name}" a été sauvegardé.` });
     }
@@ -83,7 +91,7 @@ export default function HomePage() {
   };
 
   const handleLoadPlan = (planId: string) => {
-    const planToLoad = savedPlans.find(p => p.id === planId);
+    const planToLoad = savedPlansFromStorage.find(p => p.id === planId);
     if (planToLoad) {
       const { id, name, createdAt, ...mealData } = planToLoad;
       setCurrentMealPlan(mealData);
@@ -94,7 +102,7 @@ export default function HomePage() {
   };
 
   const handleDeletePlan = (planId: string) => {
-    setSavedPlans(savedPlans.filter(p => p.id !== planId));
+    setSavedPlansInStorage(savedPlansFromStorage.filter(p => p.id !== planId));
     if (currentMealPlanId === planId) {
       setCurrentMealPlan(null);
       setCurrentMealPlanId(null);
@@ -106,9 +114,16 @@ export default function HomePage() {
   // Sort plans by date initially
   useEffect(() => {
     // Ensure prevPlans is an array before attempting to sort
-    setSavedPlans(prevPlans => Array.isArray(prevPlans) ? [...prevPlans].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) : []);
+    setSavedPlansInStorage(prevPlans => 
+      Array.isArray(prevPlans) 
+        ? [...prevPlans].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) 
+        : initialSavedPlansValue
+    );
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Run once on mount
+
+  // Determine which plans to display to avoid hydration mismatch
+  const displayableSavedPlans = hasMounted ? savedPlansFromStorage : initialSavedPlansValue;
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -119,7 +134,7 @@ export default function HomePage() {
           <div className="lg:col-span-1 space-y-6">
             <MealPlanForm onMealPlanGenerated={handleMealPlanGenerated} />
             <SavedMealPlans
-              savedPlans={savedPlans}
+              savedPlans={displayableSavedPlans}
               onLoadPlan={handleLoadPlan}
               onDeletePlan={handleDeletePlan}
             />
@@ -154,3 +169,4 @@ export default function HomePage() {
     </div>
   );
 }
+
