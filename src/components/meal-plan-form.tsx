@@ -23,7 +23,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star, CalendarDays } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Accordion,
   AccordionContent,
@@ -57,10 +57,35 @@ const defaultResearchSummary = "Concentrez-vous sur les grains entiers, les prot
 export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const [foodCategories, setFoodCategories] = useLocalStorage<FoodCategory[]>(
+  
+  const [foodCategoriesFromStorage, setFoodCategoriesInStorage] = useLocalStorage<FoodCategory[]>(
     "diabeatz-food-preferences",
     initialFoodCategories
   );
+
+  const [processedFoodCategories, setProcessedFoodCategories] = useState<FoodCategory[]>(initialFoodCategories);
+
+  useEffect(() => {
+    const hydratedCategories = foodCategoriesFromStorage.map(storedCategory => {
+      const initialCategoryDefinition = initialFoodCategories.find(
+        initCat => initCat.categoryName === storedCategory.categoryName
+      );
+      return {
+        categoryName: storedCategory.categoryName, 
+        items: storedCategory.items.map(storedItem => {
+          const initialItemDefinition = initialCategoryDefinition?.items.find(
+            initItem => initItem.id === storedItem.id
+          );
+          return {
+            ...(initialItemDefinition || {}), 
+            ...storedItem,                   
+          };
+        }),
+      };
+    });
+    setProcessedFoodCategories(hydratedCategories);
+  }, [foodCategoriesFromStorage]);
+
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -72,7 +97,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   });
 
   const handleFoodPreferenceChange = (categoryId: string, itemId: string, type: "isFavorite" | "isDisliked" | "isAllergenic", checked: boolean) => {
-    setFoodCategories(prevCategories =>
+    setFoodCategoriesInStorage(prevCategories =>
       prevCategories.map(category =>
         category.categoryName === categoryId
           ? {
@@ -100,7 +125,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     const likedFoodsList: string[] = [];
     const foodsToAvoidList: string[] = [];
 
-    foodCategories.forEach(category => {
+    processedFoodCategories.forEach(category => {
       category.items.forEach(item => {
         let foodEntry = `${item.name} ${item.ig}`;
         if (item.isDisliked || item.isAllergenic) {
@@ -165,7 +190,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       item.fat && `Lipides: ${item.fat}`,
       item.fiber && `Fibres: ${item.fiber}`,
       item.sodium && `Sel/Sodium: ${item.sodium}`,
-    ].filter(Boolean); // Filter out undefined values
+    ].filter(Boolean); 
 
     if (infos.length === 0 && !item.notes) return null;
 
@@ -246,7 +271,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
               </p>
               <div className="max-h-[400px] overflow-y-auto p-1 rounded-md border">
                 <Accordion type="multiple" className="w-full">
-                  {foodCategories.map(category => (
+                  {processedFoodCategories.map(category => (
                     <AccordionItem value={category.categoryName} key={category.categoryName} className="border-b-0 last:border-b-0">
                       <AccordionTrigger className="py-3 px-2 text-md font-semibold text-primary hover:no-underline hover:bg-muted/50 rounded-md">
                         {category.categoryName}
@@ -255,7 +280,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                         <ul className="space-y-2 pl-2">
                           {category.items.map(item => (
                             <li key={item.id} className="py-1.5 border-b border-border/50 last:border-b-0">
-                              <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-2">
+                              <div className="grid grid-cols-[1fr_auto_auto_auto] items-start gap-x-2"> {/* Changed items-center to items-start for better alignment with multi-line nutritional info */}
                                 <div>
                                   <span className="text-sm">{item.name} <span className="text-xs text-muted-foreground">{item.ig}</span></span>
                                   {renderNutritionalInfo(item)}
@@ -349,3 +374,4 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   );
 }
 
+    
