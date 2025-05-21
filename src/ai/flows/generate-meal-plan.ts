@@ -18,7 +18,7 @@ const GenerateMealPlanInputSchema = z.object({
   availableFoods: z
     .string()
     .describe(
-      "Une liste d'aliments préférés et disponibles que l'utilisateur peut manger. Chaque aliment peut être sur une nouvelle ligne ou les aliments peuvent être séparés par des virgules."
+      "Une liste d'aliments préférés et disponibles que l'utilisateur peut manger. Chaque aliment peut être sur une nouvelle ligne ou les aliments peuvent être séparés par des virgules. Les aliments marqués avec '(favori)' à la fin de leur nom sont particulièrement appréciés et devraient être inclus plus fréquemment si possible."
     ),
   foodsToAvoid: z
     .string()
@@ -73,6 +73,7 @@ const prompt = ai.definePrompt({
 
   Aliments Disponibles (ceux à utiliser) :
   {{{availableFoods}}}
+  Important: Les aliments suivis de la mention "(favori)" sont particulièrement appréciés par l'utilisateur. Essayez de les intégrer plus souvent dans le plan repas, tout en assurant la variété et l'équilibre nutritionnel.
 
   {{#if foodsToAvoid}}
   Aliments à ÉVITER ABSOLUMENT (ne pas utiliser dans le plan, car non aimés ou allergènes) :
@@ -108,5 +109,3 @@ const generateMealPlanFlow = ai.defineFlow(
     return output!;
   }
 );
-
-    
