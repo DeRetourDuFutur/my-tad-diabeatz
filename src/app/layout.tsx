@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'DiabEatz - Meal Planner for Type 2 Diabetes',
-  description: 'Create daily meal plans for Type 2 Diabetes with AI.',
+  title: 'DiabEatz - Planificateur de Repas pour Diabète de Type 2',
+  description: 'Créez des plans de repas quotidiens pour le diabète de type 2 avec l\'IA.',
 };
 
 export default function RootLayout({
@@ -24,7 +24,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="fr">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         {children}
         <Toaster />
