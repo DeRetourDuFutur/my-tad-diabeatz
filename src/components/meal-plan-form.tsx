@@ -25,21 +25,22 @@ type MealPlanFormProps = {
 };
 
 const defaultResearchSummary = "Concentrez-vous sur les grains entiers, les protéines maigres, les graisses saines et beaucoup de légumes non amylacés. Contrôlez l'apport en glucides à chaque repas et collation. Privilégiez les aliments à faible indice glycémique. Assurez un apport suffisant en fibres. Le contrôle des portions est essentiel. Des horaires de repas réguliers aident à gérer la glycémie.";
-const defaultAvailableFoods = `Avoine
-œufs
-épinards
-poitrine de poulet
-saumon
-quinoa
-brocoli
-amandes
-baies
-yaourt grec
-pain de blé entier
-lentilles
-avocat
-huile d'olive
-patates douces`;
+
+const defaultAvailableFoods = `Amandes (IG: 0)
+Avocat (IG: <15)
+Avoine (flocons) (IG: ~55)
+Brocoli (IG: <15)
+Épinards (IG: <15)
+Fraises (IG: ~40)
+Huile d'olive (GI: 0)
+Lentilles (vertes/brunes, cuites) (IG: ~30)
+Œufs (IG: 0)
+Pain de blé entier (100%) (IG: ~51)
+Patates douces (cuites) (IG: ~50)
+Poitrine de poulet (IG: 0)
+Quinoa (cuit) (IG: ~53)
+Saumon (IG: 0)
+Yaourt grec (nature, sans sucre) (IG: ~15)`;
 
 export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   const [isLoading, setIsLoading] = useState(false);
@@ -101,11 +102,10 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                   <FormControl>
                     <Textarea
                       placeholder="Ex:
-poulet
-brocoli
-quinoa
-pommes
-(un aliment par ligne)"
+Amandes (IG: 0)
+Poulet (IG: 0)
+Quinoa (cuit) (IG: ~53)
+(un aliment par ligne, avec son IG si connu)"
                       className="min-h-[120px] resize-y"
                       {...field}
                     />
