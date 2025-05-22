@@ -62,17 +62,12 @@ type MealPlanFormProps = {
   onMealPlanGenerated: (mealPlan: GenerateMealPlanOutput, planName?: string) => void;
 };
 
-const defaultResearchSummary = `Concentrez-vous sur les grains entiers, les protéines maigres, les graisses saines et beaucoup de légumes non amylacés.
-
-Contrôlez l'apport en glucides à chaque repas et collation.
-
-Privilégiez les aliments à faible indice glycémique.
-
-Assurez un apport suffisant en fibres.
-
-Le contrôle des portions est essentiel.
-
-Des horaires de repas réguliers aident à gérer la glycémie.`;
+const defaultResearchSummary = `- Concentrez-vous sur les grains entiers, les protéines maigres, les graisses saines et beaucoup de légumes non amylacés.
+- Contrôlez l'apport en glucides à chaque repas et collation.
+- Privilégiez les aliments à faible indice glycémique.
+- Assurez un apport suffisant en fibres.
+- Le contrôle des portions est essentiel.
+- Des horaires de repas réguliers aident à gérer la glycémie.`;
 
 const dayCountToDurationString = (days: number): string | undefined => {
   if (days <= 0) return undefined;
@@ -80,7 +75,7 @@ const dayCountToDurationString = (days: number): string | undefined => {
   if (days === 14) return "2 semaines";
   if (days === 21) return "3 semaines";
   if (days === 28) return "4 semaines";
-  if (days === 30) return "1 mois"; // Consistent with current "1 mois" logic (adds 29 days)
+  if (days === 30) return "1 mois"; 
   if (days >= 1 && days <= 6) return `${days} jour${days > 1 ? 's' : ''}`;
   return undefined; 
 };
@@ -110,14 +105,14 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       const initialItems = initialCategoryDefinition ? initialCategoryDefinition.items : [];
       
       return {
-        ...initialCategoryDefinition, // Ensure all base category props are present
+        ...initialCategoryDefinition, 
         ...storedCategory, 
         categoryName: storedCategory.categoryName, 
-        items: initialItems.map(initialItem => { // Iterate over initial items to ensure all are present
+        items: initialItems.map(initialItem => { 
           const storedItem = storedCategory.items.find(si => si.id === initialItem.id);
           return {
-            ...initialItem, // Base properties from initialFoodCategories
-            ...(storedItem || {}), // Overwrite with stored preferences if they exist
+            ...initialItem, 
+            ...(storedItem || {}), 
           };
         }),
       };
@@ -464,7 +459,9 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
             <div className="space-y-4">
               <Label className="text-lg font-semibold">Préférences alimentaires</Label>
               <p className="text-sm text-muted-foreground">
-                Cochez vos aliments favoris, à éviter ou allergènes. Les aliments favoris seront privilégiés pour vos plans de repas.
+                Cochez vos aliments favoris, à éviter ou allergènes.
+                <br />
+                Les aliments favoris seront privilégiés pour vos plans de repas.
               </p>
               <div className="max-h-[400px] overflow-y-auto p-1 rounded-md border">
                 <Accordion type="multiple" className="w-full">
@@ -580,6 +577,8 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     </Card>
   );
 }
+    
+
     
 
     
