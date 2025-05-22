@@ -72,8 +72,8 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
 
   const [processedFoodCategories, setProcessedFoodCategories] = useState<FoodCategory[]>(initialFoodCategories);
 
-  const [startDate, setStartDate] = useState<Date | undefined>(addDays(new Date(), 1));
-  const [endDate, setEndDate] = useState<Date | undefined>(addDays(new Date(), 1)); 
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined); 
   const [durationInDays, setDurationInDays] = useState<string>("1");
 
 
@@ -82,7 +82,16 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
 
   useEffect(() => {
     setIsClient(true);
-  }, []);
+    // Initialize dates on client mount to avoid hydration errors
+    const tomorrow = addDays(new Date(), 1);
+    if (!startDate) { // Only set if not already set (e.g. by loaded settings)
+      setStartDate(tomorrow);
+    }
+    if (!endDate) { // Only set if not already set
+      setEndDate(tomorrow);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run once on mount
 
 
   useEffect(() => {
@@ -133,7 +142,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         setDurationInDays(diff.toString());
       }
     }
-  }, [startDate, endDate]); // Corrected: Removed durationInDays from dependencies
+  }, [startDate, endDate]);
 
   // Update endDate when durationInDays (from input) or startDate changes
   useEffect(() => {
@@ -146,7 +155,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         }
       }
     }
-  }, [durationInDays, startDate]); // Corrected: Removed endDate from dependencies
+  }, [durationInDays, startDate]);
 
 
   const handleDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -158,7 +167,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       } else if (numValue > 365) {
          setDurationInDays("365");
       } else { 
-         setDurationInDays(value);
+         setDurationInDays(value); // Allow temporary "0" or other values for user input before blur
       }
     }
   };
@@ -170,7 +179,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     } else if (numDays > 365) {
       setDurationInDays("365"); 
     } else {
-      setDurationInDays(numDays.toString()); 
+      setDurationInDays(numDays.toString()); // Normalize
     }
   };
 
@@ -319,22 +328,23 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       });
       setFoodCategoriesInStorage(savedFormSettings.foodPreferences); 
       
-      const loadedStartDate = savedFormSettings.startDate ? parseISO(savedFormSettings.startDate) : addDays(new Date(), 1);
-      const loadedEndDate = savedFormSettings.endDate ? parseISO(savedFormSettings.endDate) : addDays(loadedStartDate, 0);
+      let newStartDate = addDays(new Date(), 1);
+      if (savedFormSettings.startDate) {
+        const parsed = parseISO(savedFormSettings.startDate);
+        if (isValid(parsed)) newStartDate = parsed;
+      }
+      setStartDate(newStartDate);
 
-      if (isValid(loadedStartDate)) {
-        setStartDate(loadedStartDate);
-      } else {
-        setStartDate(addDays(new Date(), 1)); 
+      let newEndDate = addDays(newStartDate, 0);
+      if (savedFormSettings.endDate) {
+        const parsed = parseISO(savedFormSettings.endDate);
+        if (isValid(parsed) && parsed >= newStartDate) {
+          newEndDate = parsed;
+        }
       }
+      setEndDate(newEndDate);
       
-      if (isValid(loadedEndDate) && loadedEndDate >= loadedStartDate) {
-        setEndDate(loadedEndDate);
-      } else if (isValid(loadedStartDate)) {
-        setEndDate(addDays(loadedStartDate, 0)); 
-      } else {
-        setEndDate(addDays(new Date(), 1)); 
-      }
+      // Duration will be recalculated by useEffect based on newStartDate and newEndDate
       toast({
         title: "Paramètres chargés!",
         description: "Votre configuration de formulaire a été restaurée.",
@@ -405,19 +415,22 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                             if (date) {
                                 const today = new Date();
                                 today.setHours(0,0,0,0);
-                                if (date < today) {
-                                  setStartDate(addDays(new Date(),1)); 
+                                if (date < today) { // Cannot select past dates
+                                  // Do nothing or provide feedback; current logic defaults to tomorrow if an invalid date is programmatically set
                                 } else {
                                   setStartDate(date);
+                                  // If new start date is after end date, adjust end date
+                                  if (endDate && date > endDate) {
+                                    setEndDate(date); 
+                                  }
                                 }
-                                if (endDate && date > endDate) setEndDate(date); 
                             }
                           }}
                           disabled={(date) => {
                               const minSelectableDate = new Date();
                               minSelectableDate.setDate(minSelectableDate.getDate()); 
                               minSelectableDate.setHours(0,0,0,0);
-                              return date < minSelectableDate;
+                              return date < minSelectableDate; // Disable past dates, allow today
                             } 
                           } 
                           initialFocus
@@ -446,7 +459,14 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                         <Calendar
                           mode="single"
                           selected={endDate}
-                          onSelect={setEndDate}
+                          onSelect={(date) => {
+                            if (date && startDate && isValid(startDate)) {
+                                if (date >= startDate) {
+                                    setEndDate(date);
+                                }
+                                // else do nothing or provide feedback: end date cannot be before start date
+                            }
+                          }}
                           disabled={(date) => {
                             const minDate = startDate && isValid(startDate) ? new Date(startDate) : new Date(new Date().setDate(new Date().getDate()));
                             minDate.setHours(0,0,0,0);
@@ -590,7 +610,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                 variant="outline" 
                 onClick={handleLoadSettings} 
                 className="flex-1" 
-                disabled={!isClient || (!savedFormSettings && typeof window !== 'undefined' && !window.localStorage.getItem("diabeatz-form-settings"))}
+                disabled={!isClient || (!savedFormSettings && typeof window !== 'undefined' && !localStorage.getItem("diabeatz-form-settings"))}
               >
                 <Upload className="mr-2 h-4 w-4" />
                 Charger les paramètres
@@ -608,5 +628,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     
 
     
+
 
 
