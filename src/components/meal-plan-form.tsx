@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star, CalendarDays, Save, Upload, ListFilter, PlusCircle, BookOpenText, Apple, Carrot, Nut, Wheat, Bean, Beef, Milk, Shell as OilIcon, Blend, BarChart2 } from "lucide-react";
+import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star, CalendarDays, Save, Upload, ListFilter, PlusCircle, BookOpenText, Apple, Carrot, Nut, Wheat, Bean, Beef, Milk, Shell as OilIcon, Blend, BarChart2, Info } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import {
   Accordion,
@@ -114,6 +114,7 @@ const defaultResearchSummary = `**Privilégiez la variété et la fraîcheur (en
 
 **N’hésitez pas à consulter un(e) diététicien(ne) pour un accompagnement personnalisé (en gras et rouge)**`;
 
+
 const RichTextDisplay: React.FC<{ text: string }> = ({ text }) => {
   const lines = text.split('\n').filter(line => line.trim() !== '');
   const elements: JSX.Element[] = [];
@@ -161,7 +162,7 @@ const RichTextDisplay: React.FC<{ text: string }> = ({ text }) => {
     } else if (listItemMatch) {
       currentListItems.push(listItemMatch[1]);
     } else if (line.trim() !== "") {
-      flushList(); // If there's a plain text line, flush any pending list and title
+      flushList(); 
       elements.push(<p key={`p-${index}`} className="mb-1 text-sm">{line}</p>);
     }
   });
@@ -254,19 +255,27 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   const [newFoodData, setNewFoodData] = useState<NewFoodData>(initialNewFoodData);
   const [addFoodFormError, setAddFoodFormError] = useState<string | null>(null);
 
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      planName: "",
+      diabeticResearchSummary: defaultResearchSummary,
+    },
+  });
 
   useEffect(() => {
-    const tomorrow = addDays(new Date(), 1);
-    tomorrow.setHours(0, 0, 0, 0);
-    if (!startDate) {
-        setStartDate(new Date(tomorrow));
-    }
-    if (!endDate) {
-        setEndDate(new Date(tomorrow));
-    }
     setIsClient(true);
+    // Initialize dates only if they are not already set (e.g., by loaded settings)
+    if (!startDate) {
+        const tomorrow = addDays(new Date(), 1);
+        tomorrow.setHours(0, 0, 0, 0);
+        setStartDate(tomorrow);
+        if (!endDate) { // Also initialize endDate if not set
+          setEndDate(new Date(tomorrow));
+        }
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, []); // Runs once on client mount
 
 
   useEffect(() => {
@@ -292,6 +301,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         };
       });
 
+      // Add items from storage that were not in initialFoodCategories (custom added food)
       storedCategory.items.forEach(storedItem => {
         if (!mergedItems.some(mi => mi.id === storedItem.id)) {
           mergedItems.push(storedItem);
@@ -299,9 +309,9 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       });
 
       return {
-        ...(initialCategoryDefinition || {}),
+        ...(initialCategoryDefinition || {}), // Spread initial category definition for safety, though categoryName should always match
         ...storedCategory,
-        categoryName: storedCategory.categoryName,
+        categoryName: storedCategory.categoryName, // Ensure categoryName from storage takes precedence
         items: mergedItems.sort((a, b) => a.name.localeCompare(b.name)),
       };
     });
@@ -309,56 +319,51 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   }, [foodCategoriesFromStorage]);
 
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      planName: "",
-      diabeticResearchSummary: defaultResearchSummary,
-    },
-  });
-
+  // Effect to update durationInDays when startDate or endDate changes
   useEffect(() => {
     if (startDate && endDate && isValid(startDate) && isValid(endDate) && endDate >= startDate) {
       const diff = differenceInDays(endDate, startDate) + 1;
       if (durationInDays !== diff.toString()) {
-        setDurationInDays(diff.toString());
+         setDurationInDays(diff.toString());
       }
-    } else if (startDate && !endDate) {
-        if (durationInDays !== "1") {
-             setDurationInDays("1");
-        }
+    } else if (startDate && !endDate && durationInDays !== "1") { // If only startDate is set, default to 1 day
+        setDurationInDays("1");
     }
-  }, [startDate, endDate, durationInDays]);
+  }, [startDate, endDate, durationInDays]); // Added durationInDays to prevent re-trigger if already correct
 
+  // Effect to update endDate when durationInDays or startDate changes
   useEffect(() => {
     if (!startDate || !isValid(startDate) || !isClient) return;
 
     const numDays = parseInt(durationInDays, 10);
-    if (!isNaN(numDays) && numDays >= 1 && numDays <= 365) {
+    if (!isNaN(numDays) && numDays >= 1 && numDays <= 365) { // Added upper limit for sanity
       const newEndDate = addDays(new Date(startDate), numDays - 1);
       if (!endDate || !isValid(endDate) || newEndDate.getTime() !== endDate.getTime()) {
         setEndDate(newEndDate);
       }
     }
-  }, [durationInDays, startDate, isClient, endDate]);
+  }, [durationInDays, startDate, isClient, endDate]); // Added endDate to prevent re-trigger if already correct
 
 
   const handleDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
+    // Allow empty string for temporary input, or numbers up to 3 digits (max 365)
     if (value === "" || (/^\d{1,3}$/.test(value) && parseInt(value, 10) <= 365 && parseInt(value,10) >=0 )) {
       setDurationInDays(value);
     } else if (/^\d+$/.test(value) && parseInt(value, 10) > 365) {
-      setDurationInDays("365");
+      setDurationInDays("365"); // Cap at 365
     }
   };
 
   const handleDurationBlur = () => {
+    // On blur, if the input is empty, invalid, or 0, default to "1"
     const numDays = parseInt(durationInDays, 10);
     if (isNaN(numDays) || numDays <= 0) {
       setDurationInDays("1");
-    } else if (numDays > 365) {
-      setDurationInDays("365");
+    } else if (numDays > 365) { // Cap at 365 if somehow bypassed
+        setDurationInDays("365");
     } else {
+      // Ensure it's a clean number string
       setDurationInDays(numDays.toString());
     }
   };
@@ -463,6 +468,11 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     }
   }
 
+  const handleOpenEditTipsDialog = () => {
+    setEditingTips(form.getValues('diabeticResearchSummary'));
+    setIsEditTipsDialogOpen(true);
+  };
+
   const handleOpenNutritionalInfoDialog = (item: FoodItem) => {
     setSelectedFoodItemForNutritionalInfo(item);
     setEditableNutritionalInfo({
@@ -527,39 +537,45 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         diabeticResearchSummary: savedFormSettings.diabeticResearchSummary,
       });
 
-      const hydratedFoodPrefs = savedFormSettings.foodPreferences.map(storedCat => {
-        const initialCatDef = initialFoodCategories.find(ic => ic.categoryName === storedCat.categoryName);
-        const initialItems = initialCatDef ? initialCatDef.items : [];
-
-        const mergedItems = initialItems.map(initItem => {
-            const storedItem = storedCat.items.find(si => si.id === initItem.id);
-            return {
-                ...initItem,
-                ...(storedItem || {}),
-                calories: storedItem?.calories ?? initItem.calories,
-                carbs: storedItem?.carbs ?? initItem.carbs,
-                protein: storedItem?.protein ?? initItem.protein,
-                fat: storedItem?.fat ?? initItem.fat,
-                sugars: storedItem?.sugars ?? initItem.sugars,
-                fiber: storedItem?.fiber ?? initItem.fiber,
-                sodium: storedItem?.sodium ?? initItem.sodium,
-                notes: storedItem?.notes ?? initItem.notes,
-            };
-        });
-
-        storedCat.items.forEach(storedItem => {
-            if (!mergedItems.some(mi => mi.id === storedItem.id)) {
-                mergedItems.push(storedItem);
-            }
-        });
-
-        return {
-          ...(initialCatDef || {}),
-          ...storedCat,
-          categoryName: storedCat.categoryName,
-          items: mergedItems.sort((a, b) => a.name.localeCompare(b.name)),
-        };
+      // Hydrate food preferences from saved settings, ensuring all items from initialFoodCategories are present
+      // and custom items from storage are also kept.
+      const hydratedFoodPrefs = initialFoodCategories.map(initialCat => {
+        const storedCat = savedFormSettings.foodPreferences.find(sc => sc.categoryName === initialCat.categoryName);
+        if (storedCat) {
+            const mergedItems = initialCat.items.map(initItem => {
+                const storedItem = storedCat.items.find(si => si.id === initItem.id);
+                return {
+                    ...initItem, // Start with defaults from initialFoodCategories
+                    ...(storedItem || {}), // Override with stored preferences
+                     // Ensure all nutritional fields are present, falling back to initial data or empty strings
+                    calories: storedItem?.calories ?? initItem.calories,
+                    carbs: storedItem?.carbs ?? initItem.carbs,
+                    protein: storedItem?.protein ?? initItem.protein,
+                    fat: storedItem?.fat ?? initItem.fat,
+                    sugars: storedItem?.sugars ?? initItem.sugars,
+                    fiber: storedItem?.fiber ?? initItem.fiber,
+                    sodium: storedItem?.sodium ?? initItem.sodium,
+                    notes: storedItem?.notes ?? initItem.notes,
+                };
+            });
+             // Add custom items from storage that were not in the initial category definition
+            storedCat.items.forEach(storedItem => {
+                if (!mergedItems.some(mi => mi.id === storedItem.id)) {
+                    mergedItems.push(storedItem);
+                }
+            });
+            return { ...initialCat, ...storedCat, items: mergedItems.sort((a,b) => a.name.localeCompare(b.name)) };
+        }
+        return initialCat; // Fallback to initial category if not found in storage (should not happen if saved correctly)
       });
+       // Add categories from storage that might not have been in initialFoodCategories (if structure changed or user added new cats somehow)
+       savedFormSettings.foodPreferences.forEach(storedCat => {
+        if(!hydratedFoodPrefs.some(hp => hp.categoryName === storedCat.categoryName)) {
+            hydratedFoodPrefs.push(storedCat);
+        }
+      });
+
+
       setFoodCategoriesInStorage(hydratedFoodPrefs);
 
       let newStartDate = addDays(new Date(), 1);
@@ -578,13 +594,14 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         const parsed = parseISO(savedFormSettings.endDate);
         if (isValid(parsed)) {
             parsed.setHours(0,0,0,0);
-            if (parsed >= newStartDate) {
+            if (parsed >= newStartDate) { // Ensure end date is not before start date
                  newEndDate = parsed;
             }
         }
       }
       setEndDate(newEndDate);
 
+      // This will trigger the useEffect to update durationInDays
       if (newStartDate && newEndDate && isValid(newStartDate) && isValid(newEndDate) && newEndDate >= newStartDate) {
         const diff = differenceInDays(newEndDate, newStartDate) + 1;
         setDurationInDays(diff.toString());
@@ -622,26 +639,36 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     }
 
     let foodAlreadyExists = false;
-    const updatedCategories = foodCategoriesFromStorage.map(category => {
+    const updatedCategories = foodCategoriesFromStorage.map(category => { // Check against current live data
       if (category.categoryName === newFoodData.categoryName) {
         if (category.items.some(item => item.name.toLowerCase() === newFoodData.name.trim().toLowerCase())) {
           setAddFoodFormError(`L'aliment "${newFoodData.name.trim()}" existe déjà dans la catégorie "${newFoodData.categoryName}".`);
           foodAlreadyExists = true;
-          return category;
+          return category; // Return category as is, no changes
         }
       }
       return category;
     });
 
     if(foodAlreadyExists) {
-      setFoodCategoriesInStorage(updatedCategories);
+      // Do not update storage if food already exists and an error is shown.
+      // The 'updatedCategories' above was just for the check.
       return;
     }
 
     const newFoodItem: FoodItem = {
-      id: `custom-${Date.now()}`,
-      ...newFoodData,
+      id: `custom-${Date.now()}`, // Consider crypto.randomUUID() for more robust IDs if available
+      name: newFoodData.name.trim(),
+      categoryName: newFoodData.categoryName,
       ig: newFoodData.ig || "(IG: N/A)",
+      calories: newFoodData.calories || "",
+      carbs: newFoodData.carbs || "",
+      protein: newFoodData.protein || "",
+      fat: newFoodData.fat || "",
+      sugars: newFoodData.sugars || "",
+      fiber: newFoodData.fiber || "",
+      sodium: newFoodData.sodium || "",
+      notes: newFoodData.notes || "",
       isFavorite: false,
       isDisliked: false,
       isAllergenic: false,
@@ -658,6 +685,8 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         newCategories[targetCategoryIndex] = updatedCategory;
         return newCategories;
       }
+      // If category doesn't exist (should not happen with Select for existing categories), create it.
+      // This path is unlikely if using the Select component for categories.
       return [...prevCategories, { categoryName: newFoodData.categoryName, items: [newFoodItem] }];
     });
 
@@ -666,29 +695,27 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       description: `${newFoodItem.name} a été ajouté à la catégorie ${newFoodData.categoryName}.`,
     });
     setIsAddFoodDialogOpen(false);
-    setNewFoodData(initialNewFoodData);
+    setNewFoodData(initialNewFoodData); // Reset form
   };
+
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <Accordion type="multiple" defaultValue={["config-base-item", "prefs-aliments-item", "conseils-aliments-item"]} className="w-full space-y-6">
+          
           <AccordionItem value="config-base-item" className="border-b-0">
             <Card className="shadow-lg">
-              <AccordionTrigger className="p-0 [&[data-state=open]>div>button>svg]:rotate-180">
+              <AccordionTrigger className="w-full p-0 text-left hover:no-underline [&[data-state=open]>div>button>svg]:rotate-180">
                 <CardHeader className="flex flex-row items-center justify-between w-full p-4">
-                  <div className="flex items-center gap-2">
-                    <Wand2 className="h-5 w-5 text-secondary-foreground" />
-                    <CardTitle className="text-lg font-semibold">Configuration de base</CardTitle>
-                  </div>
-                  {/* AccordionTrigger will place its own chevron here */}
+                    <div className="flex items-center gap-2">
+                        <Wand2 className="h-5 w-5 text-secondary-foreground" />
+                        <CardTitle className="text-lg font-semibold">Configuration de base</CardTitle>
+                    </div>
                 </CardHeader>
               </AccordionTrigger>
               <AccordionContent className="pt-0">
                 <CardContent>
-                  <CardDescription className="mb-4">
-                    Personnalisez vos préférences et générez un plan de repas adapté sur une période de votre choix.
-                  </CardDescription>
                   <div className="space-y-6">
                     <FormField
                       control={form.control}
@@ -731,14 +758,12 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                                   onSelect={(date) => {
                                     if (date) {
                                         const today = new Date();
-                                        today.setHours(0,0,0,0);
-                                        // Allow selecting today for start date if needed
-                                        if (date < addDays(today, -1) ) { /* Allow yesterday if necessary, for now it's today */
-                                        } else {
-                                          date.setHours(0,0,0,0);
+                                        today.setHours(0,0,0,0); // Compare with start of today
+                                        if (date >= today ) { 
+                                          date.setHours(0,0,0,0); // Ensure time is zeroed out
                                           setStartDate(date);
-                                          if (endDate && date > endDate) {
-                                            setEndDate(new Date(date));
+                                          if (endDate && date > endDate) { // If new start date is after current end date
+                                            setEndDate(new Date(date)); // Set end date to new start date
                                           }
                                         }
                                     }
@@ -747,7 +772,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                                   disabled={(date) => {
                                       const todayForDisable = new Date();
                                       todayForDisable.setHours(0,0,0,0);
-                                      return date < todayForDisable;
+                                      return date < todayForDisable; // Disable past dates
                                     }
                                   }
                                   initialFocus
@@ -778,15 +803,16 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                                   selected={endDate}
                                   onSelect={(date) => {
                                     if (date && startDate && isValid(startDate)) {
-                                        date.setHours(0,0,0,0);
-                                        if (date >= startDate) {
+                                        date.setHours(0,0,0,0); // Ensure time is zeroed out
+                                        if (date >= startDate) { // End date must be on or after start date
                                             setEndDate(date);
                                         }
                                     }
                                     setIsEndDatePickerOpen(false);
                                   }}
                                   disabled={(date) => {
-                                    const minDate = startDate && isValid(startDate) ? new Date(startDate) : new Date(0);
+                                    // Disable dates before startDate or if startDate is invalid
+                                    const minDate = startDate && isValid(startDate) ? new Date(startDate) : new Date(0); // Fallback to distant past if no valid start
                                     minDate.setHours(0,0,0,0);
                                     return date < minDate;
                                   }}
@@ -800,7 +826,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                           <Label htmlFor="duration-input" className="text-sm font-medium mb-1 block">Durée en jours</Label>
                           <Input
                               id="duration-input"
-                              type="text"
+                              type="text" // Changed to text to allow temporary empty/zero state
                               value={durationInDays}
                               onChange={handleDurationChange}
                               onBlur={handleDurationBlur}
@@ -820,172 +846,154 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
           </AccordionItem>
 
           <AccordionItem value="prefs-aliments-item" className="border-b-0">
-             <Card className="shadow-lg">
-                <AccordionTrigger className="p-0 [&[data-state=open]>div>button>svg]:rotate-180">
-                    <CardHeader className="flex flex-row items-center justify-between w-full p-4">
+            <Card className="shadow-lg">
+              <CardHeader className="flex flex-row items-center justify-between w-full p-4">
+                  <AccordionTrigger className="text-left hover:no-underline p-0 group [&[data-state=open]>svg]:-rotate-180">
+                    <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                            <ListFilter className="h-5 w-5 text-secondary-foreground" />
-                            <CardTitle className="text-lg font-semibold">Préférences alimentaires</CardTitle>
+                        <ListFilter className="h-5 w-5 text-secondary-foreground" />
+                        <CardTitle className="text-lg font-semibold">Préférences alimentaires</CardTitle>
                         </div>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="ml-auto mr-8" // mr-8 to leave space for accordion chevron
-                            onClick={() => {
-                                setNewFoodData(initialNewFoodData);
-                                setAddFoodFormError(null);
-                                setIsAddFoodDialogOpen(true);
-                            }}
-                            >
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Ajouter un aliment
-                        </Button>
-                    </CardHeader>
-                </AccordionTrigger>
-                <AccordionContent className="pt-0">
-                    <CardContent>
-                        <p className="text-sm text-muted-foreground whitespace-pre-line mb-3">
-                        Cochez vos aliments favoris, à éviter ou allergènes.
-                        <br/>
+                        <CardDescription className="mb-0 ml-7 -mt-1 text-xs text-muted-foreground">
+                        Cochez vos aliments favoris, à éviter ou allergènes.<br/>
                         Les aliments favoris seront privilégiés pour vos plans de repas.
-                        </p>
-                        <div className="max-h-[400px] overflow-y-auto p-1 rounded-md border">
-                        <Accordion type="multiple" className="w-full">
-                            {processedFoodCategories.map(category => {
-                            const CategoryIcon = categoryIcons[category.categoryName] || ListFilter;
-                            return (
-                                <AccordionItem value={category.categoryName} key={category.categoryName} className="border-b-0 last:border-b-0">
-                                <AccordionTrigger className="py-3 px-2 text-md font-semibold hover:no-underline hover:bg-muted/50 rounded-md">
-                                    <div className="flex items-center gap-2">
-                                    <CategoryIcon className="h-4 w-4 text-secondary-foreground" />
-                                    <span className="text-primary">{category.categoryName}</span>
-                                    </div>
-                                </AccordionTrigger>
-                                <AccordionContent className="pt-1 pb-2 px-2">
-                                    <ul className="space-y-1 pl-2">
-                                    {category.items.map(item => (
-                                        <li key={item.id} className="py-1 border-b border-border/50 last:border-b-0">
-                                        <div className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-x-2">
-                                            <div>
-                                            <span className={cn(
-                                                "text-sm font-medium",
-                                                item.isDisliked && "line-through",
-                                                item.isAllergenic && "text-destructive"
-                                            )}>{item.name}</span>
-                                            <span className={cn(
-                                                "text-xs text-muted-foreground ml-1",
-                                                item.isDisliked && "line-through",
-                                                item.isAllergenic && "text-destructive"
-                                            )}>{item.ig}</span>
-                                            </div>
-                                            <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="sm"
-                                            className="p-1 h-auto justify-self-end"
-                                            onClick={() => handleOpenNutritionalInfoDialog(item)}
-                                            title="Valeurs nutritionnelles"
-                                            >
-                                            <BarChart2 className="h-3.5 w-3.5" />
-                                            </Button>
-                                            <div className="flex items-center space-x-1 justify-self-end">
-                                            <Checkbox
-                                                id={`${item.id}-favorite`}
-                                                checked={item.isFavorite}
-                                                onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isFavorite", !!checked)}
-                                                aria-label={`Marquer ${item.name} comme favori`}
-                                                disabled={item.isDisliked || item.isAllergenic}
-                                            />
-                                            <Label htmlFor={`${item.id}-favorite`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${ (item.isDisliked || item.isAllergenic) ? 'opacity-50 cursor-not-allowed' : ''}`} title="Favori">
-                                                <Star className="h-3.5 w-3.5" />
-                                            </Label>
-                                            </div>
-                                            <div className="flex items-center space-x-1 justify-self-end">
-                                            <Checkbox
-                                                id={`${item.id}-disliked`}
-                                                checked={item.isDisliked}
-                                                onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isDisliked", !!checked)}
-                                                aria-label={`Marquer ${item.name} comme non aimé`}
-                                                disabled={item.isFavorite}
-                                            />
-                                            <Label htmlFor={`${item.id}-disliked`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${item.isFavorite ? 'opacity-50 cursor-not-allowed' : ''}`} title="Je n'aime pas">
-                                                <ThumbsDown className="h-3.5 w-3.5" />
-                                            </Label>
-                                            </div>
-                                            <div className="flex items-center space-x-1 justify-self-end">
-                                            <Checkbox
-                                                id={`${item.id}-allergenic`}
-                                                checked={item.isAllergenic}
-                                                onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isAllergenic", !!checked)}
-                                                aria-label={`Marquer ${item.name} comme allergène`}
-                                                disabled={item.isFavorite}
-                                            />
-                                            <Label htmlFor={`${item.id}-allergenic`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${item.isFavorite ? 'opacity-50 cursor-not-allowed' : ''}`} title="Allergie/Intolérance">
-                                                <AlertTriangle className="h-3.5 w-3.5" />
-                                            </Label>
-                                            </div>
-                                        </div>
-                                        </li>
-                                    ))}
-                                    </ul>
-                                </AccordionContent>
-                                </AccordionItem>
-                            );
-                            })}
-                        </Accordion>
-                        </div>
-                    </CardContent>
-                 </AccordionContent>
+                        </CardDescription>
+                    </div>
+                  </AccordionTrigger>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="ml-4 shrink-0"
+                  onClick={() => {
+                      setNewFoodData(initialNewFoodData);
+                      setAddFoodFormError(null);
+                      setIsAddFoodDialogOpen(true);
+                  }}
+                  >
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Ajouter un aliment
+                </Button>
+              </CardHeader>
+              <AccordionContent className="pt-0">
+                  <CardContent>
+                      <div className="max-h-[400px] overflow-y-auto p-1 rounded-md border mt-4">
+                      <Accordion type="multiple" className="w-full">
+                          {processedFoodCategories.map(category => {
+                          const CategoryIcon = categoryIcons[category.categoryName] || ListFilter;
+                          return (
+                              <AccordionItem value={category.categoryName} key={category.categoryName} className="border-b-0 last:border-b-0">
+                              <AccordionTrigger className="py-3 px-2 hover:no-underline hover:bg-muted/50 rounded-md">
+                                <div className="flex items-center gap-2">
+                                  <CategoryIcon className="h-4 w-4 text-secondary-foreground" />
+                                  <span className="text-md font-semibold text-primary">{category.categoryName}</span>
+                                </div>
+                              </AccordionTrigger>
+                              <AccordionContent className="pt-1 pb-2 px-2">
+                                  <ul className="space-y-1 pl-2">
+                                  {category.items.map(item => (
+                                      <li key={item.id} className="py-1 border-b border-border/50 last:border-b-0">
+                                      <div className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-x-2">
+                                          <div>
+                                          <span className={cn(
+                                              "text-sm font-medium",
+                                              item.isDisliked && "line-through",
+                                              item.isAllergenic && "text-destructive"
+                                          )}>{item.name}</span>
+                                          <span className={cn(
+                                              "text-xs text-muted-foreground ml-1",
+                                               item.isDisliked && "line-through",
+                                              item.isAllergenic && "text-destructive"
+                                          )}>{item.ig}</span>
+                                          </div>
+                                          <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          className="p-1 h-auto justify-self-end"
+                                          onClick={() => handleOpenNutritionalInfoDialog(item)}
+                                          title="Valeurs nutritionnelles"
+                                          >
+                                          <BarChart2 className="h-3.5 w-3.5" />
+                                          </Button>
+                                          <div className="flex items-center space-x-1 justify-self-end">
+                                          <Checkbox
+                                              id={`${item.id}-favorite`}
+                                              checked={item.isFavorite}
+                                              onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isFavorite", !!checked)}
+                                              aria-label={`Marquer ${item.name} comme favori`}
+                                              disabled={item.isDisliked || item.isAllergenic}
+                                          />
+                                          <Label htmlFor={`${item.id}-favorite`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${ (item.isDisliked || item.isAllergenic) ? 'opacity-50 cursor-not-allowed' : ''}`} title="Favori">
+                                              <Star className="h-3.5 w-3.5" />
+                                          </Label>
+                                          </div>
+                                          <div className="flex items-center space-x-1 justify-self-end">
+                                          <Checkbox
+                                              id={`${item.id}-disliked`}
+                                              checked={item.isDisliked}
+                                              onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isDisliked", !!checked)}
+                                              aria-label={`Marquer ${item.name} comme non aimé`}
+                                              disabled={item.isFavorite}
+                                          />
+                                          <Label htmlFor={`${item.id}-disliked`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${item.isFavorite ? 'opacity-50 cursor-not-allowed' : ''}`} title="Je n'aime pas">
+                                              <ThumbsDown className="h-3.5 w-3.5" />
+                                          </Label>
+                                          </div>
+                                          <div className="flex items-center space-x-1 justify-self-end">
+                                          <Checkbox
+                                              id={`${item.id}-allergenic`}
+                                              checked={item.isAllergenic}
+                                              onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isAllergenic", !!checked)}
+                                              aria-label={`Marquer ${item.name} comme allergène`}
+                                              disabled={item.isFavorite}
+                                          />
+                                          <Label htmlFor={`${item.id}-allergenic`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${item.isFavorite ? 'opacity-50 cursor-not-allowed' : ''}`} title="Allergie/Intolérance">
+                                              <AlertTriangle className="h-3.5 w-3.5" />
+                                          </Label>
+                                          </div>
+                                      </div>
+                                      </li>
+                                  ))}
+                                  </ul>
+                              </AccordionContent>
+                              </AccordionItem>
+                          );
+                          })}
+                      </Accordion>
+                      </div>
+                  </CardContent>
+                </AccordionContent>
             </Card>
           </AccordionItem>
 
           <AccordionItem value="conseils-aliments-item" className="border-b-0">
             <Card className="shadow-lg">
-                <AccordionTrigger className="p-0 [&[data-state=open]>div>button>svg]:rotate-180">
-                    <CardHeader className="flex flex-row items-center justify-between w-full p-4">
-                        <div className="flex items-center gap-2">
-                            <BookOpenText className="h-5 w-5 text-secondary-foreground" />
-                            <CardTitle className="text-lg font-semibold text-foreground">Conseils alimentaires optimisés pour Diabète de Type 2</CardTitle>
-                        </div>
-                    </CardHeader>
-                </AccordionTrigger>
-                <AccordionContent className="pt-0">
-                    <CardContent>
-                        <Accordion type="single" collapsible className="w-full">
-                        <AccordionItem value="dietary-advice-section">
-                            <AccordionTrigger className="text-sm font-semibold text-foreground hover:no-underline hover:bg-muted/50 rounded-md py-3 px-2">
-                            Afficher/Masquer les conseils
-                            </AccordionTrigger>
-                            <AccordionContent className="pt-1 pb-2 px-2">
-                            <FormField
-                                control={form.control}
-                                name="diabeticResearchSummary"
-                                render={({ field }) => (
-                                <FormItem className="mt-2">
-                                    <div className="mb-3 p-3 border rounded-md bg-background/50 max-h-60 overflow-y-auto">
-                                    <RichTextDisplay text={field.value} />
-                                    </div>
-                                    <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                        setEditingTips(form.getValues('diabeticResearchSummary'));
-                                        setIsEditTipsDialogOpen(true);
-                                    }}
-                                    >
-                                    Modifier les conseils
-                                    </Button>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
-                            </AccordionContent>
-                        </AccordionItem>
-                        </Accordion>
-                    </CardContent>
-                </AccordionContent>
+              <AccordionTrigger className="w-full p-0 text-left hover:no-underline [&[data-state=open]>div>button>svg]:rotate-180">
+                 <CardHeader className="flex flex-row items-center justify-between w-full p-4">
+                    <div className="flex items-center gap-2">
+                        <BookOpenText className="h-5 w-5 text-secondary-foreground" />
+                        <CardTitle className="text-lg font-semibold text-foreground">
+                            Conseils alimentaires optimisés pour Diabète de Type 2
+                        </CardTitle>
+                    </div>
+                </CardHeader>
+              </AccordionTrigger>
+              <AccordionContent className="pt-0">
+                  <CardContent>
+                    <div className="mb-3 p-3 border rounded-md bg-background/50 max-h-60 overflow-y-auto">
+                        <RichTextDisplay text={form.watch('diabeticResearchSummary')} />
+                    </div>
+                    <Button
+                        type="button"
+                        variant="link"
+                        onClick={handleOpenEditTipsDialog}
+                        className="mt-2 text-sm p-0 h-auto"
+                    >
+                        Modifier les conseils
+                    </Button>
+                  </CardContent>
+              </AccordionContent>
             </Card>
           </AccordionItem>
         </Accordion>
@@ -1226,3 +1234,5 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     </Form>
   );
 }
+
+    
