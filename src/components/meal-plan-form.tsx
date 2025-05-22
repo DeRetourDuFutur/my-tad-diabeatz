@@ -78,6 +78,11 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
 
 
   const [savedFormSettings, setSavedFormSettings] = useLocalStorage<FormSettings | null>("diabeatz-form-settings", null);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
 
   useEffect(() => {
@@ -96,6 +101,15 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
           return {
             ...initialItem, 
             ...(storedItem || {}), 
+            // Ensure all nutritional fields exist, falling back to defaults if not in storedItem
+            calories: storedItem?.calories ?? initialItem.calories,
+            carbs: storedItem?.carbs ?? initialItem.carbs,
+            protein: storedItem?.protein ?? initialItem.protein,
+            fat: storedItem?.fat ?? initialItem.fat,
+            sugars: storedItem?.sugars ?? initialItem.sugars,
+            fiber: storedItem?.fiber ?? initialItem.fiber,
+            sodium: storedItem?.sodium ?? initialItem.sodium,
+            notes: storedItem?.notes ?? initialItem.notes,
           };
         }),
       };
@@ -120,10 +134,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         setDurationInDays(diff.toString());
       }
     }
-    // If endDate becomes < startDate due to external set (e.g. loading settings),
-    // this effect won't correct durationInDays to "1" directly.
-    // The date picker logic for startDate's onSelect should handle adjusting endDate.
-  }, [startDate, endDate]);
+  }, [startDate, endDate, durationInDays]);
 
   // Update endDate when durationInDays (from input) or startDate changes
   useEffect(() => {
@@ -135,21 +146,19 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
           setEndDate(newEndDate);
         }
       }
-      // If durationInDays is not a valid number for calculation (e.g., empty, 0, >365),
-      // this effect won't change endDate. The onBlur of the duration input
-      // will correct durationInDays to "1", which will then trigger this effect.
     }
-  }, [durationInDays, startDate]);
+  }, [durationInDays, startDate, endDate]);
 
 
   const handleDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
+    // Allow empty string, or numbers between 1 and 365
     if (value === "" || /^\d+$/.test(value)) { 
       const numValue = parseInt(value, 10);
-      if (value === "" || (numValue >= 1 && numValue <= 365) ) { 
+      if (value === "" || (numValue >= 1 && numValue <= 365) ) { // Max 365 days, min 1 day
          setDurationInDays(value);
       } else if (numValue > 365) {
-         setDurationInDays("365");
+         setDurationInDays("365"); // Cap at 365
       } else { // handles "0", negative, or other non-empty invalid numbers
          setDurationInDays(value); // Allow typing, blur will sanitize
       }
@@ -159,9 +168,9 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   const handleDurationBlur = () => {
     const numDays = parseInt(durationInDays, 10);
     if (isNaN(numDays) || numDays <= 0) {
-      setDurationInDays("1"); 
+      setDurationInDays("1"); // Default to 1 if invalid or empty on blur
     } else if (numDays > 365) {
-      setDurationInDays("365");
+      setDurationInDays("365"); // Cap at 365
     } else {
       setDurationInDays(numDays.toString()); // Normalize, e.g., "05" to "5"
     }
@@ -409,6 +418,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                           }}
                           disabled={(date) => {
                               const minSelectableDate = new Date();
+                              minSelectableDate.setDate(minSelectableDate.getDate()); // Allow today for start date if needed, or use +1 for tomorrow
                               minSelectableDate.setHours(0,0,0,0);
                               return date < minSelectableDate;
                             } 
@@ -455,7 +465,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                   <Label htmlFor="duration-input" className="text-sm font-medium mb-1 block">Durée en jours</Label>
                   <Input
                       id="duration-input"
-                      type="text" // Changed to text to allow empty string during typing. Validation on blur.
+                      type="text" 
                       value={durationInDays}
                       onChange={handleDurationChange}
                       onBlur={handleDurationBlur}
@@ -579,7 +589,13 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                 <Save className="mr-2 h-4 w-4" />
                 Sauvegarder les paramètres
               </Button>
-              <Button type="button" variant="outline" onClick={handleLoadSettings} className="flex-1" disabled={!savedFormSettings && (typeof window !== 'undefined' && !localStorage.getItem("diabeatz-form-settings"))}>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={handleLoadSettings} 
+                className="flex-1" 
+                disabled={!isClient || (!savedFormSettings && typeof window !== 'undefined' && !window.localStorage.getItem("diabeatz-form-settings"))}
+              >
                 <Upload className="mr-2 h-4 w-4" />
                 Charger les paramètres
               </Button>
@@ -596,3 +612,4 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     
 
     
+
