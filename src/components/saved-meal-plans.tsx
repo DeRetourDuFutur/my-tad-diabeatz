@@ -25,7 +25,7 @@ type SavedMealPlansProps = {
 export function SavedMealPlans({ savedPlans, onLoadPlan, onDeletePlan }: SavedMealPlansProps) {
   return (
     <Card className="shadow-lg">
-      <Accordion type="single" collapsible defaultValue="saved-plans-item">
+      <Accordion type="single" collapsible> {/* Removed defaultValue="saved-plans-item" */}
         <AccordionItem value="saved-plans-item" className="border-b-0">
           <AccordionTrigger className="w-full text-left p-0 hover:no-underline">
             <CardHeader className="flex flex-row items-center justify-between w-full p-4">
