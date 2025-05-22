@@ -54,12 +54,62 @@ type MealPlanFormProps = {
   onMealPlanGenerated: (mealPlan: GenerateMealPlanOutput, planName?: string) => void;
 };
 
-const defaultResearchSummary = `- Concentrez-vous sur les grains entiers, les protéines maigres, les graisses saines et beaucoup de légumes non amylacés.
-- Contrôlez l'apport en glucides à chaque repas et collation.
-- Privilégiez les aliments à faible indice glycémique.
-- Assurez un apport suffisant en fibres.
-- Le contrôle des portions est essentiel.
-- Des horaires de repas réguliers aident à gérer la glycémie.`;
+const defaultResearchSummary = `Privilégiez la variété et la fraîcheur (en gras et vert)
+Cuisinez autant que possible à partir d’aliments frais et peu transformés, en variant les sources de nutriments sur la semaine.
+
+Aucun aliment n’est strictement interdit, mais il est préférable de limiter les produits ultra-transformés, les sucres ajoutés et les plats industriels.
+
+Faites la part belle aux légumes non amylacés (en gras)
+Consommez au moins 3 portions de légumes par jour, en privilégiant les légumes verts à feuilles, les crucifères, les légumes colorés et les courges.
+
+Remplissez la moitié de votre assiette de légumes à chaque repas pour augmenter l’apport en fibres et limiter l’absorption des glucides.
+
+Choisissez des céréales complètes et des légumineuses (en gras et vert)
+
+Remplacez les céréales raffinées (pain blanc, riz blanc) par des céréales complètes (pain complet, riz brun, quinoa, avoine).
+
+Intégrez des légumineuses (lentilles, pois chiches, haricots) au moins deux fois par semaine pour leur richesse en fibres et protéines végétales.
+
+Privilégiez les protéines maigres et les bonnes graisses (en gras et vert)
+
+Optez pour des sources de protéines maigres : volaille sans peau, poissons gras (saumon, sardine, maquereau) riches en oméga-3, œufs.
+
+Consommez des huiles végétales (olive, colza, tournesol), des avocats, des noix et des graines en quantité modérée pour favoriser les acides gras insaturés.
+
+Contrôlez la qualité et la quantité des glucides (en gras et vert)
+Répartissez les glucides de façon régulière à chaque repas et collation, en visant 45 à 75 g de glucides par repas, et 15 à 30 g par collation si nécessaire.
+
+Privilégiez les aliments à faible ou moyen indice glycémique (IG) : légumes, fruits à coque, légumineuses, céréales complètes.
+
+Limitez les aliments à IG élevé (pain blanc, pommes de terre, sodas, pâtisseries).
+
+Assurez un apport suffisant en fibres (en gras et vert)
+
+Consommez au moins 5 portions de fruits et légumes par jour, dont 2 à 3 fruits (entiers, non en jus).
+
+Les fibres ralentissent l’absorption des sucres et facilitent le contrôle de la glycémie.
+
+Maîtrisez les portions et respectez votre satiété (en gras et vert)
+Utilisez des assiettes plus petites, remplissez la moitié de légumes, et limitez la portion de féculents à la taille de votre poing.
+
+Écoutez vos signaux de faim et de satiété, prenez le temps de savourer vos repas.
+
+Structurez vos repas et collations (en gras et vert)
+Prenez 3 repas principaux par jour à horaires réguliers, sans sauter de repas.
+
+Si besoin, ajoutez 1 à 2 collations nutritives pour prévenir les hypoglycémies ou combler la faim, en privilégiant des aliments riches en fibres et protéines.
+
+Limitez le sel, l’alcool et les graisses saturées (en gras et vert)
+Réduisez la consommation de sel pour prévenir l’hypertension.
+
+Limitez l’alcool à un verre par jour pour les femmes, deux pour les hommes, en tenant compte de ses effets sur la glycémie.
+
+Privilégiez la volaille et limitez les viandes rouges et charcuteries à 500g par semaine maximum.
+
+Adaptez votre alimentation à votre mode de vie (en gras et vert)
+Tenez compte de vos horaires, préférences alimentaires et activité physique pour construire des repas adaptés et durables.
+
+N’hésitez pas à consulter un(e) diététicien(ne) pour un accompagnement personnalisé (en gras et rouge)`;
 
 export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   const [isLoading, setIsLoading] = useState(false);
@@ -585,7 +635,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
               name="diabeticResearchSummary"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Conseils à propos du régime Diabétique Type 2</FormLabel>
+                  <FormLabel>Conseils alimentaires optimisés pour Diabète de Type 2</FormLabel>
                   <FormControl>
                     <Textarea
                       placeholder="Ex: Focus sur les aliments à faible IG, contrôle des portions..."
@@ -646,3 +696,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
 
 
 
+
+
+    
