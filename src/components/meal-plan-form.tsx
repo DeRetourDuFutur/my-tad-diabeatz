@@ -74,6 +74,17 @@ Le contrôle des portions est essentiel.
 
 Des horaires de repas réguliers aident à gérer la glycémie.`;
 
+const dayCountToDurationString = (days: number): string | undefined => {
+  if (days <= 0) return undefined;
+  if (days === 7) return "1 semaine";
+  if (days === 14) return "2 semaines";
+  if (days === 21) return "3 semaines";
+  if (days === 28) return "4 semaines";
+  if (days === 30) return "1 mois"; // Consistent with current "1 mois" logic (adds 29 days)
+  if (days >= 1 && days <= 6) return `${days} jour${days > 1 ? 's' : ''}`;
+  return undefined; 
+};
+
 export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -99,15 +110,14 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       const initialItems = initialCategoryDefinition ? initialCategoryDefinition.items : [];
       
       return {
+        ...initialCategoryDefinition, // Ensure all base category props are present
         ...storedCategory, 
         categoryName: storedCategory.categoryName, 
-        items: storedCategory.items.map(storedItem => {
-          const initialItemDefinition = initialItems.find(
-            initItem => initItem.id === storedItem.id
-          );
+        items: initialItems.map(initialItem => { // Iterate over initial items to ensure all are present
+          const storedItem = storedCategory.items.find(si => si.id === initialItem.id);
           return {
-            ...(initialItemDefinition || {}), 
-            ...storedItem,                  
+            ...initialItem, // Base properties from initialFoodCategories
+            ...(storedItem || {}), // Overwrite with stored preferences if they exist
           };
         }),
       };
@@ -146,15 +156,28 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         default: daysToAdd = 0; break;
       }
       const newEndDate = addDays(startDate, daysToAdd);
-      if (!endDate || newEndDate !== endDate) { // Only set if different to avoid re-triggering if already correct
+      if (!endDate || differenceInDays(newEndDate, endDate) !== 0) { 
          setEndDate(newEndDate);
       }
     } else {
-      setEndDate(undefined);
+       if (endDate !== undefined) setEndDate(undefined);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps  
-  }, [startDate, planDurationValue, form.getValues('planDuration')]); 
-  // Added form.getValues('planDuration') for initialization consistency
+  }, [startDate, planDurationValue]); 
+
+  useEffect(() => {
+    if (startDate && endDate && endDate >= startDate) {
+      const diff = differenceInDays(endDate, startDate) + 1;
+      const newDurationString = dayCountToDurationString(diff);
+      
+      if (newDurationString && form.getValues('planDuration') !== newDurationString) {
+        form.setValue('planDuration', newDurationString, { 
+          shouldValidate: false, 
+          shouldDirty: true 
+        });
+      }
+    }
+  }, [startDate, endDate, form]);
 
   const handleFoodPreferenceChange = (categoryId: string, itemId: string, type: "isFavorite" | "isDisliked" | "isAllergenic", checked: boolean) => {
     setFoodCategoriesInStorage(prevCategories =>
@@ -354,7 +377,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Durée du plan</FormLabel>
-                   <div className="mb-1 text-sm font-medium">Calendrier du plan</div>
                   <div className="flex flex-col sm:flex-row gap-4 items-start">
                     <div className="w-full sm:w-1/2">
                       <Select onValueChange={field.onChange} value={field.value}>
@@ -378,54 +400,57 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="w-full sm:w-1/2 grid grid-cols-2 gap-2">
-                       <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full justify-start text-left font-normal h-10",
-                              !startDate && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarDays className="mr-2 h-4 w-4" />
-                            {startDate ? format(startDate, "PPP", { locale: fr }) : <span>Date début</span>}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={startDate}
-                            onSelect={(date) => {setStartDate(date); if (date && endDate && date > endDate) setEndDate(date);}}
-                            disabled={(date) => date < new Date(new Date().setDate(new Date().getDate() -1)) } 
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                       <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full justify-start text-left font-normal h-10",
-                              !endDate && "text-muted-foreground"
-                            )}
-                            disabled={!startDate}
-                          >
-                            <CalendarDays className="mr-2 h-4 w-4" />
-                            {endDate ? format(endDate, "PPP", { locale: fr }) : <span>Date fin</span>}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={endDate}
-                            onSelect={setEndDate}
-                            disabled={(date) => startDate ? date < startDate : date < new Date(new Date().setDate(new Date().getDate() -1)) }
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
+                    <div className="w-full sm:w-1/2 space-y-1.5">
+                       <div className="mb-1 text-sm font-medium">Calendrier du plan</div>
+                       <div className="grid grid-cols-2 gap-2">
+                         <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full justify-start text-left font-normal h-10",
+                                !startDate && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarDays className="mr-2 h-4 w-4" />
+                              {startDate ? format(startDate, "PPP", { locale: fr }) : <span>Date début</span>}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={startDate}
+                              onSelect={(date) => {setStartDate(date); if (date && endDate && date > endDate) setEndDate(date);}}
+                              disabled={(date) => date < new Date(new Date().setDate(new Date().getDate() -1)) } 
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                         <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full justify-start text-left font-normal h-10",
+                                !endDate && "text-muted-foreground"
+                              )}
+                              disabled={!startDate}
+                            >
+                              <CalendarDays className="mr-2 h-4 w-4" />
+                              {endDate ? format(endDate, "PPP", { locale: fr }) : <span>Date fin</span>}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={endDate}
+                              onSelect={setEndDate}
+                              disabled={(date) => startDate ? date < startDate : date < new Date(new Date().setDate(new Date().getDate() -1)) }
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
                     </div>
                   </div>
                   <FormDescription>
@@ -555,4 +580,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     </Card>
   );
 }
+    
+
     
