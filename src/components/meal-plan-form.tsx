@@ -18,7 +18,6 @@ import {
   FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-// Removed Textarea from here as it's no longer directly used for an editable field in the same way
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -39,6 +38,15 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { format, addDays, differenceInDays, isValid, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -136,14 +144,19 @@ const RichTextDisplay: React.FC<{ text: string }> = ({ text }) => {
     } else if (listItemMatch) {
       currentListItems.push(listItemMatch[1]);
     } else if (line.trim() === "" && currentListItems.length > 0) {
-      flushList();
+      // Preserve empty lines between sections if they are not list items
+      // flushList();
+      // elements.push(<div key={`br-${index}`} className="h-2" />); // Represents a small space
     } else if (line.trim() !== "") {
       flushList();
       elements.push(<p key={`p-${index}`} className="mb-1">{line}</p>);
+    } else { // Handle consecutive empty lines or empty lines after a title
+      flushList(); // Ensure any pending list is flushed
+      // Potentially add a space if needed, or let CSS margins handle it
     }
   });
 
-  flushList(); 
+  flushList(); // Flush any remaining list items at the end
 
   return <div className="text-sm prose prose-sm dark:prose-invert max-w-none">{elements}</div>;
 };
@@ -169,6 +182,8 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   const [isClient, setIsClient] = useState(false);
   const [isStartDatePickerOpen, setIsStartDatePickerOpen] = useState(false);
   const [isEndDatePickerOpen, setIsEndDatePickerOpen] = useState(false);
+  const [isEditTipsDialogOpen, setIsEditTipsDialogOpen] = useState(false);
+  const [editingTips, setEditingTips] = useState<string>("");
 
 
  useEffect(() => {
@@ -229,18 +244,22 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       if (durationInDays !== diff.toString()) {
         setDurationInDays(diff.toString());
       }
+    } else if (startDate && !endDate) { // If only start date is set, assume 1 day duration for input field
+        if (durationInDays !== "1") {
+             setDurationInDays("1");
+        }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps  
   }, [startDate, endDate]); 
 
   useEffect(() => {
+    if (!startDate || !isValid(startDate)) return;
+    
     const numDays = parseInt(durationInDays, 10);
-    if (startDate && isValid(startDate)) {
-      if (!isNaN(numDays) && numDays >= 1 && numDays <= 365) { 
-        const newEndDate = addDays(startDate, numDays - 1);
-        if (!endDate || !isValid(endDate) || newEndDate.getTime() !== endDate.getTime()) {
-          setEndDate(newEndDate);
-        }
+    if (!isNaN(numDays) && numDays >= 1 && numDays <= 365) { 
+      const newEndDate = addDays(startDate, numDays - 1);
+      if (!endDate || !isValid(endDate) || newEndDate.getTime() !== endDate.getTime()) {
+        setEndDate(newEndDate);
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -249,10 +268,12 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
 
   const handleDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    if (value === "" || (/^\d{1,3}$/.test(value) && parseInt(value, 10) <= 365)) { 
+    if (value === "" || (/^\d{1,3}$/.test(value) && parseInt(value, 10) <= 365 && parseInt(value, 10) > 0 )) { 
       setDurationInDays(value);
     } else if (/^\d+$/.test(value) && parseInt(value, 10) > 365) {
       setDurationInDays("365"); 
+    } else if (value === "0" || (value !== "" && parseInt(value,10) <=0 ) ) {
+      setDurationInDays("1");
     }
   };
   
@@ -594,7 +615,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
               <Label className="text-lg font-semibold">Préférences alimentaires</Label>
               <p className="text-sm text-muted-foreground whitespace-pre-line">
                 Cochez vos aliments favoris, à éviter ou allergènes.
-Les aliments favoris seront privilégiés pour vos plans de repas.
+                Les aliments favoris seront privilégiés pour vos plans de repas.
               </p>
               <div className="max-h-[400px] overflow-y-auto p-1 rounded-md border">
                 <Accordion type="multiple" className="w-full">
@@ -668,12 +689,23 @@ Les aliments favoris seront privilégiés pour vos plans de repas.
                   <FormField
                     control={form.control}
                     name="diabeticResearchSummary"
-                    render={({ field }) => (
+                    render={({ field }) => ( // field is used by react-hook-form to manage the value
                       <FormItem className="mt-2">
                         <div className="mb-3 p-3 border rounded-md bg-background/50 max-h-60 overflow-y-auto">
                            <RichTextDisplay text={field.value} />
                         </div>
-                        {/* The FormControl, Textarea, FormDescription, and FormMessage for diabeticResearchSummary are removed */}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setEditingTips(form.getValues('diabeticResearchSummary'));
+                            setIsEditTipsDialogOpen(true);
+                          }}
+                        >
+                          Modifier les conseils
+                        </Button>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -714,6 +746,36 @@ Les aliments favoris seront privilégiés pour vos plans de repas.
 
           </form>
         </Form>
+        <Dialog open={isEditTipsDialogOpen} onOpenChange={setIsEditTipsDialogOpen}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>Modifier les Conseils Alimentaires</DialogTitle>
+              <DialogDescription>
+                Modifiez le texte des conseils ci-dessous. Utilisez `**texte**` pour le gras.
+                Les annotations comme (en gras et vert) seront interprétées pour le style.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <Textarea
+                value={editingTips}
+                onChange={(e) => setEditingTips(e.target.value)}
+                className="min-h-[250px] text-sm" 
+                rows={15}
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsEditTipsDialogOpen(false)}>Annuler</Button>
+              <Button
+                onClick={() => {
+                  form.setValue('diabeticResearchSummary', editingTips, { shouldValidate: true, shouldDirty: true });
+                  setIsEditTipsDialogOpen(false);
+                }}
+              >
+                Enregistrer les modifications
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );
