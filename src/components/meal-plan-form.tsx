@@ -47,7 +47,6 @@ import type { FormSettings } from "@/lib/types";
 
 const formSchema = z.object({
   planName: z.string().optional(),
-  // planDuration: z.string().min(1, { message: "Veuillez sélectionner une durée." }), // Removed
   diabeticResearchSummary: z.string().min(20, { message: "Veuillez fournir un résumé de recherche pertinent." }),
 });
 
@@ -88,14 +87,18 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       const initialItems = initialCategoryDefinition ? initialCategoryDefinition.items : [];
       
       return {
+        // Start with initial definition to ensure all base fields are present
         ...initialCategoryDefinition, 
+        // Then spread the stored category which might have different preference flags
         ...storedCategory, 
+        // Ensure categoryName is from stored if it somehow differs (shouldn't)
         categoryName: storedCategory.categoryName, 
+        // Hydrate items: take initial item definition and merge stored preferences
         items: initialItems.map(initialItem => { 
           const storedItem = storedCategory.items.find(si => si.id === initialItem.id);
           return {
-            ...initialItem, 
-            ...(storedItem || {}), 
+            ...initialItem, // Base structure and default values (like placeholders for nutrition)
+            ...(storedItem || {}), // Apply stored preferences (isFavorite, isDisliked, isAllergenic)
           };
         }),
       };
@@ -108,12 +111,11 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       planName: "",
-      // planDuration: "1 jour", // Removed
       diabeticResearchSummary: defaultResearchSummary,
     },
   });
 
-  useEffect(() => {
+ useEffect(() => {
     if (startDate && endDate && endDate >= startDate) {
       const diff = differenceInDays(endDate, startDate) + 1;
       setCalculatedDurationDisplay(`${diff} jour${diff > 1 ? 's' : ''}`);
@@ -136,9 +138,10 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                   ? {
                       ...item,
                       [type]: checked,
+                      // Logic to ensure mutually exclusive states if needed
                       ...(type === "isFavorite" && checked && { isDisliked: false, isAllergenic: false }),
-                      ...(type === "isDisliked" && checked && { isFavorite: false }),
-                      ...(type === "isAllergenic" && checked && { isFavorite: false }),
+                      ...(type === "isDisliked" && checked && { isFavorite: false }), // Cannot be favorite if disliked
+                      ...(type === "isAllergenic" && checked && { isFavorite: false }), // Cannot be favorite if allergenic
                     }
                   : item
               ),
@@ -233,7 +236,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       item.fat && `Lipides: ${item.fat}`,
       item.fiber && `Fibres: ${item.fiber}`,
       item.sodium && `Sel/Sodium: ${item.sodium}`,
-    ].filter(Boolean); 
+    ].filter(Boolean); // Filter out undefined or empty strings
 
     if (infos.length === 0 && !item.notes) return null;
 
@@ -249,11 +252,10 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     const currentFormValues = form.getValues();
     const settingsToSave: FormSettings = {
       planName: currentFormValues.planName,
-      // planDuration: currentFormValues.planDuration, // Removed
       diabeticResearchSummary: currentFormValues.diabeticResearchSummary,
-      foodPreferences: foodCategoriesFromStorage, 
+      foodPreferences: foodCategoriesFromStorage, // Save the raw preferences
       startDate: startDate ? startDate.toISOString() : undefined,
-      endDate: endDate ? endDate.toISOString() : undefined, 
+      endDate: endDate ? endDate.toISOString() : undefined, // Save endDate as well
     };
     setSavedFormSettings(settingsToSave);
     toast({
@@ -266,12 +268,19 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     if (savedFormSettings) {
       form.reset({
         planName: savedFormSettings.planName || "",
-        // planDuration: savedFormSettings.planDuration, // Removed
         diabeticResearchSummary: savedFormSettings.diabeticResearchSummary,
       });
-      setFoodCategoriesInStorage(savedFormSettings.foodPreferences); 
+      setFoodCategoriesInStorage(savedFormSettings.foodPreferences); // This will trigger the useEffect to update processedFoodCategories
       setStartDate(savedFormSettings.startDate ? new Date(savedFormSettings.startDate) : new Date());
-      setEndDate(savedFormSettings.endDate ? new Date(savedFormSettings.endDate) : addDays(new Date (savedFormSettings.startDate || new Date()),0)); 
+      // Ensure endDate is also loaded and is not before startDate
+      const loadedEndDate = savedFormSettings.endDate ? new Date(savedFormSettings.endDate) : undefined;
+      const loadedStartDate = savedFormSettings.startDate ? new Date(savedFormSettings.startDate) : new Date();
+      if (loadedEndDate && loadedStartDate && loadedEndDate >= loadedStartDate) {
+        setEndDate(loadedEndDate);
+      } else {
+        setEndDate(addDays(loadedStartDate, 0)); // Default to same day or adjust as needed
+      }
+      
       toast({
         title: "Paramètres chargés!",
         description: "Votre configuration de formulaire a été restaurée.",
@@ -318,7 +327,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
             />
             
             <FormItem>
-              <FormLabel>Calendrier du plan</FormLabel>
+               <FormLabel>Calendrier du plan</FormLabel>
               <div className="flex flex-col sm:flex-row gap-4 items-center">
                 <Popover>
                   <PopoverTrigger asChild>
@@ -338,7 +347,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                       mode="single"
                       selected={startDate}
                       onSelect={(date) => {setStartDate(date); if (date && endDate && date > endDate) setEndDate(date);}}
-                      disabled={(date) => date < new Date(new Date().setDate(new Date().getDate() -1)) } 
+                      disabled={(date) => date < new Date(new Date().setDate(new Date().getDate() -1)) } // Prevent selecting past dates
                       initialFocus
                     />
                   </PopoverContent>
@@ -351,7 +360,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                         "w-full sm:w-auto justify-start text-left font-normal h-10 flex-1",
                         !endDate && "text-muted-foreground"
                       )}
-                      disabled={!startDate}
+                      disabled={!startDate} // Disable if no start date
                     >
                       <CalendarDays className="mr-2 h-4 w-4" />
                       {endDate ? format(endDate, "PPP", { locale: fr }) : <span>Date fin</span>}
@@ -362,7 +371,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                       mode="single"
                       selected={endDate}
                       onSelect={setEndDate}
-                      disabled={(date) => startDate ? date < startDate : date < new Date(new Date().setDate(new Date().getDate() -1)) }
+                      disabled={(date) => startDate ? date < startDate : date < new Date(new Date().setDate(new Date().getDate() -1)) } // Prevent end date before start date
                       initialFocus
                     />
                   </PopoverContent>
@@ -372,7 +381,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                 </div>
               </div>
               <FormDescription>
-                Choisissez la date de début et de fin du plan.
+                Choisissez la date de début et de fin du plan. Cela vous indiquera la durée du plan en jours
               </FormDescription>
             </FormItem>
 
@@ -503,3 +512,4 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     
 
     
+
