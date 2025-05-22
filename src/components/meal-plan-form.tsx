@@ -112,41 +112,33 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     },
   });
 
-  // Update durationInDays when startDate or endDate changes
+  // Update durationInDays when startDate or endDate changes from pickers
   useEffect(() => {
     if (startDate && endDate && isValid(startDate) && isValid(endDate) && endDate >= startDate) {
       const diff = differenceInDays(endDate, startDate) + 1;
-      setDurationInDays(diff.toString());
-    } else if (startDate && endDate && isValid(startDate) && isValid(endDate) && endDate < startDate) {
-      // If endDate is before startDate, reset endDate to startDate and duration to 1
-      setEndDate(startDate);
-      setDurationInDays("1");
+      if (durationInDays !== diff.toString()) {
+        setDurationInDays(diff.toString());
+      }
     }
+    // If endDate becomes < startDate due to external set (e.g. loading settings),
+    // this effect won't correct durationInDays to "1" directly.
+    // The date picker logic for startDate's onSelect should handle adjusting endDate.
   }, [startDate, endDate]);
 
-  // Update endDate when durationInDays or startDate changes
+  // Update endDate when durationInDays (from input) or startDate changes
   useEffect(() => {
     const numDays = parseInt(durationInDays, 10);
-    if (!isNaN(numDays) && numDays > 0 && startDate && isValid(startDate)) {
-      const newEndDate = addDays(startDate, numDays - 1);
-      if (!endDate || !isValid(endDate) || newEndDate.getTime() !== endDate.getTime()) {
-        if (newEndDate >= startDate) {
-            setEndDate(newEndDate);
-        } else {
-            setEndDate(startDate); 
-            setDurationInDays("1"); 
+    if (startDate && isValid(startDate)) {
+      if (!isNaN(numDays) && numDays >= 1 && numDays <= 365) {
+        const newEndDate = addDays(startDate, numDays - 1);
+        if (!endDate || !isValid(endDate) || newEndDate.getTime() !== endDate.getTime()) {
+          setEndDate(newEndDate);
         }
       }
-    } else if ((!isNaN(numDays) && numDays <= 0 && startDate && isValid(startDate)) || (durationInDays === "" && startDate && isValid(startDate))) {
-        const newEndDate = addDays(startDate, 0);
-        if(!endDate || !isValid(endDate) || newEndDate.getTime() !== endDate.getTime()){
-             setEndDate(newEndDate);
-        }
-        if(durationInDays !== "1") { 
-            setDurationInDays("1");
-        }
+      // If durationInDays is not a valid number for calculation (e.g., empty, 0, >365),
+      // this effect won't change endDate. The onBlur of the duration input
+      // will correct durationInDays to "1", which will then trigger this effect.
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [durationInDays, startDate]);
 
 
@@ -154,19 +146,24 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     const value = e.target.value;
     if (value === "" || /^\d+$/.test(value)) { 
       const numValue = parseInt(value, 10);
-      if (value === "" || (numValue > 0 && numValue <= 365) ) { 
+      if (value === "" || (numValue >= 1 && numValue <= 365) ) { 
          setDurationInDays(value);
-      } else if (numValue <=0 && value !== "") {
-         setDurationInDays("1");
       } else if (numValue > 365) {
          setDurationInDays("365");
+      } else { // handles "0", negative, or other non-empty invalid numbers
+         setDurationInDays(value); // Allow typing, blur will sanitize
       }
     }
   };
   
   const handleDurationBlur = () => {
-    if (durationInDays === "" || parseInt(durationInDays, 10) <= 0) {
+    const numDays = parseInt(durationInDays, 10);
+    if (isNaN(numDays) || numDays <= 0) {
       setDurationInDays("1"); 
+    } else if (numDays > 365) {
+      setDurationInDays("365");
+    } else {
+      setDurationInDays(numDays.toString()); // Normalize, e.g., "05" to "5"
     }
   };
 
@@ -331,7 +328,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       } else {
         setEndDate(addDays(new Date(), 1)); 
       }
-      
+      // The useEffect for [startDate, endDate] will update durationInDays
       toast({
         title: "Paramètres chargés!",
         description: "Votre configuration de formulaire a été restaurée.",
@@ -376,10 +373,8 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
             
             <FormItem>
               <FormLabel>Calendrier du plan</FormLabel>
-              <div className="flex flex-col md:flex-row gap-4 md:gap-3 items-end"> {/* items-end for vertical alignment */}
-                {/* Date Pickers Area - takes up more space */}
+              <div className="flex flex-col md:flex-row gap-4 md:gap-3 items-end">
                 <div className="flex-grow flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                  {/* Start Date Picker Div */}
                   <div className="flex-1 min-w-[140px] sm:min-w-[170px]">
                     <Label htmlFor="start-date-picker-trigger" className="text-sm font-medium mb-1 block">Date de début</Label>
                     <Popover>
@@ -402,17 +397,27 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                           selected={startDate}
                           onSelect={(date) => {
                             if (date) {
-                                setStartDate(date);
+                                const today = new Date();
+                                today.setHours(0,0,0,0);
+                                if (date < today) {
+                                  setStartDate(addDays(new Date(),1)); // Set to tomorrow if past date selected
+                                } else {
+                                  setStartDate(date);
+                                }
                                 if (endDate && date > endDate) setEndDate(date); 
                             }
                           }}
-                          disabled={(date) => date < new Date(new Date().setDate(new Date().getDate() -1)) } 
+                          disabled={(date) => {
+                              const minSelectableDate = new Date();
+                              minSelectableDate.setHours(0,0,0,0);
+                              return date < minSelectableDate;
+                            } 
+                          } 
                           initialFocus
                         />
                       </PopoverContent>
                     </Popover>
                   </div>
-                  {/* End Date Picker Div */}
                   <div className="flex-1 min-w-[140px] sm:min-w-[170px]">
                     <Label htmlFor="end-date-picker-trigger" className="text-sm font-medium mb-1 block">Date de fin</Label>
                     <Popover>
@@ -436,9 +441,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                           selected={endDate}
                           onSelect={setEndDate}
                           disabled={(date) => {
-                            const today = new Date();
-                            today.setHours(0, 0, 0, 0); // Ensure comparison is date-only
-                            const minDate = startDate && isValid(startDate) ? new Date(startDate) : today;
+                            const minDate = startDate && isValid(startDate) ? new Date(startDate) : new Date(new Date().setDate(new Date().getDate()));
                             minDate.setHours(0,0,0,0);
                             return date < minDate;
                           }}
@@ -448,13 +451,11 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                     </Popover>
                   </div>
                 </div>
-                {/* Duration Area */}
-                <div className="w-full md:w-auto flex-shrink-0"> {/* flex-shrink-0 to prevent shrinking too much */}
+                <div className="w-full md:w-auto flex-shrink-0">
                   <Label htmlFor="duration-input" className="text-sm font-medium mb-1 block">Durée en jours</Label>
                   <Input
                       id="duration-input"
-                      type="number"
-                      min="1"
+                      type="text" // Changed to text to allow empty string during typing. Validation on blur.
                       value={durationInDays}
                       onChange={handleDurationChange}
                       onBlur={handleDurationBlur}
@@ -473,7 +474,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
               <Label className="text-lg font-semibold">Préférences alimentaires</Label>
               <p className="text-sm text-muted-foreground">
                 Cochez vos aliments favoris, à éviter ou allergènes.
-                <br />
+                <br/>
                 Les aliments favoris seront privilégiés pour vos plans de repas.
               </p>
               <div className="max-h-[400px] overflow-y-auto p-1 rounded-md border">
