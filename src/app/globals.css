@@ -4,8 +4,8 @@
 
 @layer base {
   :root {
-    --background: 100 22% 95%; /* Very light desaturated green #F0F4EF */
-    --foreground: 100 10% 20%; /* Darker desaturated green for text */
+    --background: 100 22% 95%; /* Very light desaturated green #F0F4EF - Kept as a neutral base */
+    --foreground: 100 10% 20%; /* Darker desaturated green for text - Kept as a neutral base */
 
     --card: 100 22% 98%;
     --card-foreground: 100 10% 20%;
@@ -13,47 +13,48 @@
     --popover: 100 22% 98%;
     --popover-foreground: 100 10% 20%;
 
-    --primary: 107 32% 65%; /* Soft olive green, slightly darker #A0C492 */
-    --primary-foreground: 107 60% 15%; /* Dark, saturated green for text on primary */
+    --primary: 217 70% 50%; /* Deep Blue */
+    --primary-foreground: 217 70% 95%; /* Very light blue/white for text on primary */
 
-    --secondary: 107 25% 85%; /* Lighter shade of olive green */
+    --secondary: 107 25% 85%; /* Lighter shade of olive green - Kept as secondary, can be adjusted if needed */
     --secondary-foreground: 107 20% 25%;
 
     --muted: 100 20% 90%;
     --muted-foreground: 100 10% 45%;
 
-    --accent: 37 29% 56%; /* Muted gold #B2976B */
+    --accent: 37 29% 56%; /* Muted gold #B2976B - Kept as accent */
     --accent-foreground: 37 40% 10%; /* Dark brown for text on accent */
 
     --destructive: 0 70% 65%; /* Soft, desaturated red */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 107 20% 80%;
-    --input: 107 20% 88%;
-    --ring: 107 32% 55%; /* Ring color, darker than new primary */
+    --border: 107 20% 80%; /* Kept, can be made more neutral if desired */
+    --input: 107 20% 88%; /* Kept, can be made more neutral if desired */
+    --ring: 217 70% 45%; /* Ring color, darker shade of new primary blue */
 
-    --chart-1: 107 32% 65%; /* Match new primary */
-    --chart-2: 37 29% 56%;
-    --chart-3: 107 25% 85%;
-    --chart-4: 100 22% 80%;
-    --chart-5: 37 20% 70%;
+    --chart-1: 217 70% 50%; /* Match new primary blue */
+    --chart-2: 37 29% 56%; /* Muted Gold */
+    --chart-3: 107 25% 85%; /* Kept as is, former secondary green */
+    --chart-4: 100 22% 80%; /* Kept as is */
+    --chart-5: 37 20% 70%; /* Kept as is */
     
     --radius: 0.5rem;
 
     /* Sidebar specific colors - Light Theme */
-    --sidebar-background: 100 22% 92%;
-    --sidebar-foreground: 100 10% 20%;
-    --sidebar-primary: 107 32% 60%; /* Adjusted sidebar primary */
-    --sidebar-primary-foreground: 107 60% 15%;
-    --sidebar-accent: 37 29% 50%;
+    /* Assuming sidebar primary elements should also follow the new blue theme */
+    --sidebar-background: 100 22% 92%; /* Kept as a light neutral base for sidebar */
+    --sidebar-foreground: 100 10% 20%; /* Kept */
+    --sidebar-primary: 217 70% 48%; /* Deep blue for sidebar primary elements */
+    --sidebar-primary-foreground: 217 70% 95%; /* Light text for sidebar primary */
+    --sidebar-accent: 37 29% 50%; /* Muted gold accent in sidebar */
     --sidebar-accent-foreground: 37 40% 10%;
-    --sidebar-border: 107 20% 75%;
-    --sidebar-ring: 107 32% 50%; /* Adjusted sidebar ring */
+    --sidebar-border: 107 20% 75%; /* Kept, can be made more neutral */
+    --sidebar-ring: 217 70% 40%; /* Adjusted sidebar ring for blue theme */
   }
 
   .dark {
-    --background: 100 10% 10%;
-    --foreground: 100 20% 90%;
+    --background: 100 10% 10%; /* Kept */
+    --foreground: 100 20% 90%; /* Kept */
 
     --card: 100 10% 15%;
     --card-foreground: 100 20% 90%;
@@ -61,10 +62,10 @@
     --popover: 100 10% 15%;
     --popover-foreground: 100 20% 90%;
 
-    --primary: 107 32% 55%; /* Darker olive for dark mode primary, adjusted */
-    --primary-foreground: 107 30% 95%; /* Light text for dark mode primary */
+    --primary: 217 70% 60%; /* Deep Blue for dark mode primary, slightly lighter */
+    --primary-foreground: 217 70% 95%; /* Light text for dark mode primary */
 
-    --secondary: 107 25% 30%;
+    --secondary: 107 25% 30%; /* Kept */
     --secondary-foreground: 100 20% 90%;
 
     --muted: 100 10% 20%;
@@ -76,25 +77,25 @@
     --destructive: 0 60% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 107 20% 25%;
-    --input: 107 20% 20%;
-    --ring: 107 32% 45%; /* Ring color for dark mode, adjusted */
+    --border: 107 20% 25%; /* Kept, can be made more neutral */
+    --input: 107 20% 20%; /* Kept, can be made more neutral */
+    --ring: 217 70% 55%; /* Ring color for dark mode, shade of new primary blue */
     
-    --chart-1: 107 32% 55%; /* Match new dark primary */
+    --chart-1: 217 70% 60%; /* Match new dark primary blue */
     --chart-2: 37 29% 60%;
     --chart-3: 107 25% 40%;
     --chart-4: 100 15% 30%;
     --chart-5: 37 20% 50%;
 
     /* Sidebar specific colors - Dark Theme */
-    --sidebar-background: 100 10% 12%;
-    --sidebar-foreground: 100 20% 85%;
-    --sidebar-primary: 107 32% 50%; /* Adjusted dark sidebar primary */
-    --sidebar-primary-foreground: 107 30% 95%;
+    --sidebar-background: 100 10% 12%; /* Kept */
+    --sidebar-foreground: 100 20% 85%; /* Kept */
+    --sidebar-primary: 217 70% 58%; /* Deep blue for dark sidebar primary */
+    --sidebar-primary-foreground: 217 70% 95%;
     --sidebar-accent: 37 29% 55%;
     --sidebar-accent-foreground: 37 30% 15%;
-    --sidebar-border: 107 20% 20%;
-    --sidebar-ring: 107 32% 40%; /* Adjusted dark sidebar ring */
+    --sidebar-border: 107 20% 20%; /* Kept, can be made more neutral */
+    --sidebar-ring: 217 70% 50%; /* Adjusted dark sidebar ring for blue theme */
   }
 }
 
