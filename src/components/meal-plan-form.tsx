@@ -244,15 +244,12 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   );
   const [processedFoodCategories, setProcessedFoodCategories] = useState<FoodCategory[]>(initialFoodCategories);
 
-  // State for date/duration selection
   const [selectionMode, setSelectionMode] = useState<'dates' | 'duration'>('dates');
   
-  // For "Par Dates" mode
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [displayDurationFromDates, setDisplayDurationFromDates] = useState<string>("1 jour");
   
-  // For "Par Durée" mode
   const [durationInDays, setDurationInDays] = useState<string>("1"); 
   const [durationModeStartDate, setDurationModeStartDate] = useState<Date | undefined>(undefined);
   const [displayEndDateFromDuration, setDisplayEndDateFromDuration] = useState<Date | undefined>(undefined);
@@ -283,7 +280,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     },
   });
 
-  useEffect(() => {
+ useEffect(() => {
     setIsClient(true);
   }, []);
 
@@ -291,19 +288,18 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     if (isClient) {
       const tomorrow = startOfDay(addDays(new Date(), 1));
 
-      if (!startDate) setStartDate(tomorrow);
-      if (!endDate) setEndDate(new Date(tomorrow)); // for 1 day duration initially for "dates" mode
-      
-      if (!durationModeStartDate) setDurationModeStartDate(tomorrow);
-      // durationInDays is already "1" by default via useState for "duration" mode
-
       if (savedFormSettings) {
-        handleLoadSettings(); 
+        handleLoadSettings();
+      } else {
+        // Initialize dates only if not loading from settings
+        if (!startDate) setStartDate(tomorrow);
+        if (!endDate) setEndDate(new Date(tomorrow)); // for 1 day duration initially for "dates" mode
+        if (!durationModeStartDate) setDurationModeStartDate(tomorrow);
+        // durationInDays is already "1" by default via useState for "duration" mode
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClient]); 
-
+  }, [isClient]); // Removed savedFormSettings from deps to avoid re-init loop
 
   useEffect(() => {
     const hydratedCategories = foodCategoriesFromStorage.map(storedCategory => {
@@ -344,7 +340,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     setProcessedFoodCategories(hydratedCategories);
   }, [foodCategoriesFromStorage]);
 
-  // Update display duration when startDate or endDate changes (for "Par Dates" mode)
+
   useEffect(() => {
     if (selectionMode === 'dates' && startDate && endDate && isValid(startDate) && isValid(endDate) && !isBefore(endDate, startDate)) {
       const diff = differenceInDays(endDate, startDate) + 1;
@@ -354,17 +350,23 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     }
   }, [startDate, endDate, selectionMode]);
 
-  // Update displayable endDate when durationInDays or durationModeStartDate changes (for "Par Durée" mode)
+
   useEffect(() => {
     if (selectionMode === 'duration' && durationModeStartDate && isValid(durationModeStartDate)) {
       const numDays = parseInt(durationInDays, 10);
       if (!isNaN(numDays) && numDays >= 1 && numDays <= 365) {
-        setDisplayEndDateFromDuration(addDays(durationModeStartDate, numDays - 1));
+         const newEndDate = addDays(durationModeStartDate, numDays - 1);
+         if (!isEqual(newEndDate, displayEndDateFromDuration || new Date(0))) { // Avoid unnecessary updates
+            setDisplayEndDateFromDuration(newEndDate);
+         }
       } else {
-        setDisplayEndDateFromDuration(undefined); 
+        if (displayEndDateFromDuration !== undefined) { // Avoid unnecessary updates
+            setDisplayEndDateFromDuration(undefined); 
+        }
       }
     }
-  }, [durationInDays, durationModeStartDate, selectionMode]);
+  }, [durationInDays, durationModeStartDate, selectionMode, displayEndDateFromDuration]);
+
 
   const handleDurationInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -658,6 +660,14 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   }, [savedFormSettings, form, setFoodCategoriesInStorage]); 
 
 
+  useEffect(() => {
+    if (isClient && savedFormSettings && (startDate === undefined || endDate === undefined || durationModeStartDate === undefined)) {
+        handleLoadSettings();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isClient, savedFormSettings]);
+
+
   const handleAddNewFoodChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setNewFoodData(prev => ({ ...prev, [name]: value }));
@@ -731,9 +741,9 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   if (!isClient) {
     return (
       <div className="space-y-6">
-        <Card className="shadow-lg"><CardHeader><CardTitle>Chargement...</CardTitle></CardHeader><CardContent><Loader2 className="animate-spin" /></CardContent></Card>
-        <Card className="shadow-lg"><CardHeader><CardTitle>Chargement...</CardTitle></CardHeader><CardContent><Loader2 className="animate-spin" /></CardContent></Card>
-        <Card className="shadow-lg"><CardHeader><CardTitle>Chargement...</CardTitle></CardHeader><CardContent><Loader2 className="animate-spin" /></CardContent></Card>
+        <Card className="shadow-lg"><CardHeader><CardTitle className="text-lg font-semibold">Chargement...</CardTitle></CardHeader><CardContent><Loader2 className="animate-spin" /></CardContent></Card>
+        <Card className="shadow-lg"><CardHeader><CardTitle className="text-lg font-semibold">Chargement...</CardTitle></CardHeader><CardContent><Loader2 className="animate-spin" /></CardContent></Card>
+        <Card className="shadow-lg"><CardHeader><CardTitle className="text-lg font-semibold">Chargement...</CardTitle></CardHeader><CardContent><Loader2 className="animate-spin" /></CardContent></Card>
       </div>
     );
   }
@@ -772,7 +782,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                       />
                       
                       <FormItem>
-                        <FormLabel className="text-base font-medium">Calendrier / Durée</FormLabel>
+                        <FormLabel className="text-base font-medium mb-2 block">Calendrier / Durée</FormLabel>
                          <FormDescriptionComponent className="mb-3">
                           Choisissez la date de début et de fin du plan ou indiquez le nombre de jours souhaité.
                         </FormDescriptionComponent>
@@ -814,7 +824,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                                       if (date) {
                                         const newStartDate = startOfDay(date);
                                         const today = startOfDay(new Date());
-                                        if (isBefore(newStartDate, today)) {
+                                        if (isBefore(newStartDate, today)) { // Allow today
                                           setStartDate(today);
                                           if (endDate && isBefore(endDate, today)) setEndDate(new Date(today));
                                         } else {
@@ -860,7 +870,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                                       setIsEndDatePickerOpen(false);
                                     }}
                                     disabled={(date) => {
-                                      const minDate = startDate && isValid(startDate) ? new Date(startDate) : startOfDay(addDays(new Date(), -1));
+                                      const minDate = startDate && isValid(startDate) ? new Date(startDate) : startOfDay(addDays(new Date(),-1)); // ensure minDate is valid
                                       return isBefore(startOfDay(date), minDate);
                                     }}
                                     initialFocus
@@ -868,8 +878,8 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                                 </PopoverContent>
                               </Popover>
                             </div>
-                            <div className="pt-1 text-sm text-primary min-w-[80px] text-right sm:text-left">
-                              {displayDurationFromDates}
+                            <div className="sm:h-10 sm:flex sm:items-center text-sm text-primary min-w-[80px] text-right sm:text-left sm:justify-start">
+                              {displayDurationFromDates !== "Durée invalide" && displayDurationFromDates}
                             </div>
                           </div>
                         )}
@@ -911,7 +921,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                                 </PopoverContent>
                               </Popover>
                             </div>
-                            <div className="w-full sm:w-auto md:w-32">
+                            <div className="w-full sm:w-auto md:w-24">
                               <Label htmlFor="duration-input-field" className="text-sm font-medium mb-1 block">Durée en jours</Label>
                               <Input
                                 id="duration-input-field"
@@ -923,9 +933,12 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                                 placeholder="Jours"
                               />
                             </div>
-                            <div className="flex-1 pt-1 text-sm text-primary space-y-1 min-w-[150px] sm:min-w-[180px]">
+                            <div className="flex-1 text-sm text-primary sm:h-10 sm:flex sm:items-center min-w-[150px] sm:min-w-[180px]">
                                 {displayEndDateFromDuration && isValid(displayEndDateFromDuration) && (
-                                    <div><span className="font-medium text-muted-foreground">Fin du plan:</span> {format(displayEndDateFromDuration, "PPP", { locale: fr })}</div>
+                                    <div>
+                                        <span className="font-medium text-muted-foreground">Fin du plan: </span>
+                                        {format(displayEndDateFromDuration, "PPP", { locale: fr })}
+                                    </div>
                                 )}
                             </div>
                           </div>
@@ -1059,7 +1072,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
           
           <AccordionItem value="conseils-aliments-item" className="border-b-0">
              <Card className="shadow-lg">
-                <AccordionTrigger className="w-full text-left p-0 hover:no-underline text-sm font-semibold py-3 px-2">
+                <AccordionTrigger className="w-full text-left p-0 hover:no-underline">
                   <CardHeader className="flex flex-row items-center justify-between w-full p-4">
                      <div className="flex items-center gap-2">
                        <BookOpenText className="h-5 w-5 text-secondary-foreground" />
@@ -1078,7 +1091,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                       type="button"
                       variant="link"
                       onClick={handleOpenEditTipsDialog}
-                      className="mt-2 text-sm p-0 h-auto"
+                      className="text-sm p-0 h-auto"
                     >
                       Modifier les conseils
                     </Button>
@@ -1099,6 +1112,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                 onClick={handleLoadSettings}
                 className="w-full sm:flex-1"
                 disabled={!isClient || (!savedFormSettings && (typeof window !== 'undefined' && !localStorage.getItem("diabeatz-form-settings")))}
+
             >
                 <Upload className="mr-2 h-4 w-4" />
                 Charger les paramètres
