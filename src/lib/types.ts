@@ -44,10 +44,9 @@ export interface StoredMealPlan extends GenerateMealPlanOutput {
 
 export interface FormSettings {
   planName?: string;
-  // planDuration: string; // Removed as per user request
   diabeticResearchSummary: string;
   foodPreferences: FoodCategory[];
   startDate?: string; // ISO string for localStorage
   endDate?: string; // ISO string for localStorage
+  durationInDays?: string; // User inputted duration as string
 }
-
