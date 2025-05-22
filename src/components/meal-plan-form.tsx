@@ -55,56 +55,45 @@ type MealPlanFormProps = {
 };
 
 const defaultResearchSummary = `**Privilégiez la variété et la fraîcheur (en gras et vert)**
-Cuisinez autant que possible à partir d’aliments frais et peu transformés, en variant les sources de nutriments sur la semaine.
-
-Aucun aliment n’est strictement interdit, mais il est préférable de limiter les produits ultra-transformés, les sucres ajoutés et les plats industriels.
+- Cuisinez autant que possible à partir d’aliments frais et peu transformés, en variant les sources de nutriments sur la semaine.
+- Aucun aliment n’est strictement interdit, mais il est préférable de limiter les produits ultra-transformés, les sucres ajoutés et les plats industriels.
 
 **Faites la part belle aux légumes non amylacés (en gras)**
-Consommez au moins 3 portions de légumes par jour, en privilégiant les légumes verts à feuilles, les crucifères, les légumes colorés et les courges.
-
-Remplissez la moitié de votre assiette de légumes à chaque repas pour augmenter l’apport en fibres et limiter l’absorption des glucides.
+- Consommez au moins 3 portions de légumes par jour, en privilégiant les légumes verts à feuilles, les crucifères, les légumes colorés et les courges.
+- Remplissez la moitié de votre assiette de légumes à chaque repas pour augmenter l’apport en fibres et limiter l’absorption des glucides.
 
 **Choisissez des céréales complètes et des légumineuses (en gras et vert)**
-Remplacez les céréales raffinées (pain blanc, riz blanc) par des céréales complètes (pain complet, riz brun, quinoa, avoine).
-
-Intégrez des légumineuses (lentilles, pois chiches, haricots) au moins deux fois par semaine pour leur richesse en fibres et protéines végétales.
+- Remplacez les céréales raffinées (pain blanc, riz blanc) par des céréales complètes (pain complet, riz brun, quinoa, avoine).
+- Intégrez des légumineuses (lentilles, pois chiches, haricots) au moins deux fois par semaine pour leur richesse en fibres et protéines végétales.
 
 **Privilégiez les protéines maigres et les bonnes graisses (en gras et vert)**
-Optez pour des sources de protéines maigres : volaille sans peau, poissons gras (saumon, sardine, maquereau) riches en oméga-3, œufs.
-
-Consommez des huiles végétales (olive, colza, tournesol), des avocats, des noix et des graines en quantité modérée pour favoriser les acides gras insaturés.
+- Optez pour des sources de protéines maigres : volaille sans peau, poissons gras (saumon, sardine, maquereau) riches en oméga-3, œufs.
+- Consommez des huiles végétales (olive, colza, tournesol), des avocats, des noix et des graines en quantité modérée pour favoriser les acides gras insaturés.
 
 **Contrôlez la qualité et la quantité des glucides (en gras et vert)**
-Répartissez les glucides de façon régulière à chaque repas et collation, en visant 45 à 75 g de glucides par repas, et 15 à 30 g par collation si nécessaire.
-
-Privilégiez les aliments à faible ou moyen indice glycémique (IG) : légumes, fruits à coque, légumineuses, céréales complètes.
-
-Limitez les aliments à IG élevé (pain blanc, pommes de terre, sodas, pâtisseries).
+- Répartissez les glucides de façon régulière à chaque repas et collation, en visant 45 à 75 g de glucides par repas, et 15 à 30 g par collation si nécessaire.
+- Privilégiez les aliments à faible ou moyen indice glycémique (IG) : légumes, fruits à coque, légumineuses, céréales complètes.
+- Limitez les aliments à IG élevé (pain blanc, pommes de terre, sodas, pâtisseries).
 
 **Assurez un apport suffisant en fibres (en gras et vert)**
-Consommez au moins 5 portions de fruits et légumes par jour, dont 2 à 3 fruits (entiers, non en jus).
-
-Les fibres ralentissent l’absorption des sucres et facilitent le contrôle de la glycémie.
+- Consommez au moins 5 portions de fruits et légumes par jour, dont 2 à 3 fruits (entiers, non en jus).
+- Les fibres ralentissent l’absorption des sucres et facilitent le contrôle de la glycémie.
 
 **Maîtrisez les portions et respectez votre satiété (en gras et vert)**
-Utilisez des assiettes plus petites, remplissez la moitié de légumes, et limitez la portion de féculents à la taille de votre poing.
-
-Écoutez vos signaux de faim et de satiété, prenez le temps de savourer vos repas.
+- Utilisez des assiettes plus petites, remplissez la moitié de légumes, et limitez la portion de féculents à la taille de votre poing.
+- Écoutez vos signaux de faim et de satiété, prenez le temps de savourer vos repas.
 
 **Structurez vos repas et collations (en gras et vert)**
-Prenez 3 repas principaux par jour à horaires réguliers, sans sauter de repas.
-
-Si besoin, ajoutez 1 à 2 collations nutritives pour prévenir les hypoglycémies ou combler la faim, en privilégiant des aliments riches en fibres et protéines.
+- Prenez 3 repas principaux par jour à horaires réguliers, sans sauter de repas.
+- Si besoin, ajoutez 1 à 2 collations nutritives pour prévenir les hypoglycémies ou combler la faim, en privilégiant des aliments riches en fibres et protéines.
 
 **Limitez le sel, l’alcool et les graisses saturées (en gras et vert)**
-Réduisez la consommation de sel pour prévenir l’hypertension.
-
-Limitez l’alcool à un verre par jour pour les femmes, deux pour les hommes, en tenant compte de ses effets sur la glycémie.
-
-Privilégiez la volaille et limitez les viandes rouges et charcuteries à 500g par semaine maximum.
+- Réduisez la consommation de sel pour prévenir l’hypertension.
+- Limitez l’alcool à un verre par jour pour les femmes, deux pour les hommes, en tenant compte de ses effets sur la glycémie.
+- Privilégiez la volaille et limitez les viandes rouges et charcuteries à 500g par semaine maximum.
 
 **Adaptez votre alimentation à votre mode de vie (en gras et vert)**
-Tenez compte de vos horaires, préférences alimentaires et activité physique pour construire des repas adaptés et durables.
+- Tenez compte de vos horaires, préférences alimentaires et activité physique pour construire des repas adaptés et durables.
 
 **N’hésitez pas à consulter un(e) diététicien(ne) pour un accompagnement personnalisé (en gras et rouge)**`;
 
@@ -131,8 +120,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
 
 
   useEffect(() => {
-    // Initialize dates on client mount to avoid hydration errors
-    // and only if they haven't been set by loaded settings.
     if (!startDate) {
       const tomorrow = addDays(new Date(), 1);
       tomorrow.setHours(0,0,0,0); 
@@ -140,7 +127,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       if (!endDate) { 
         const alsoTomorrow = new Date(tomorrow);
         setEndDate(alsoTomorrow);
-        // durationInDays will be set by the effect below
       }
     }
     setIsClient(true);
@@ -188,7 +174,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     },
   });
 
-  // Update durationInDays when startDate or endDate changes from pickers
   useEffect(() => {
     if (startDate && endDate && isValid(startDate) && isValid(endDate) && endDate >= startDate) {
       const diff = differenceInDays(endDate, startDate) + 1;
@@ -196,9 +181,9 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         setDurationInDays(diff.toString());
       }
     }
-  }, [startDate, endDate]); // CORRECTED: Only depends on startDate and endDate
+  // eslint-disable-next-line react-hooks/exhaustive-deps  
+  }, [startDate, endDate]); 
 
-  // Update endDate when durationInDays (from input) or startDate changes
   useEffect(() => {
     const numDays = parseInt(durationInDays, 10);
     if (startDate && isValid(startDate)) {
@@ -209,16 +194,16 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         }
       }
     }
-  }, [durationInDays, startDate]); // CORRECTED: Only depends on durationInDays and startDate
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [durationInDays, startDate]); 
 
 
   const handleDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    // Allow empty string for intermediate input, or positive numbers up to 3 digits
     if (value === "" || (/^\d{1,3}$/.test(value) && parseInt(value, 10) <= 365)) { 
       setDurationInDays(value);
     } else if (/^\d+$/.test(value) && parseInt(value, 10) > 365) {
-      setDurationInDays("365"); // Cap at 365
+      setDurationInDays("365"); 
     }
   };
   
@@ -229,7 +214,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     } else if (numDays > 365) {
       setDurationInDays("365"); 
     } else {
-      setDurationInDays(numDays.toString()); // Normalize
+      setDurationInDays(numDays.toString()); 
     }
   };
 
@@ -390,19 +375,18 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       }
       setStartDate(newStartDate);
 
-      let newEndDate = new Date(newStartDate); // Default to same as start day (1 day duration)
+      let newEndDate = new Date(newStartDate); 
       if (savedFormSettings.endDate) {
         const parsed = parseISO(savedFormSettings.endDate);
         if (isValid(parsed)) {
             parsed.setHours(0,0,0,0);
-            if (parsed >= newStartDate) { // Ensure end date is not before start date
+            if (parsed >= newStartDate) { 
                  newEndDate = parsed;
             }
         }
       }
       setEndDate(newEndDate);
       
-      // Duration will be recalculated by useEffect based on newStartDate and newEndDate
       toast({
         title: "Paramètres chargés!",
         description: "Votre configuration de formulaire a été restaurée.",
@@ -627,26 +611,35 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
               </div>
             </div>
 
-            <FormField
-              control={form.control}
-              name="diabeticResearchSummary"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Conseils alimentaires optimisés pour Diabète de Type 2</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Ex: Focus sur les aliments à faible IG, contrôle des portions..."
-                      className="min-h-[150px] resize-y"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Ce résumé aide l'IA à adapter le plan à vos besoins et aux dernières recommandations.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="dietary-advice-section">
+                <AccordionTrigger className="text-md font-semibold text-primary hover:no-underline hover:bg-muted/50 rounded-md py-3 px-2">
+                  Conseils alimentaires optimisés pour Diabète de Type 2
+                </AccordionTrigger>
+                <AccordionContent className="pt-1 pb-2 px-2">
+                  <FormField
+                    control={form.control}
+                    name="diabeticResearchSummary"
+                    render={({ field }) => (
+                      <FormItem className="mt-2">
+                        <FormControl>
+                          <Textarea
+                            placeholder="Ex: Focus sur les aliments à faible IG, contrôle des portions..."
+                            className="min-h-[150px] resize-y"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormDescription className="mt-2">
+                          Ce résumé aide l'IA à adapter le plan à vos besoins et aux dernières recommandations.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+
             <Button type="submit" disabled={isLoading} className="w-full">
               {isLoading ? (
                 <>
@@ -694,6 +687,8 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
 
 
 
+
+    
 
     
 
