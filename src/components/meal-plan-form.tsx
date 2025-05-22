@@ -23,7 +23,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star, CalendarDays } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Accordion,
   AccordionContent,
@@ -40,6 +40,15 @@ import {
 import useLocalStorage from "@/hooks/use-local-storage";
 import type { FoodCategory, FoodItem } from "@/lib/food-data"; 
 import { initialFoodCategories } from "@/lib/food-data"; 
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { format, addDays } from "date-fns";
+import { fr } from "date-fns/locale";
 
 
 const formSchema = z.object({
@@ -64,6 +73,10 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   );
 
   const [processedFoodCategories, setProcessedFoodCategories] = useState<FoodCategory[]>(initialFoodCategories);
+
+  const [startDate, setStartDate] = useState<Date | undefined>(new Date());
+  const [endDate, setEndDate] = useState<Date | undefined>();
+
 
   useEffect(() => {
     const hydratedCategories = foodCategoriesFromStorage.map(storedCategory => {
@@ -95,6 +108,28 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       diabeticResearchSummary: defaultResearchSummary,
     },
   });
+
+  const planDurationValue = form.watch('planDuration');
+
+  useEffect(() => {
+    if (startDate) {
+      const duration = planDurationValue || form.getValues('planDuration');
+      let daysToAdd = 0;
+      switch (duration) {
+        case "1 jour": daysToAdd = 0; break;
+        case "3 jours": daysToAdd = 2; break;
+        case "5 jours": daysToAdd = 4; break;
+        case "1 semaine": daysToAdd = 6; break;
+        case "2 semaines": daysToAdd = 13; break;
+        default:
+          setEndDate(startDate);
+          return;
+      }
+      setEndDate(addDays(startDate, daysToAdd));
+    } else {
+      setEndDate(undefined);
+    }
+  }, [startDate, planDurationValue, form]);
 
   const handleFoodPreferenceChange = (categoryId: string, itemId: string, type: "isFavorite" | "isDisliked" | "isAllergenic", checked: boolean) => {
     setFoodCategoriesInStorage(prevCategories =>
@@ -239,24 +274,63 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
               name="planDuration"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Durée du plan</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />
-                        <SelectValue placeholder="Sélectionner une durée" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="1 jour">1 jour</SelectItem>
-                      <SelectItem value="3 jours">3 jours</SelectItem>
-                      <SelectItem value="5 jours">5 jours</SelectItem>
-                      <SelectItem value="1 semaine">1 semaine</SelectItem>
-                      <SelectItem value="2 semaines">2 semaines</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <FormLabel>Durée et Période du plan</FormLabel>
+                  <div className="flex gap-4 items-center">
+                    <div className="w-1/2">
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger id="planDurationSelect">
+                            <CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />
+                            <SelectValue placeholder="Sélectionner une durée" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="1 jour">1 jour</SelectItem>
+                          <SelectItem value="3 jours">3 jours</SelectItem>
+                          <SelectItem value="5 jours">5 jours</SelectItem>
+                          <SelectItem value="1 semaine">1 semaine</SelectItem>
+                          <SelectItem value="2 semaines">2 semaines</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="w-1/2">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full justify-start text-left font-normal h-10",
+                              !startDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarDays className="mr-2 h-4 w-4" />
+                            {startDate ? (
+                              endDate ? (
+                                <>
+                                  {format(startDate, "PPP", { locale: fr })} - {format(endDate, "PPP", { locale: fr })}
+                                </>
+                              ) : (
+                                format(startDate, "PPP", { locale: fr })
+                              )
+                            ) : (
+                              <span>Choisir une période</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={startDate}
+                            onSelect={setStartDate}
+                            disabled={(date) => date < new Date(new Date().setHours(0,0,0,0)) }
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
                   <FormDescription>
-                    Choisissez pour combien de temps le plan doit être généré.
+                    Choisissez la durée et la date de début. L'IA utilisera la durée sélectionnée pour la génération.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -280,7 +354,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                         <ul className="space-y-2 pl-2">
                           {category.items.map(item => (
                             <li key={item.id} className="py-1.5 border-b border-border/50 last:border-b-0">
-                              <div className="grid grid-cols-[1fr_auto_auto_auto] items-start gap-x-2"> {/* Changed items-center to items-start for better alignment with multi-line nutritional info */}
+                              <div className="grid grid-cols-[1fr_auto_auto_auto] items-start gap-x-2">
                                 <div>
                                   <span className="text-sm">{item.name} <span className="text-xs text-muted-foreground">{item.ig}</span></span>
                                   {renderNutritionalInfo(item)}
@@ -372,4 +446,4 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   );
 }
 
-    
+      
