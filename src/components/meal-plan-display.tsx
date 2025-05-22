@@ -25,7 +25,7 @@ const MealComponentCard: React.FC<{ component: MealComponent; typeTitle?: string
   if (isSnack) IconForType = Cookie;
   else if (typeTitle === "Entrée") IconForType = Soup;
   else if (typeTitle === "Plat Principal") IconForType = Beef;
-  else if (typeTitle === "Fromage") IconForType = Grape; // Changed from CheeseIcon
+  else if (typeTitle === "Fromage") IconForType = Grape; 
   else if (typeTitle === "Dessert") IconForType = Apple;
 
 
@@ -111,7 +111,7 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
     return (
       <Card className="flex flex-col items-center justify-center p-8 min-h-[300px] text-center shadow-lg">
         <ChefHat className="h-16 w-16 text-muted-foreground mb-4" />
-        <CardTitle className="text-xl mb-2">Votre Plan Repas Apparaîtra Ici</CardTitle>
+        <CardTitle className="text-xl mb-2">Vos plans repas</CardTitle>
         <CardDescription>
           Utilisez le formulaire pour générer un nouveau plan repas personnalisé.
         </CardDescription>
@@ -149,9 +149,9 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
               </TabsTrigger>
             ))}
           </TabsList>
-          <ScrollArea className="h-[calc(100vh-380px)] lg:h-auto lg:max-h-[calc(100vh-320px)] pr-3 -mr-3"> {/* Adjusted padding for scrollbar */}
+          <ScrollArea className="h-[calc(100vh-380px)] lg:h-auto lg:max-h-[calc(100vh-320px)] pr-3 -mr-3"> 
             {mealPlan.days.map((day, dayIndex) => (
-              <TabsContent key={day.dayIdentifier || `day-content-${dayIndex}`} value={day.dayIdentifier || `day-content-${dayIndex}`}>
+              <TabsContent key={day.dayIdentifier || `day-content-${dayIndex}`} value={day.dayIdentifier || `day-${dayIndex}`}> {/* Ensure unique value here if dayIdentifier can be missing */}
                 <div className="space-y-6">
 
                   {/* Breakfast */}
@@ -256,3 +256,5 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
     </Card>
   );
 }
+
+    
