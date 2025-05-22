@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star, CalendarDays, Save, Upload, ListFilter, PlusCircle, BookOpenText, BarChart2, Apple, Carrot, Nut, Wheat, Bean, Beef, Milk, Shell as OilIcon, Blend } from "lucide-react";
+import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star, CalendarDays, Save, Upload, ListFilter, PlusCircle, BookOpenText, Info, BarChart2, Apple, Carrot, Nut, Wheat, Bean, Beef, Milk, Shell as OilIcon, Blend } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import {
   Accordion,
@@ -245,12 +245,10 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   
   const [selectionMode, setSelectionMode] = useState<'dates' | 'duration'>('dates');
   
-  // States for "Par Dates" mode
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [displayDurationFromDates, setDisplayDurationFromDates] = useState<string>("1 jour");
   
-  // States for "Par Durée" mode
   const [durationInDays, setDurationInDays] = useState<string>("1"); 
   const [durationModeStartDate, setDurationModeStartDate] = useState<Date | undefined>(undefined);
   const [displayEndDateFromDuration, setDisplayEndDateFromDuration] = useState<Date | undefined>(undefined);
@@ -289,26 +287,17 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     if (isClient) {
       const tomorrow = startOfDay(addDays(new Date(), 1));
       if (savedFormSettings) {
-        // handleLoadSettings will be called which sets dates
+        handleLoadSettings();
       } else {
-        // Initialize dates for "Par Dates" mode
         setStartDate(tomorrow);
-        setEndDate(new Date(tomorrow)); // for 1 day duration initially
-        // Initialize date and duration for "Par Durée" mode
+        setEndDate(new Date(tomorrow)); 
         setDurationModeStartDate(tomorrow);
         setDurationInDays("1");
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClient]);
+  }, [isClient, savedFormSettings]); // handleLoadSettings might not be stable, savedFormSettings ensures it runs when settings are loaded
 
-  // Effect to handle loading settings once they are available from localStorage
-  useEffect(() => {
-    if (isClient && savedFormSettings) {
-        handleLoadSettings();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClient, savedFormSettings]); // Trigger when savedFormSettings is hydrated
 
   useEffect(() => {
     const hydratedCategories = foodCategoriesFromStorage.map(storedCategory => {
@@ -350,7 +339,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   }, [foodCategoriesFromStorage]);
 
 
-  // Update display duration when in "Par Dates" mode and dates change
   useEffect(() => {
     if (selectionMode === 'dates' && startDate && endDate && isValid(startDate) && isValid(endDate) && !isBefore(endDate, startDate)) {
       const diff = differenceInDays(endDate, startDate) + 1;
@@ -361,7 +349,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   }, [startDate, endDate, selectionMode]);
 
 
-  // Update display end date when in "Par Durée" mode and duration or start date changes
   useEffect(() => {
     if (selectionMode === 'duration' && durationModeStartDate && isValid(durationModeStartDate)) {
       const numDays = parseInt(durationInDays, 10);
@@ -881,7 +868,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                                       setIsEndDatePickerOpen(false);
                                     }}
                                     disabled={(date) => {
-                                      const minDate = startDate && isValid(startDate) ? new Date(startDate) : startOfDay(addDays(new Date(),-1)); 
+                                      const minDate = startDate && isValid(startDate) ? new Date(startDate) : startOfDay(new Date()); 
                                       return isBefore(startOfDay(date), minDate);
                                     }}
                                     initialFocus
@@ -933,7 +920,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                               </Popover>
                             </div>
                             <div className="w-full sm:w-auto md:w-24">
-                              <Label htmlFor="duration-input-field" className="text-sm font-medium mb-1 block">Durée en jour(s)</Label>
+                              <Label htmlFor="duration-input-field" className="text-sm font-medium mb-1 block">Jour(s)</Label>
                               <Input
                                 id="duration-input-field"
                                 type="text" 
@@ -997,7 +984,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                           const CategoryIcon = categoryIcons[category.categoryName] || ListFilter;
                           return (
                               <AccordionItem value={category.categoryName} key={category.categoryName} className="border-b-0 last:border-b-0">
-                              <AccordionTrigger className="py-3 px-2 hover:no-underline hover:bg-muted/50 rounded-md">
+                              <AccordionTrigger className="py-3 px-2 hover:no-underline hover:bg-muted/50 rounded-md flex-1">
                                 <div className="flex items-center gap-2">
                                   <CategoryIcon className="h-4 w-4 text-secondary-foreground" />
                                   <span className="text-md font-semibold text-primary">{category.categoryName}</span>
