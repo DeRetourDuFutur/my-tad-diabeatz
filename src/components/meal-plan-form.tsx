@@ -678,7 +678,7 @@ Les aliments favoris seront privilégiés pour vos plans de repas.
 
             <Accordion type="single" collapsible className="w-full">
               <AccordionItem value="dietary-advice-section">
-                <AccordionTrigger className="text-md font-semibold text-primary hover:no-underline hover:bg-muted/50 rounded-md py-3 px-2">
+                <AccordionTrigger className="text-md font-semibold text-foreground hover:no-underline hover:bg-muted/50 rounded-md py-3 px-2">
                   Conseils alimentaires optimisés pour Diabète de Type 2
                 </AccordionTrigger>
                 <AccordionContent className="pt-1 pb-2 px-2">
@@ -763,3 +763,5 @@ Les aliments favoris seront privilégiés pour vos plans de repas.
     
 
     
+
+      
