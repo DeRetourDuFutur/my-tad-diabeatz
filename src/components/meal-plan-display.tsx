@@ -5,9 +5,15 @@ import { useEffect } from "react";
 import type { GenerateMealPlanOutput, DailyMealPlan, MealComponent, Breakfast, LunchDinner } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChefHat, Save, Utensils, Lightbulb, Clock, ClipboardList, GlassWater, Soup, Beef, Apple, Grape, Cookie } from "lucide-react"; // Changed CheeseIcon to Grape, Added Cookie for snacks
+import { ChefHat, Save, Utensils, Lightbulb, Clock, ClipboardList, GlassWater, Soup, Beef, Apple, Grape, Cookie } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 type MealPlanDisplayProps = {
   mealPlan: GenerateMealPlanOutput | null;
@@ -20,12 +26,12 @@ const MealComponentCard: React.FC<{ component: MealComponent; typeTitle?: string
   if (!component || !component.title) return null;
 
   let hasPreviousContent = false;
-  
+
   let IconForType = Utensils;
   if (isSnack) IconForType = Cookie;
   else if (typeTitle === "Entrée") IconForType = Soup;
   else if (typeTitle === "Plat Principal") IconForType = Beef;
-  else if (typeTitle === "Fromage") IconForType = Grape; 
+  else if (typeTitle === "Fromage") IconForType = Grape;
   else if (typeTitle === "Dessert") IconForType = Apple;
 
 
@@ -64,7 +70,7 @@ const MealComponentCard: React.FC<{ component: MealComponent; typeTitle?: string
             { (hasPreviousContent = true) }
           </div>
         )}
-        
+
         {component.recipe && (
           <div className={`${hasPreviousContent ? 'pt-2 border-t border-border/50' : ''}`}>
             <h4 className="font-medium mb-0.5 text-xs text-foreground/90">Recette :</h4>
@@ -109,12 +115,26 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
 
   if (!mealPlan || !mealPlan.days || mealPlan.days.length === 0) {
     return (
-      <Card className="flex flex-col items-center justify-center p-8 min-h-[300px] text-center shadow-lg">
-        <ChefHat className="h-16 w-16 text-muted-foreground mb-4" />
-        <CardTitle className="text-lg font-semibold mb-2">Vos plans repas</CardTitle>
-        <CardDescription>
-          Utilisez le formulaire pour générer un nouveau plan repas personnalisé.
-        </CardDescription>
+      <Card className="shadow-lg">
+        <Accordion type="single" collapsible defaultValue="meal-display-placeholder-item">
+          <AccordionItem value="meal-display-placeholder-item" className="border-b-0">
+            <AccordionTrigger className="p-0 [&[data-state=open]>div>button>svg]:rotate-180">
+              <CardHeader className="flex flex-row items-center justify-between w-full p-4">
+                <div className="flex items-center gap-2">
+                  <ChefHat className="h-5 w-5 text-secondary-foreground" />
+                  <CardTitle className="text-lg font-semibold">Vos plans repas</CardTitle>
+                </div>
+              </CardHeader>
+            </AccordionTrigger>
+            <AccordionContent className="pt-0">
+              <CardContent className="flex flex-col items-center justify-center p-8 min-h-[200px] text-center">
+                <CardDescription>
+                  Utilisez le formulaire pour générer un nouveau plan repas personnalisé.
+                </CardDescription>
+              </CardContent>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       </Card>
     );
   }
@@ -149,9 +169,9 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
               </TabsTrigger>
             ))}
           </TabsList>
-          <ScrollArea className="h-[calc(100vh-380px)] lg:h-auto lg:max-h-[calc(100vh-320px)] pr-3 -mr-3"> 
+          <ScrollArea className="h-[calc(100vh-380px)] lg:h-auto lg:max-h-[calc(100vh-320px)] pr-3 -mr-3">
             {mealPlan.days.map((day, dayIndex) => (
-              <TabsContent key={day.dayIdentifier || `day-content-${dayIndex}`} value={day.dayIdentifier || `day-${dayIndex}`}> {/* Ensure unique value here if dayIdentifier can be missing */}
+              <TabsContent key={day.dayIdentifier || `day-content-${dayIndex}`} value={day.dayIdentifier || `day-${dayIndex}`}>
                 <div className="space-y-6">
 
                   {/* Breakfast */}
@@ -256,5 +276,3 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
     </Card>
   );
 }
-
-    

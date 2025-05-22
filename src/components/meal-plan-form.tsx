@@ -30,8 +30,8 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import useLocalStorage from "@/hooks/use-local-storage";
-import type { FoodCategory, FoodItem } from "@/lib/food-data"; 
-import { initialFoodCategories } from "@/lib/food-data"; 
+import type { FoodCategory, FoodItem } from "@/lib/food-data";
+import { initialFoodCategories } from "@/lib/food-data";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -74,51 +74,69 @@ type MealPlanFormProps = {
 const defaultResearchSummary = `**Privilégiez la variété et la fraîcheur (en gras et bleu)**
 - Cuisinez autant que possible à partir d’aliments frais et peu transformés, en variant les sources de nutriments sur la semaine.
 - Aucun aliment n’est strictement interdit, mais il est préférable de limiter les produits ultra-transformés, les sucres ajoutés et les plats industriels.
+
 **Faites la part belle aux légumes non amylacés (en gras et bleu)**
 - Consommez au moins 3 portions de légumes par jour, en privilégiant les légumes verts à feuilles, les crucifères, les légumes colorés et les courges.
 - Remplissez la moitié de votre assiette de légumes à chaque repas pour augmenter l’apport en fibres et limiter l’absorption des glucides.
+
 **Choisissez des céréales complètes et des légumineuses (en gras et bleu)**
 - Remplacez les céréales raffinées (pain blanc, riz blanc) par des céréales complètes (pain complet, riz brun, quinoa, avoine).
 - Intégrez des légumineuses (lentilles, pois chiches, haricots) au moins deux fois par semaine pour leur richesse en fibres et protéines végétales.
+
 **Privilégiez les protéines maigres et les bonnes graisses (en gras et bleu)**
 - Optez pour des sources de protéines maigres : volaille sans peau, poissons gras (saumon, sardine, maquereau) riches en oméga-3, œufs.
 - Consommez des huiles végétales (olive, colza, tournesol), des avocats, des noix et des graines en quantité modérée pour favoriser les acides gras insaturés.
+
 **Contrôlez la qualité et la quantité des glucides (en gras et bleu)**
 - Répartissez les glucides de façon régulière à chaque repas et collation, en visant 45 à 75 g de glucides par repas, et 15 à 30 g par collation si nécessaire.
 - Privilégiez les aliments à faible ou moyen indice glycémique (IG) : légumes, fruits à coque, légumineuses, céréales complètes.
 - Limitez les aliments à IG élevé (pain blanc, pommes de terre, sodas, pâtisseries).
+
 **Assurez un apport suffisant en fibres (en gras et bleu)**
 - Consommez au moins 5 portions de fruits et légumes par jour, dont 2 à 3 fruits (entiers, non en jus).
 - Les fibres ralentissent l’absorption des sucres et facilitent le contrôle de la glycémie.
+
 **Maîtrisez les portions et respectez votre satiété (en gras et bleu)**
 - Utilisez des assiettes plus petites, remplissez la moitié de légumes, et limitez la portion de féculents à la taille de votre poing.
 - Écoutez vos signaux de faim et de satiété, prenez le temps de savourer vos repas.
+
 **Structurez vos repas et collations (en gras et bleu)**
 - Prenez 3 repas principaux par jour à horaires réguliers, sans sauter de repas.
 - Si besoin, ajoutez 1 à 2 collations nutritives pour prévenir les hypoglycémies ou combler la faim, en privilégiant des aliments riches en fibres et protéines.
+
 **Limitez le sel, l’alcool et les graisses saturées (en gras et bleu)**
 - Réduisez la consommation de sel pour prévenir l’hypertension.
 - Limitez l’alcool à un verre par jour pour les femmes, deux pour les hommes, en tenant compte de ses effets sur la glycémie.
 - Privilégiez la volaille et limitez les viandes rouges et charcuteries à 500g par semaine maximum.
+
 **Adaptez votre alimentation à votre mode de vie (en gras et bleu)**
 - Tenez compte de vos horaires, préférences alimentaires et activité physique pour construire des repas adaptés et durables.
+
 **N’hésitez pas à consulter un(e) diététicien(ne) pour un accompagnement personnalisé (en gras et rouge)**`;
 
 const RichTextDisplay: React.FC<{ text: string }> = ({ text }) => {
   const lines = text.split('\n').filter(line => line.trim() !== '');
   const elements: JSX.Element[] = [];
   let currentListItems: string[] = [];
+  let currentSectionTitle: React.ReactNode = null;
 
   const flushList = () => {
     if (currentListItems.length > 0) {
       elements.push(
-        <ul key={`ul-${elements.length}`} className="list-disc pl-5 mb-2 space-y-0.5">
-          {currentListItems.map((item, idx) => (
-            <li key={`li-${elements.length}-${idx}`}>{item}</li>
-          ))}
-        </ul>
+        <div key={`section-${elements.length}`} className="mb-3">
+          {currentSectionTitle && <div className="mb-1">{currentSectionTitle}</div>}
+          <ul className="list-disc pl-5 space-y-0.5">
+            {currentListItems.map((item, idx) => (
+              <li key={`li-${elements.length}-${idx}`} className="text-sm">{item}</li>
+            ))}
+          </ul>
+        </div>
       );
       currentListItems = [];
+      currentSectionTitle = null;
+    } else if (currentSectionTitle) {
+        elements.push(<div key={`title-only-${elements.length}`} className="mb-1">{currentSectionTitle}</div>);
+        currentSectionTitle = null;
     }
   };
 
@@ -129,28 +147,28 @@ const RichTextDisplay: React.FC<{ text: string }> = ({ text }) => {
     if (titleMatch) {
       flushList();
       let titleContent = titleMatch[1];
-      let titleClasses = "font-semibold my-3 text-foreground"; 
+      let titleClasses = "font-semibold text-foreground";
       if (titleContent.includes("(en gras et bleu)")) {
-        titleClasses = "font-semibold my-3 text-primary";
+        titleClasses = "font-semibold text-primary";
         titleContent = titleContent.replace("(en gras et bleu)", "").trim();
       } else if (titleContent.includes("(en gras et rouge)")) {
-        titleClasses = "font-semibold my-3 text-destructive";
+        titleClasses = "font-semibold text-destructive";
         titleContent = titleContent.replace("(en gras et rouge)", "").trim();
       } else if (titleContent.includes("(en gras)")) {
          titleContent = titleContent.replace("(en gras)", "").trim();
       }
-      elements.push(<p key={`title-${index}`} className={titleClasses}>{titleContent}</p>);
+      currentSectionTitle = <p className={titleClasses}>{titleContent}</p>;
     } else if (listItemMatch) {
       currentListItems.push(listItemMatch[1]);
-    } else if (line.trim() !== "") { 
-      flushList();
-      elements.push(<p key={`p-${index}`} className="mb-1">{line}</p>);
+    } else if (line.trim() !== "") {
+      flushList(); // If there's a plain text line, flush any pending list and title
+      elements.push(<p key={`p-${index}`} className="mb-1 text-sm">{line}</p>);
     }
   });
 
-  flushList(); 
+  flushList();
 
-  return <div className="text-sm prose prose-sm dark:prose-invert max-w-none">{elements}</div>;
+  return <div className="prose prose-sm dark:prose-invert max-w-none">{elements}</div>;
 };
 
 type EditableNutritionalInfo = {
@@ -208,7 +226,7 @@ const categoryIcons: Record<string, React.ElementType> = {
 export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  
+
   const [foodCategoriesFromStorage, setFoodCategoriesInStorage] = useLocalStorage<FoodCategory[]>(
     "diabeatz-food-preferences",
     initialFoodCategories
@@ -217,7 +235,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   const [processedFoodCategories, setProcessedFoodCategories] = useState<FoodCategory[]>(initialFoodCategories);
 
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined); 
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [durationInDays, setDurationInDays] = useState<string>("1");
 
 
@@ -238,14 +256,13 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
 
 
   useEffect(() => {
-    // Initialize dates on client mount to avoid hydration issues
     const tomorrow = addDays(new Date(), 1);
     tomorrow.setHours(0, 0, 0, 0);
-    if (!startDate) { 
-        setStartDate(tomorrow);
+    if (!startDate) {
+        setStartDate(new Date(tomorrow));
     }
-    if (!endDate) { 
-        setEndDate(new Date(tomorrow)); 
+    if (!endDate) {
+        setEndDate(new Date(tomorrow));
     }
     setIsClient(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -258,12 +275,12 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         initCat => initCat.categoryName === storedCategory.categoryName
       );
       const initialItems = initialCategoryDefinition ? initialCategoryDefinition.items : [];
-      
-      const mergedItems = initialItems.map(initialItem => { 
+
+      const mergedItems = initialItems.map(initialItem => {
         const storedItem = storedCategory.items.find(si => si.id === initialItem.id);
         return {
-          ...initialItem, 
-          ...(storedItem || {}), 
+          ...initialItem,
+          ...(storedItem || {}),
           calories: storedItem?.calories ?? initialItem.calories,
           carbs: storedItem?.carbs ?? initialItem.carbs,
           protein: storedItem?.protein ?? initialItem.protein,
@@ -275,7 +292,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         };
       });
 
-      // Add items from storage that might not be in initialFoodCategories (custom added foods)
       storedCategory.items.forEach(storedItem => {
         if (!mergedItems.some(mi => mi.id === storedItem.id)) {
           mergedItems.push(storedItem);
@@ -283,9 +299,9 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       });
 
       return {
-        ...(initialCategoryDefinition || {}), // provide base structure if category itself was custom
-        ...storedCategory, 
-        categoryName: storedCategory.categoryName, // ensure categoryName from storage is used
+        ...(initialCategoryDefinition || {}),
+        ...storedCategory,
+        categoryName: storedCategory.categoryName,
         items: mergedItems.sort((a, b) => a.name.localeCompare(b.name)),
       };
     });
@@ -300,48 +316,46 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       diabeticResearchSummary: defaultResearchSummary,
     },
   });
- 
-   useEffect(() => {
+
+  useEffect(() => {
     if (startDate && endDate && isValid(startDate) && isValid(endDate) && endDate >= startDate) {
       const diff = differenceInDays(endDate, startDate) + 1;
       if (durationInDays !== diff.toString()) {
         setDurationInDays(diff.toString());
       }
-    } else if (startDate && !endDate) { 
+    } else if (startDate && !endDate) {
         if (durationInDays !== "1") {
              setDurationInDays("1");
         }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startDate, endDate]); 
+  }, [startDate, endDate, durationInDays]);
 
   useEffect(() => {
     if (!startDate || !isValid(startDate) || !isClient) return;
-    
+
     const numDays = parseInt(durationInDays, 10);
-    if (!isNaN(numDays) && numDays >= 1 && numDays <= 365) { 
-      const newEndDate = addDays(startDate, numDays - 1);
+    if (!isNaN(numDays) && numDays >= 1 && numDays <= 365) {
+      const newEndDate = addDays(new Date(startDate), numDays - 1);
       if (!endDate || !isValid(endDate) || newEndDate.getTime() !== endDate.getTime()) {
         setEndDate(newEndDate);
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [durationInDays, startDate, isClient]); 
+  }, [durationInDays, startDate, isClient, endDate]);
 
 
   const handleDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    if (value === "" || (/^\d{1,3}$/.test(value) && parseInt(value, 10) <= 365 && parseInt(value,10) >=0 )) { 
+    if (value === "" || (/^\d{1,3}$/.test(value) && parseInt(value, 10) <= 365 && parseInt(value,10) >=0 )) {
       setDurationInDays(value);
     } else if (/^\d+$/.test(value) && parseInt(value, 10) > 365) {
       setDurationInDays("365");
     }
   };
-  
+
   const handleDurationBlur = () => {
     const numDays = parseInt(durationInDays, 10);
     if (isNaN(numDays) || numDays <= 0) {
-      setDurationInDays("1"); 
+      setDurationInDays("1");
     } else if (numDays > 365) {
       setDurationInDays("365");
     } else {
@@ -414,7 +428,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       setIsLoading(false);
       return;
     }
-    
+
     const availableFoodsForAI = likedFoodsList.join("\n");
     const foodsToAvoidForAI = foodsToAvoidList.join("\n");
 
@@ -428,7 +442,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         availableFoods: availableFoodsForAI,
         foodsToAvoid: foodsToAvoidForAI.length > 0 ? foodsToAvoidForAI : undefined,
         diabeticResearchSummary: values.diabeticResearchSummary,
-        planDuration: planDurationForAI, 
+        planDuration: planDurationForAI,
       };
       const result = await generateMealPlan(mealPlanInput);
       onMealPlanGenerated(result, values.planName);
@@ -479,7 +493,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                 item.id === selectedFoodItemForNutritionalInfo.id
                     ? {
                         ...item,
-                        ...editableNutritionalInfo, 
+                        ...editableNutritionalInfo,
                       }
                     : item
             ),
@@ -495,9 +509,9 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     const settingsToSave: FormSettings = {
       planName: currentFormValues.planName,
       diabeticResearchSummary: currentFormValues.diabeticResearchSummary,
-      foodPreferences: foodCategoriesFromStorage, 
+      foodPreferences: foodCategoriesFromStorage,
       startDate: startDate ? startDate.toISOString() : undefined,
-      endDate: endDate ? endDate.toISOString() : undefined, 
+      endDate: endDate ? endDate.toISOString() : undefined,
     };
     setSavedFormSettings(settingsToSave);
     toast({
@@ -512,11 +526,11 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         planName: savedFormSettings.planName || "",
         diabeticResearchSummary: savedFormSettings.diabeticResearchSummary,
       });
-      
+
       const hydratedFoodPrefs = savedFormSettings.foodPreferences.map(storedCat => {
         const initialCatDef = initialFoodCategories.find(ic => ic.categoryName === storedCat.categoryName);
         const initialItems = initialCatDef ? initialCatDef.items : [];
-        
+
         const mergedItems = initialItems.map(initItem => {
             const storedItem = storedCat.items.find(si => si.id === initItem.id);
             return {
@@ -538,17 +552,17 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                 mergedItems.push(storedItem);
             }
         });
-        
+
         return {
-          ...(initialCatDef || {}), 
+          ...(initialCatDef || {}),
           ...storedCat,
-          categoryName: storedCat.categoryName, 
+          categoryName: storedCat.categoryName,
           items: mergedItems.sort((a, b) => a.name.localeCompare(b.name)),
         };
       });
       setFoodCategoriesInStorage(hydratedFoodPrefs);
-      
-      let newStartDate = addDays(new Date(), 1); 
+
+      let newStartDate = addDays(new Date(), 1);
       newStartDate.setHours(0,0,0,0);
       if (savedFormSettings.startDate) {
         const parsed = parseISO(savedFormSettings.startDate);
@@ -559,18 +573,18 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       }
       setStartDate(newStartDate);
 
-      let newEndDate = new Date(newStartDate); 
+      let newEndDate = new Date(newStartDate);
       if (savedFormSettings.endDate) {
         const parsed = parseISO(savedFormSettings.endDate);
         if (isValid(parsed)) {
             parsed.setHours(0,0,0,0);
-            if (parsed >= newStartDate) { 
+            if (parsed >= newStartDate) {
                  newEndDate = parsed;
             }
         }
       }
       setEndDate(newEndDate);
-      
+
       if (newStartDate && newEndDate && isValid(newStartDate) && isValid(newEndDate) && newEndDate >= newStartDate) {
         const diff = differenceInDays(newEndDate, newStartDate) + 1;
         setDurationInDays(diff.toString());
@@ -613,21 +627,21 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         if (category.items.some(item => item.name.toLowerCase() === newFoodData.name.trim().toLowerCase())) {
           setAddFoodFormError(`L'aliment "${newFoodData.name.trim()}" existe déjà dans la catégorie "${newFoodData.categoryName}".`);
           foodAlreadyExists = true;
-          return category; 
+          return category;
         }
       }
       return category;
     });
 
     if(foodAlreadyExists) {
-      setFoodCategoriesInStorage(updatedCategories); 
+      setFoodCategoriesInStorage(updatedCategories);
       return;
     }
-    
+
     const newFoodItem: FoodItem = {
-      id: `custom-${Date.now()}`, 
+      id: `custom-${Date.now()}`,
       ...newFoodData,
-      ig: newFoodData.ig || "(IG: N/A)", 
+      ig: newFoodData.ig || "(IG: N/A)",
       isFavorite: false,
       isDisliked: false,
       isAllergenic: false,
@@ -652,309 +666,330 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       description: `${newFoodItem.name} a été ajouté à la catégorie ${newFoodData.categoryName}.`,
     });
     setIsAddFoodDialogOpen(false);
-    setNewFoodData(initialNewFoodData); 
+    setNewFoodData(initialNewFoodData);
   };
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-              <Wand2 className="h-5 w-5 text-primary" />
-              Configuration de base
-            </CardTitle>
-            <CardDescription>
-             Personnalisez vos préférences et générez un plan de repas adapté sur une période de votre choix.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              <FormField
-                control={form.control}
-                name="planName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nom du plan (optionnel)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: Mon plan semaine prochaine" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormItem>
-                <FormLabel>Calendrier du plan</FormLabel>
-                <div className="flex flex-col md:flex-row gap-4 md:gap-3 items-end md:items-stretch"> 
-                  <div className="flex-grow flex flex-col sm:flex-row gap-3 w-full md:w-auto"> 
-                    <div className="flex-1 min-w-[140px] sm:min-w-[170px]">
-                      <Label htmlFor="start-date-picker-trigger" className="text-sm font-medium mb-1 block">Date de début</Label>
-                      <Popover open={isStartDatePickerOpen} onOpenChange={setIsStartDatePickerOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            id="start-date-picker-trigger"
-                            variant={"outline"}
-                            className={cn(
-                              "w-full justify-start text-left font-normal h-10",
-                              !startDate && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarDays className="mr-2 h-4 w-4" />
-                            {startDate && isValid(startDate) ? format(startDate, "PPP", { locale: fr }) : <span>Choisir une date</span>}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={startDate}
-                            onSelect={(date) => {
-                              if (date) {
-                                  const today = new Date();
-                                  today.setHours(0,0,0,0);
-                                  if (date < today ) { 
-                                  } else {
-                                    date.setHours(0,0,0,0);
-                                    setStartDate(date);
-                                    if (endDate && date > endDate) {
-                                      setEndDate(new Date(date)); 
+        <Accordion type="multiple" defaultValue={["config-base-item", "prefs-aliments-item", "conseils-aliments-item"]} className="w-full space-y-6">
+          <AccordionItem value="config-base-item" className="border-b-0">
+            <Card className="shadow-lg">
+              <AccordionTrigger className="p-0 [&[data-state=open]>div>button>svg]:rotate-180">
+                <CardHeader className="flex flex-row items-center justify-between w-full p-4">
+                  <div className="flex items-center gap-2">
+                    <Wand2 className="h-5 w-5 text-secondary-foreground" />
+                    <CardTitle className="text-lg font-semibold">Configuration de base</CardTitle>
+                  </div>
+                  {/* AccordionTrigger will place its own chevron here */}
+                </CardHeader>
+              </AccordionTrigger>
+              <AccordionContent className="pt-0">
+                <CardContent>
+                  <CardDescription className="mb-4">
+                    Personnalisez vos préférences et générez un plan de repas adapté sur une période de votre choix.
+                  </CardDescription>
+                  <div className="space-y-6">
+                    <FormField
+                      control={form.control}
+                      name="planName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nom du plan (optionnel)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Ex: Mon plan semaine prochaine" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormItem>
+                      <FormLabel>Calendrier du plan</FormLabel>
+                      <div className="flex flex-col md:flex-row gap-4 md:gap-3 items-end md:items-stretch">
+                        <div className="flex-grow flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                          <div className="flex-1 min-w-[140px] sm:min-w-[170px]">
+                            <Label htmlFor="start-date-picker-trigger" className="text-sm font-medium mb-1 block">Date de début</Label>
+                            <Popover open={isStartDatePickerOpen} onOpenChange={setIsStartDatePickerOpen}>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  id="start-date-picker-trigger"
+                                  variant={"outline"}
+                                  className={cn(
+                                    "w-full justify-start text-left font-normal h-10",
+                                    !startDate && "text-muted-foreground"
+                                  )}
+                                >
+                                  <CalendarDays className="mr-2 h-4 w-4" />
+                                  {startDate && isValid(startDate) ? format(startDate, "PPP", { locale: fr }) : <span>Choisir une date</span>}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={startDate}
+                                  onSelect={(date) => {
+                                    if (date) {
+                                        const today = new Date();
+                                        today.setHours(0,0,0,0);
+                                        // Allow selecting today for start date if needed
+                                        if (date < addDays(today, -1) ) { /* Allow yesterday if necessary, for now it's today */
+                                        } else {
+                                          date.setHours(0,0,0,0);
+                                          setStartDate(date);
+                                          if (endDate && date > endDate) {
+                                            setEndDate(new Date(date));
+                                          }
+                                        }
+                                    }
+                                    setIsStartDatePickerOpen(false);
+                                  }}
+                                  disabled={(date) => {
+                                      const todayForDisable = new Date();
+                                      todayForDisable.setHours(0,0,0,0);
+                                      return date < todayForDisable;
                                     }
                                   }
-                              }
-                              setIsStartDatePickerOpen(false);
-                            }}
-                            disabled={(date) => {
-                                const todayForDisable = new Date(); 
-                                todayForDisable.setHours(0,0,0,0);
-                                return date < todayForDisable;
-                              } 
-                            } 
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                    <div className="flex-1 min-w-[140px] sm:min-w-[170px]">
-                      <Label htmlFor="end-date-picker-trigger" className="text-sm font-medium mb-1 block">Date de fin</Label>
-                      <Popover open={isEndDatePickerOpen} onOpenChange={setIsEndDatePickerOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            id="end-date-picker-trigger"
-                            variant={"outline"}
-                            className={cn(
-                              "w-full justify-start text-left font-normal h-10",
-                              !endDate && "text-muted-foreground"
-                            )}
-                            disabled={!startDate || !isValid(startDate)} 
-                          >
-                            <CalendarDays className="mr-2 h-4 w-4" />
-                            {endDate && isValid(endDate) ? format(endDate, "PPP", { locale: fr }) : <span>Choisir une date</span>}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={endDate}
-                            onSelect={(date) => {
-                              if (date && startDate && isValid(startDate)) {
-                                  date.setHours(0,0,0,0);
-                                  if (date >= startDate) { 
-                                      setEndDate(date);
-                                  }
-                              }
-                              setIsEndDatePickerOpen(false);
-                            }}
-                            disabled={(date) => {
-                              const minDate = startDate && isValid(startDate) ? new Date(startDate) : new Date(0); 
-                              minDate.setHours(0,0,0,0);
-                              return date < minDate;
-                            }}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                  </div>
-                  <div className="w-full md:w-auto flex-shrink-0">
-                    <Label htmlFor="duration-input" className="text-sm font-medium mb-1 block">Durée en jours</Label>
-                    <Input
-                        id="duration-input"
-                        type="text" 
-                        value={durationInDays}
-                        onChange={handleDurationChange}
-                        onBlur={handleDurationBlur}
-                        className="h-10 text-center w-full md:w-24 bg-secondary" 
-                        placeholder="Jours"
-                    />
-                  </div>
-                </div>
-                <FormDescriptionComponent>
-                  Choisissez la date de début et de fin du plan ou indiquez le nombre de jours souhaité.
-                </FormDescriptionComponent>
-              </FormItem>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-lg">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <div className="flex-grow">
-              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <ListFilter className="h-5 w-5 text-primary" />
-                Préférences alimentaires
-              </CardTitle>
-            </div>
-            <Button 
-              type="button" 
-              variant="outline" 
-              size="sm" 
-              onClick={() => { 
-                setNewFoodData(initialNewFoodData); 
-                setAddFoodFormError(null);
-                setIsAddFoodDialogOpen(true);
-              }}
-            >
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Ajouter un aliment
-            </Button>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <p className="text-sm text-muted-foreground whitespace-pre-line mb-3">
-              Cochez vos aliments favoris, à éviter ou allergènes.
-              <br/>
-              Les aliments favoris seront privilégiés pour vos plans de repas.
-            </p>
-            <div className="max-h-[400px] overflow-y-auto p-1 rounded-md border">
-              <Accordion type="multiple" className="w-full">
-                {processedFoodCategories.map(category => {
-                  const CategoryIcon = categoryIcons[category.categoryName] || ListFilter;
-                  return (
-                    <AccordionItem value={category.categoryName} key={category.categoryName} className="border-b-0 last:border-b-0">
-                       <AccordionTrigger className="py-3 px-2 text-md font-semibold hover:no-underline hover:bg-muted/50 rounded-md">
-                         <div className="flex items-center gap-2"> 
-                           <CategoryIcon className="h-4 w-4 text-secondary-foreground" />
-                           <span className="text-primary">{category.categoryName}</span>
-                         </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="pt-1 pb-2 px-2">
-                        <ul className="space-y-1 pl-2">
-                          {category.items.map(item => (
-                            <li key={item.id} className="py-1 border-b border-border/50 last:border-b-0">
-                              <div className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-x-2">
-                                <div>
-                                  <span className={cn(
-                                    "text-sm font-medium",
-                                    item.isDisliked && "line-through",
-                                    item.isAllergenic && "text-destructive"
-                                  )}>{item.name}</span>
-                                  <span className={cn(
-                                    "text-xs text-muted-foreground ml-1",
-                                    item.isDisliked && "line-through",
-                                    item.isAllergenic && "text-destructive"
-                                  )}>{item.ig}</span>
-                                </div>
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                          <div className="flex-1 min-w-[140px] sm:min-w-[170px]">
+                            <Label htmlFor="end-date-picker-trigger" className="text-sm font-medium mb-1 block">Date de fin</Label>
+                            <Popover open={isEndDatePickerOpen} onOpenChange={setIsEndDatePickerOpen}>
+                              <PopoverTrigger asChild>
                                 <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  className="p-1 h-auto justify-self-end"
-                                  onClick={() => handleOpenNutritionalInfoDialog(item)}
-                                  title="Valeurs nutritionnelles"
+                                  id="end-date-picker-trigger"
+                                  variant={"outline"}
+                                  className={cn(
+                                    "w-full justify-start text-left font-normal h-10",
+                                    !endDate && "text-muted-foreground"
+                                  )}
+                                  disabled={!startDate || !isValid(startDate)}
                                 >
-                                  <BarChart2 className="h-3.5 w-3.5" />
+                                  <CalendarDays className="mr-2 h-4 w-4" />
+                                  {endDate && isValid(endDate) ? format(endDate, "PPP", { locale: fr }) : <span>Choisir une date</span>}
                                 </Button>
-                                <div className="flex items-center space-x-1 justify-self-end">
-                                  <Checkbox
-                                    id={`${item.id}-favorite`}
-                                    checked={item.isFavorite}
-                                    onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isFavorite", !!checked)}
-                                    aria-label={`Marquer ${item.name} comme favori`}
-                                    disabled={item.isDisliked || item.isAllergenic}
-                                  />
-                                  <Label htmlFor={`${item.id}-favorite`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${ (item.isDisliked || item.isAllergenic) ? 'opacity-50 cursor-not-allowed' : ''}`} title="Favori">
-                                    <Star className="h-3.5 w-3.5" />
-                                  </Label>
-                                </div>
-                                <div className="flex items-center space-x-1 justify-self-end">
-                                  <Checkbox
-                                    id={`${item.id}-disliked`}
-                                    checked={item.isDisliked}
-                                    onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isDisliked", !!checked)}
-                                    aria-label={`Marquer ${item.name} comme non aimé`}
-                                    disabled={item.isFavorite}
-                                  />
-                                  <Label htmlFor={`${item.id}-disliked`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${item.isFavorite ? 'opacity-50 cursor-not-allowed' : ''}`} title="Je n'aime pas">
-                                    <ThumbsDown className="h-3.5 w-3.5" />
-                                  </Label>
-                                </div>
-                                <div className="flex items-center space-x-1 justify-self-end">
-                                  <Checkbox
-                                    id={`${item.id}-allergenic`}
-                                    checked={item.isAllergenic}
-                                    onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isAllergenic", !!checked)}
-                                    aria-label={`Marquer ${item.name} comme allergène`}
-                                    disabled={item.isFavorite}
-                                  />
-                                  <Label htmlFor={`${item.id}-allergenic`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${item.isFavorite ? 'opacity-50 cursor-not-allowed' : ''}`} title="Allergie/Intolérance">
-                                    <AlertTriangle className="h-3.5 w-3.5" />
-                                  </Label>
-                                </div>
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      </AccordionContent>
-                    </AccordionItem>
-                  );
-                })}
-              </Accordion>
-            </div>
-          </CardContent>
-        </Card>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={endDate}
+                                  onSelect={(date) => {
+                                    if (date && startDate && isValid(startDate)) {
+                                        date.setHours(0,0,0,0);
+                                        if (date >= startDate) {
+                                            setEndDate(date);
+                                        }
+                                    }
+                                    setIsEndDatePickerOpen(false);
+                                  }}
+                                  disabled={(date) => {
+                                    const minDate = startDate && isValid(startDate) ? new Date(startDate) : new Date(0);
+                                    minDate.setHours(0,0,0,0);
+                                    return date < minDate;
+                                  }}
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                        </div>
+                        <div className="w-full md:w-auto flex-shrink-0">
+                          <Label htmlFor="duration-input" className="text-sm font-medium mb-1 block">Durée en jours</Label>
+                          <Input
+                              id="duration-input"
+                              type="text"
+                              value={durationInDays}
+                              onChange={handleDurationChange}
+                              onBlur={handleDurationBlur}
+                              className="h-10 text-center w-full md:w-24 bg-secondary"
+                              placeholder="Jours"
+                          />
+                        </div>
+                      </div>
+                      <FormDescriptionComponent>
+                        Choisissez la date de début et de fin du plan ou indiquez le nombre de jours souhaité.
+                      </FormDescriptionComponent>
+                    </FormItem>
+                  </div>
+                </CardContent>
+              </AccordionContent>
+            </Card>
+          </AccordionItem>
 
-        <Card className="shadow-lg">
-          <CardHeader>
-             <CardTitle className="flex items-center gap-2 text-lg font-semibold text-foreground">
-               <BookOpenText className="h-5 w-5 text-primary" />
-               Conseils alimentaires optimisés pour Diabète de Type 2
-             </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Accordion type="single" collapsible className="w-full">
-              <AccordionItem value="dietary-advice-section">
-                <AccordionTrigger className="text-sm font-semibold text-foreground hover:no-underline hover:bg-muted/50 rounded-md py-3 px-2">
-                  Afficher/Masquer les conseils
-                </AccordionTrigger>
-                <AccordionContent className="pt-1 pb-2 px-2">
-                   <FormField
-                    control={form.control}
-                    name="diabeticResearchSummary"
-                    render={({ field }) => ( 
-                      <FormItem className="mt-2">
-                        <div className="mb-3 p-3 border rounded-md bg-background/50 max-h-60 overflow-y-auto">
-                           <RichTextDisplay text={field.value} />
+          <AccordionItem value="prefs-aliments-item" className="border-b-0">
+             <Card className="shadow-lg">
+                <AccordionTrigger className="p-0 [&[data-state=open]>div>button>svg]:rotate-180">
+                    <CardHeader className="flex flex-row items-center justify-between w-full p-4">
+                        <div className="flex items-center gap-2">
+                            <ListFilter className="h-5 w-5 text-secondary-foreground" />
+                            <CardTitle className="text-lg font-semibold">Préférences alimentaires</CardTitle>
                         </div>
                         <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setEditingTips(form.getValues('diabeticResearchSummary'));
-                            setIsEditTipsDialogOpen(true);
-                          }}
-                        >
-                          Modifier les conseils
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="ml-auto mr-8" // mr-8 to leave space for accordion chevron
+                            onClick={() => {
+                                setNewFoodData(initialNewFoodData);
+                                setAddFoodFormError(null);
+                                setIsAddFoodDialogOpen(true);
+                            }}
+                            >
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Ajouter un aliment
                         </Button>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                    </CardHeader>
+                </AccordionTrigger>
+                <AccordionContent className="pt-0">
+                    <CardContent>
+                        <p className="text-sm text-muted-foreground whitespace-pre-line mb-3">
+                        Cochez vos aliments favoris, à éviter ou allergènes.
+                        <br/>
+                        Les aliments favoris seront privilégiés pour vos plans de repas.
+                        </p>
+                        <div className="max-h-[400px] overflow-y-auto p-1 rounded-md border">
+                        <Accordion type="multiple" className="w-full">
+                            {processedFoodCategories.map(category => {
+                            const CategoryIcon = categoryIcons[category.categoryName] || ListFilter;
+                            return (
+                                <AccordionItem value={category.categoryName} key={category.categoryName} className="border-b-0 last:border-b-0">
+                                <AccordionTrigger className="py-3 px-2 text-md font-semibold hover:no-underline hover:bg-muted/50 rounded-md">
+                                    <div className="flex items-center gap-2">
+                                    <CategoryIcon className="h-4 w-4 text-secondary-foreground" />
+                                    <span className="text-primary">{category.categoryName}</span>
+                                    </div>
+                                </AccordionTrigger>
+                                <AccordionContent className="pt-1 pb-2 px-2">
+                                    <ul className="space-y-1 pl-2">
+                                    {category.items.map(item => (
+                                        <li key={item.id} className="py-1 border-b border-border/50 last:border-b-0">
+                                        <div className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-x-2">
+                                            <div>
+                                            <span className={cn(
+                                                "text-sm font-medium",
+                                                item.isDisliked && "line-through",
+                                                item.isAllergenic && "text-destructive"
+                                            )}>{item.name}</span>
+                                            <span className={cn(
+                                                "text-xs text-muted-foreground ml-1",
+                                                item.isDisliked && "line-through",
+                                                item.isAllergenic && "text-destructive"
+                                            )}>{item.ig}</span>
+                                            </div>
+                                            <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            className="p-1 h-auto justify-self-end"
+                                            onClick={() => handleOpenNutritionalInfoDialog(item)}
+                                            title="Valeurs nutritionnelles"
+                                            >
+                                            <BarChart2 className="h-3.5 w-3.5" />
+                                            </Button>
+                                            <div className="flex items-center space-x-1 justify-self-end">
+                                            <Checkbox
+                                                id={`${item.id}-favorite`}
+                                                checked={item.isFavorite}
+                                                onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isFavorite", !!checked)}
+                                                aria-label={`Marquer ${item.name} comme favori`}
+                                                disabled={item.isDisliked || item.isAllergenic}
+                                            />
+                                            <Label htmlFor={`${item.id}-favorite`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${ (item.isDisliked || item.isAllergenic) ? 'opacity-50 cursor-not-allowed' : ''}`} title="Favori">
+                                                <Star className="h-3.5 w-3.5" />
+                                            </Label>
+                                            </div>
+                                            <div className="flex items-center space-x-1 justify-self-end">
+                                            <Checkbox
+                                                id={`${item.id}-disliked`}
+                                                checked={item.isDisliked}
+                                                onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isDisliked", !!checked)}
+                                                aria-label={`Marquer ${item.name} comme non aimé`}
+                                                disabled={item.isFavorite}
+                                            />
+                                            <Label htmlFor={`${item.id}-disliked`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${item.isFavorite ? 'opacity-50 cursor-not-allowed' : ''}`} title="Je n'aime pas">
+                                                <ThumbsDown className="h-3.5 w-3.5" />
+                                            </Label>
+                                            </div>
+                                            <div className="flex items-center space-x-1 justify-self-end">
+                                            <Checkbox
+                                                id={`${item.id}-allergenic`}
+                                                checked={item.isAllergenic}
+                                                onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isAllergenic", !!checked)}
+                                                aria-label={`Marquer ${item.name} comme allergène`}
+                                                disabled={item.isFavorite}
+                                            />
+                                            <Label htmlFor={`${item.id}-allergenic`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${item.isFavorite ? 'opacity-50 cursor-not-allowed' : ''}`} title="Allergie/Intolérance">
+                                                <AlertTriangle className="h-3.5 w-3.5" />
+                                            </Label>
+                                            </div>
+                                        </div>
+                                        </li>
+                                    ))}
+                                    </ul>
+                                </AccordionContent>
+                                </AccordionItem>
+                            );
+                            })}
+                        </Accordion>
+                        </div>
+                    </CardContent>
+                 </AccordionContent>
+            </Card>
+          </AccordionItem>
+
+          <AccordionItem value="conseils-aliments-item" className="border-b-0">
+            <Card className="shadow-lg">
+                <AccordionTrigger className="p-0 [&[data-state=open]>div>button>svg]:rotate-180">
+                    <CardHeader className="flex flex-row items-center justify-between w-full p-4">
+                        <div className="flex items-center gap-2">
+                            <BookOpenText className="h-5 w-5 text-secondary-foreground" />
+                            <CardTitle className="text-lg font-semibold text-foreground">Conseils alimentaires optimisés pour Diabète de Type 2</CardTitle>
+                        </div>
+                    </CardHeader>
+                </AccordionTrigger>
+                <AccordionContent className="pt-0">
+                    <CardContent>
+                        <Accordion type="single" collapsible className="w-full">
+                        <AccordionItem value="dietary-advice-section">
+                            <AccordionTrigger className="text-sm font-semibold text-foreground hover:no-underline hover:bg-muted/50 rounded-md py-3 px-2">
+                            Afficher/Masquer les conseils
+                            </AccordionTrigger>
+                            <AccordionContent className="pt-1 pb-2 px-2">
+                            <FormField
+                                control={form.control}
+                                name="diabeticResearchSummary"
+                                render={({ field }) => (
+                                <FormItem className="mt-2">
+                                    <div className="mb-3 p-3 border rounded-md bg-background/50 max-h-60 overflow-y-auto">
+                                    <RichTextDisplay text={field.value} />
+                                    </div>
+                                    <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                        setEditingTips(form.getValues('diabeticResearchSummary'));
+                                        setIsEditTipsDialogOpen(true);
+                                    }}
+                                    >
+                                    Modifier les conseils
+                                    </Button>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            </AccordionContent>
+                        </AccordionItem>
+                        </Accordion>
+                    </CardContent>
                 </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </CardContent>
-        </Card>
-        
+            </Card>
+          </AccordionItem>
+        </Accordion>
+
         <div className="space-y-4">
             <Button type="submit" disabled={isLoading} className="w-full">
             {isLoading ? (
@@ -975,11 +1010,11 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                 <Save className="mr-2 h-4 w-4" />
                 Sauvegarder les paramètres
             </Button>
-            <Button 
-                type="button" 
-                variant="outline" 
-                onClick={handleLoadSettings} 
-                className="flex-1" 
+            <Button
+                type="button"
+                variant="outline"
+                onClick={handleLoadSettings}
+                className="flex-1"
                 disabled={!isClient || (!savedFormSettings && (typeof window !== 'undefined' && !localStorage.getItem("diabeatz-form-settings")))}
             >
                 <Upload className="mr-2 h-4 w-4" />
@@ -1001,7 +1036,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
               <Textarea
                 value={editingTips}
                 onChange={(e) => setEditingTips(e.target.value)}
-                className="min-h-[250px] text-sm" 
+                className="min-h-[250px] text-sm"
                 rows={15}
               />
             </div>
@@ -1191,4 +1226,3 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     </Form>
   );
 }
-
