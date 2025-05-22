@@ -62,7 +62,17 @@ type MealPlanFormProps = {
   onMealPlanGenerated: (mealPlan: GenerateMealPlanOutput, planName?: string) => void;
 };
 
-const defaultResearchSummary = "Concentrez-vous sur les grains entiers, les protéines maigres, les graisses saines et beaucoup de légumes non amylacés. Contrôlez l'apport en glucides à chaque repas et collation. Privilégiez les aliments à faible indice glycémique. Assurez un apport suffisant en fibres. Le contrôle des portions est essentiel. Des horaires de repas réguliers aident à gérer la glycémie.";
+const defaultResearchSummary = `Concentrez-vous sur les grains entiers, les protéines maigres, les graisses saines et beaucoup de légumes non amylacés.
+
+Contrôlez l'apport en glucides à chaque repas et collation.
+
+Privilégiez les aliments à faible indice glycémique.
+
+Assurez un apport suffisant en fibres.
+
+Le contrôle des portions est essentiel.
+
+Des horaires de repas réguliers aident à gérer la glycémie.`;
 
 export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   const [isLoading, setIsLoading] = useState(false);
@@ -76,7 +86,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   const [processedFoodCategories, setProcessedFoodCategories] = useState<FoodCategory[]>(initialFoodCategories);
 
   const [startDate, setStartDate] = useState<Date | undefined>(new Date());
-  const [endDate, setEndDate] = useState<Date | undefined>(new Date()); // Initialize endDate
+  const [endDate, setEndDate] = useState<Date | undefined>(new Date()); 
 
   const [savedFormSettings, setSavedFormSettings] = useLocalStorage<FormSettings | null>("diabeatz-form-settings", null);
 
@@ -89,15 +99,15 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       const initialItems = initialCategoryDefinition ? initialCategoryDefinition.items : [];
       
       return {
-        ...storedCategory, // Keep other category properties if any
+        ...storedCategory, 
         categoryName: storedCategory.categoryName, 
         items: storedCategory.items.map(storedItem => {
           const initialItemDefinition = initialItems.find(
             initItem => initItem.id === storedItem.id
           );
           return {
-            ...(initialItemDefinition || {}), // Spread initial definition first to get all keys
-            ...storedItem,                  // Then spread stored item to override with user preferences
+            ...(initialItemDefinition || {}), 
+            ...storedItem,                  
           };
         }),
       };
@@ -117,7 +127,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
 
   const planDurationValue = form.watch('planDuration');
 
-  // Calculate endDate when startDate or planDurationValue (from Select) changes
   useEffect(() => {
     if (startDate) {
       const durationStr = planDurationValue || form.getValues('planDuration');
@@ -133,14 +142,19 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         case "2 semaines": daysToAdd = 13; break;
         case "3 semaines": daysToAdd = 20; break;
         case "4 semaines": daysToAdd = 27; break;
-        case "1 mois": daysToAdd = 29; break; // Approx 30 jours (0-indexed for addDays)
+        case "1 mois": daysToAdd = 29; break; 
         default: daysToAdd = 0; break;
       }
-      setEndDate(addDays(startDate, daysToAdd));
+      const newEndDate = addDays(startDate, daysToAdd);
+      if (!endDate || newEndDate !== endDate) { // Only set if different to avoid re-triggering if already correct
+         setEndDate(newEndDate);
+      }
     } else {
       setEndDate(undefined);
     }
-  }, [startDate, planDurationValue, form]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps  
+  }, [startDate, planDurationValue, form.getValues('planDuration')]); 
+  // Added form.getValues('planDuration') for initialization consistency
 
   const handleFoodPreferenceChange = (categoryId: string, itemId: string, type: "isFavorite" | "isDisliked" | "isAllergenic", checked: boolean) => {
     setFoodCategoriesInStorage(prevCategories =>
@@ -211,7 +225,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     const availableFoodsForAI = likedFoodsList.join("\n");
     const foodsToAvoidForAI = foodsToAvoidList.join("\n");
 
-    // Calculate actual duration in days for the AI
     const actualDurationInDays = differenceInDays(endDate, startDate) + 1;
     const planDurationForAI = `${actualDurationInDays} jour${actualDurationInDays > 1 ? 's' : ''}`;
 
@@ -222,7 +235,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         availableFoods: availableFoodsForAI,
         foodsToAvoid: foodsToAvoidForAI.length > 0 ? foodsToAvoidForAI : undefined,
         diabeticResearchSummary: values.diabeticResearchSummary,
-        planDuration: planDurationForAI, // Use the calculated duration string
+        planDuration: planDurationForAI, 
       };
       const result = await generateMealPlan(mealPlanInput);
       onMealPlanGenerated(result, values.planName);
@@ -271,7 +284,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       diabeticResearchSummary: currentFormValues.diabeticResearchSummary,
       foodPreferences: foodCategoriesFromStorage, 
       startDate: startDate ? startDate.toISOString() : undefined,
-      endDate: endDate ? endDate.toISOString() : undefined, // Save endDate as well
+      endDate: endDate ? endDate.toISOString() : undefined, 
     };
     setSavedFormSettings(settingsToSave);
     toast({
@@ -289,7 +302,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       });
       setFoodCategoriesInStorage(savedFormSettings.foodPreferences); 
       setStartDate(savedFormSettings.startDate ? new Date(savedFormSettings.startDate) : new Date());
-      setEndDate(savedFormSettings.endDate ? new Date(savedFormSettings.endDate) : addDays(new Date (savedFormSettings.startDate || new Date()),0)); // Load endDate
+      setEndDate(savedFormSettings.endDate ? new Date(savedFormSettings.endDate) : addDays(new Date (savedFormSettings.startDate || new Date()),0)); 
       toast({
         title: "Paramètres chargés!",
         description: "Votre configuration de formulaire a été restaurée.",
@@ -312,7 +325,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
           Configuration des plans de repas
         </CardTitle>
         <CardDescription>
-          Personnalisez vos préférences et générez un plan repas adapté.
+          Personnalisez vos préférences et générez un plan de repas adapté sur une période de votre choix.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -323,7 +336,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
               name="planName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nom du Plan (optionnel)</FormLabel>
+                  <FormLabel>Nom du plan (optionnel)</FormLabel>
                   <FormControl>
                     <Input placeholder="Ex: Mon plan semaine prochaine" {...field} />
                   </FormControl>
@@ -341,6 +354,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Durée du plan</FormLabel>
+                   <div className="mb-1 text-sm font-medium">Calendrier du plan</div>
                   <div className="flex flex-col sm:flex-row gap-4 items-start">
                     <div className="w-full sm:w-1/2">
                       <Select onValueChange={field.onChange} value={field.value}>
@@ -383,7 +397,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                             mode="single"
                             selected={startDate}
                             onSelect={(date) => {setStartDate(date); if (date && endDate && date > endDate) setEndDate(date);}}
-                            disabled={(date) => date < new Date(new Date().setDate(new Date().getDate() -1)) } // Allow today
+                            disabled={(date) => date < new Date(new Date().setDate(new Date().getDate() -1)) } 
                             initialFocus
                           />
                         </PopoverContent>
@@ -425,7 +439,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
             <div className="space-y-4">
               <Label className="text-lg font-semibold">Préférences alimentaires</Label>
               <p className="text-sm text-muted-foreground">
-                Cochez les les aliments favoris, à éviter ou allergènes. Les aliments favoris seront privilégiés pour vos plans de repas.
+                Cochez vos aliments favoris, à éviter ou allergènes. Les aliments favoris seront privilégiés pour vos plans de repas.
               </p>
               <div className="max-h-[400px] overflow-y-auto p-1 rounded-md border">
                 <Accordion type="multiple" className="w-full">
@@ -443,7 +457,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                                   <span className="text-sm">{item.name} <span className="text-xs text-muted-foreground">{item.ig}</span></span>
                                   {renderNutritionalInfo(item)}
                                 </div>
-                                <div className="flex items-center space-x-1 justify-self-end">
+                                 <div className="flex items-center space-x-1 justify-self-end">
                                   <Checkbox
                                     id={`${item.id}-favorite`}
                                     checked={item.isFavorite}
