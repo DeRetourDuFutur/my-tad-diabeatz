@@ -40,7 +40,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { format, addDays, differenceInDays } from "date-fns";
+import { format, addDays, differenceInDays, isValid, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import type { FormSettings } from "@/lib/types";
 
@@ -74,7 +74,8 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
 
   const [startDate, setStartDate] = useState<Date | undefined>(new Date());
   const [endDate, setEndDate] = useState<Date | undefined>(addDays(new Date(), 0)); 
-  const [calculatedDurationDisplay, setCalculatedDurationDisplay] = useState<string>("1 jour");
+  const [durationInDays, setDurationInDays] = useState<string>("1");
+
 
   const [savedFormSettings, setSavedFormSettings] = useLocalStorage<FormSettings | null>("diabeatz-form-settings", null);
 
@@ -87,18 +88,14 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       const initialItems = initialCategoryDefinition ? initialCategoryDefinition.items : [];
       
       return {
-        // Start with initial definition to ensure all base fields are present
-        ...initialCategoryDefinition, 
-        // Then spread the stored category which might have different preference flags
+        ...(initialCategoryDefinition || {}), 
         ...storedCategory, 
-        // Ensure categoryName is from stored if it somehow differs (shouldn't)
         categoryName: storedCategory.categoryName, 
-        // Hydrate items: take initial item definition and merge stored preferences
         items: initialItems.map(initialItem => { 
           const storedItem = storedCategory.items.find(si => si.id === initialItem.id);
           return {
-            ...initialItem, // Base structure and default values (like placeholders for nutrition)
-            ...(storedItem || {}), // Apply stored preferences (isFavorite, isDisliked, isAllergenic)
+            ...initialItem, 
+            ...(storedItem || {}), 
           };
         }),
       };
@@ -115,16 +112,62 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     },
   });
 
- useEffect(() => {
-    if (startDate && endDate && endDate >= startDate) {
+  // Update durationInDays when startDate or endDate changes
+  useEffect(() => {
+    if (startDate && endDate && isValid(startDate) && isValid(endDate) && endDate >= startDate) {
       const diff = differenceInDays(endDate, startDate) + 1;
-      setCalculatedDurationDisplay(`${diff} jour${diff > 1 ? 's' : ''}`);
-    } else if (startDate && endDate && endDate < startDate) {
-      setCalculatedDurationDisplay("Date de fin invalide");
-    } else {
-      setCalculatedDurationDisplay("-");
+      setDurationInDays(diff.toString());
+    } else if (startDate && endDate && isValid(startDate) && isValid(endDate) && endDate < startDate) {
+      setDurationInDays("0"); // Or some indicator of invalid range
     }
   }, [startDate, endDate]);
+
+  // Update endDate when durationInDays or startDate changes
+  useEffect(() => {
+    const numDays = parseInt(durationInDays, 10);
+    if (!isNaN(numDays) && numDays > 0 && startDate && isValid(startDate)) {
+      const newEndDate = addDays(startDate, numDays - 1);
+      // Only update if newEndDate is different to avoid infinite loops
+      if (!endDate || !isValid(endDate) || newEndDate.getTime() !== endDate.getTime()) {
+         // Check if newEndDate is not before startDate to prevent invalid range from duration input
+        if (newEndDate >= startDate) {
+            setEndDate(newEndDate);
+        } else {
+            // If duration makes endDate before startDate, reset duration to 1 or based on current valid endDate
+            if (endDate && endDate >= startDate) {
+                 const diff = differenceInDays(endDate, startDate) + 1;
+                 setDurationInDays(diff.toString());
+            } else {
+                 setDurationInDays("1");
+                 setEndDate(addDays(startDate, 0));
+            }
+        }
+      }
+    } else if (!isNaN(numDays) && numDays <= 0 && startDate && isValid(startDate)) {
+        // Handle cases where user enters 0 or negative, reset to 1 day
+        setDurationInDays("1");
+        if(!endDate || !isValid(endDate) || addDays(startDate,0).getTime() !== endDate.getTime()){
+             setEndDate(addDays(startDate, 0));
+        }
+    }
+  }, [durationInDays, startDate]);
+
+
+  const handleDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Allow empty input temporarily, or positive numbers
+    if (value === "" || (parseInt(value, 10) > 0 && /^\d*$/.test(value))) {
+      setDurationInDays(value);
+    } else if (parseInt(value, 10) <= 0 && value !== "") {
+      setDurationInDays("1"); // Reset to 1 if 0 or negative
+    }
+  };
+  
+  const handleDurationBlur = () => {
+    if (durationInDays === "" || parseInt(durationInDays, 10) <= 0) {
+      setDurationInDays("1"); // Default to 1 if empty or invalid on blur
+    }
+  };
 
 
   const handleFoodPreferenceChange = (categoryId: string, itemId: string, type: "isFavorite" | "isDisliked" | "isAllergenic", checked: boolean) => {
@@ -138,10 +181,9 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                   ? {
                       ...item,
                       [type]: checked,
-                      // Logic to ensure mutually exclusive states if needed
                       ...(type === "isFavorite" && checked && { isDisliked: false, isAllergenic: false }),
-                      ...(type === "isDisliked" && checked && { isFavorite: false }), // Cannot be favorite if disliked
-                      ...(type === "isAllergenic" && checked && { isFavorite: false }), // Cannot be favorite if allergenic
+                      ...(type === "isDisliked" && checked && { isFavorite: false }), 
+                      ...(type === "isAllergenic" && checked && { isFavorite: false }), 
                     }
                   : item
               ),
@@ -154,7 +196,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
 
-    if (!startDate || !endDate || endDate < startDate) {
+    if (!startDate || !endDate || !isValid(startDate) || !isValid(endDate) || endDate < startDate) {
       toast({
         title: "Dates invalides",
         description: "Veuillez sélectionner une date de début et une date de fin valide, où la date de fin est après ou égale à la date de début.",
@@ -236,7 +278,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       item.fat && `Lipides: ${item.fat}`,
       item.fiber && `Fibres: ${item.fiber}`,
       item.sodium && `Sel/Sodium: ${item.sodium}`,
-    ].filter(Boolean); // Filter out undefined or empty strings
+    ].filter(Boolean); 
 
     if (infos.length === 0 && !item.notes) return null;
 
@@ -253,9 +295,9 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     const settingsToSave: FormSettings = {
       planName: currentFormValues.planName,
       diabeticResearchSummary: currentFormValues.diabeticResearchSummary,
-      foodPreferences: foodCategoriesFromStorage, // Save the raw preferences
+      foodPreferences: foodCategoriesFromStorage, 
       startDate: startDate ? startDate.toISOString() : undefined,
-      endDate: endDate ? endDate.toISOString() : undefined, // Save endDate as well
+      endDate: endDate ? endDate.toISOString() : undefined, 
     };
     setSavedFormSettings(settingsToSave);
     toast({
@@ -270,17 +312,26 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         planName: savedFormSettings.planName || "",
         diabeticResearchSummary: savedFormSettings.diabeticResearchSummary,
       });
-      setFoodCategoriesInStorage(savedFormSettings.foodPreferences); // This will trigger the useEffect to update processedFoodCategories
-      setStartDate(savedFormSettings.startDate ? new Date(savedFormSettings.startDate) : new Date());
-      // Ensure endDate is also loaded and is not before startDate
-      const loadedEndDate = savedFormSettings.endDate ? new Date(savedFormSettings.endDate) : undefined;
-      const loadedStartDate = savedFormSettings.startDate ? new Date(savedFormSettings.startDate) : new Date();
-      if (loadedEndDate && loadedStartDate && loadedEndDate >= loadedStartDate) {
-        setEndDate(loadedEndDate);
+      setFoodCategoriesInStorage(savedFormSettings.foodPreferences); 
+      
+      const loadedStartDate = savedFormSettings.startDate ? parseISO(savedFormSettings.startDate) : new Date();
+      const loadedEndDate = savedFormSettings.endDate ? parseISO(savedFormSettings.endDate) : addDays(loadedStartDate, 0);
+
+      if (isValid(loadedStartDate)) {
+        setStartDate(loadedStartDate);
       } else {
-        setEndDate(addDays(loadedStartDate, 0)); // Default to same day or adjust as needed
+        setStartDate(new Date()); // Fallback
       }
       
+      if (isValid(loadedEndDate) && loadedEndDate >= loadedStartDate) {
+        setEndDate(loadedEndDate);
+      } else if (isValid(loadedStartDate)) {
+        setEndDate(addDays(loadedStartDate, 0)); // Fallback based on valid start date
+      } else {
+        setEndDate(addDays(new Date(),0)); // Fallback
+      }
+      
+      // This will trigger the useEffect to set durationInDays based on loaded dates
       toast({
         title: "Paramètres chargés!",
         description: "Votre configuration de formulaire a été restaurée.",
@@ -303,7 +354,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
           Configuration des plans de repas
         </CardTitle>
         <CardDescription>
-          Personnalisez vos préférences et générez un plan de repas adapté sur une période de votre choix.
+         Personnalisez vos préférences et générez un plan de repas adapté sur une période de votre choix.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -327,61 +378,90 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
             />
             
             <FormItem>
-               <FormLabel>Calendrier du plan</FormLabel>
-              <div className="flex flex-col sm:flex-row gap-4 items-center">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-full sm:w-auto justify-start text-left font-normal h-10 flex-1",
-                        !startDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarDays className="mr-2 h-4 w-4" />
-                      {startDate ? format(startDate, "PPP", { locale: fr }) : <span>Date début</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={startDate}
-                      onSelect={(date) => {setStartDate(date); if (date && endDate && date > endDate) setEndDate(date);}}
-                      disabled={(date) => date < new Date(new Date().setDate(new Date().getDate() -1)) } // Prevent selecting past dates
-                      initialFocus
+              <FormLabel>Calendrier du plan</FormLabel>
+              <div className="flex flex-col sm:flex-row gap-4 items-start">
+                {/* Left Column: Date Pickers (60%) */}
+                <div className="w-full sm:w-3/5 space-y-3">
+                  <div>
+                    <Label htmlFor="start-date-picker-trigger" className="text-sm font-medium">Date de début</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          id="start-date-picker-trigger"
+                          variant={"outline"}
+                          className={cn(
+                            "w-full justify-start text-left font-normal h-10",
+                            !startDate && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarDays className="mr-2 h-4 w-4" />
+                          {startDate && isValid(startDate) ? format(startDate, "PPP", { locale: fr }) : <span>Choisir une date</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={startDate}
+                          onSelect={(date) => {
+                            if (date) {
+                                setStartDate(date);
+                                if (endDate && date > endDate) setEndDate(date); // Ensure end date is not before start
+                            }
+                          }}
+                          disabled={(date) => date < new Date(new Date().setDate(new Date().getDate() -1)) } 
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div>
+                    <Label htmlFor="end-date-picker-trigger" className="text-sm font-medium">Date de fin</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          id="end-date-picker-trigger"
+                          variant={"outline"}
+                          className={cn(
+                            "w-full justify-start text-left font-normal h-10",
+                            !endDate && "text-muted-foreground"
+                          )}
+                          disabled={!startDate || !isValid(startDate)} 
+                        >
+                          <CalendarDays className="mr-2 h-4 w-4" />
+                          {endDate && isValid(endDate) ? format(endDate, "PPP", { locale: fr }) : <span>Choisir une date</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={endDate}
+                          onSelect={setEndDate}
+                          disabled={(date) => startDate && isValid(startDate) ? date < startDate : date < new Date(new Date().setDate(new Date().getDate() -1)) } 
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+                {/* Right Column: Duration Input (40%) */}
+                <div className="w-full sm:w-2/5 space-y-3 sm:pt-0 pt-2"> {/* Adjusted padding top for small screens */}
+                   <div>
+                    <Label htmlFor="duration-input" className="text-sm font-medium">Durée choisie (jours)</Label>
+                    <Input
+                        id="duration-input"
+                        type="number"
+                        min="1"
+                        value={durationInDays}
+                        onChange={handleDurationChange}
+                        onBlur={handleDurationBlur}
+                        className="h-10 text-center"
+                        placeholder="Jours"
                     />
-                  </PopoverContent>
-                </Popover>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-full sm:w-auto justify-start text-left font-normal h-10 flex-1",
-                        !endDate && "text-muted-foreground"
-                      )}
-                      disabled={!startDate} // Disable if no start date
-                    >
-                      <CalendarDays className="mr-2 h-4 w-4" />
-                      {endDate ? format(endDate, "PPP", { locale: fr }) : <span>Date fin</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={endDate}
-                      onSelect={setEndDate}
-                      disabled={(date) => startDate ? date < startDate : date < new Date(new Date().setDate(new Date().getDate() -1)) } // Prevent end date before start date
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-                <div className="px-3 py-2 h-10 border border-input rounded-md text-sm flex items-center justify-center bg-muted text-muted-foreground min-w-[80px]">
-                  {calculatedDurationDisplay}
+                   </div>
                 </div>
               </div>
               <FormDescription>
-                Choisissez la date de début et de fin du plan. Cela vous indiquera la durée du plan en jours
+                Choisissez la date de début et de fin du plan. Cela vous indiquera la durée du plan en jours.
               </FormDescription>
             </FormItem>
 
@@ -495,7 +575,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                 <Save className="mr-2 h-4 w-4" />
                 Sauvegarder les paramètres
               </Button>
-              <Button type="button" variant="outline" onClick={handleLoadSettings} className="flex-1" disabled={!savedFormSettings}>
+              <Button type="button" variant="outline" onClick={handleLoadSettings} className="flex-1" disabled={!savedFormSettings && (typeof window !== 'undefined' && !localStorage.getItem("diabeatz-form-settings"))}>
                 <Upload className="mr-2 h-4 w-4" />
                 Charger les paramètres
               </Button>
@@ -508,8 +588,3 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   );
 }
     
-
-    
-
-    
-
