@@ -47,7 +47,8 @@ export interface FormSettings {
   diabeticResearchSummary: string;
   foodPreferences: FoodCategory[];
   selectionMode?: 'dates' | 'duration';
-  startDate?: string; // ISO string for localStorage
-  endDate?: string; // ISO string for localStorage
-  durationInDays?: string; 
+  startDate?: string; // ISO string for localStorage (for "Par Dates" mode)
+  endDate?: string; // ISO string for localStorage (for "Par Dates" mode)
+  durationInDays?: string; // For "Par Durée" mode
+  durationModeStartDate?: string; // ISO string for localStorage (start date for "Par Durée" mode)
 }

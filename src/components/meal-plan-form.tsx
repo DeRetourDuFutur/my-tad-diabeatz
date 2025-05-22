@@ -41,7 +41,7 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription as DialogDescriptionComponent, // Renamed
+  DialogDescription as DialogDescriptionComponentUI, // Renamed
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -59,7 +59,7 @@ import { cn } from "@/lib/utils";
 import { format, addDays, differenceInDays, isValid, parseISO, isBefore } from "date-fns";
 import { fr } from "date-fns/locale";
 import type { FormSettings } from "@/lib/types";
-import { Alert, AlertTitle, AlertDescription as AlertDescriptionComponentUI } from "@/components/ui/alert";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"; // Renamed AlertDescription import
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 
@@ -75,35 +75,45 @@ type MealPlanFormProps = {
 
 const defaultResearchSummary = `**Privilégiez la variété et la fraîcheur (en gras et bleu)**
 - Cuisinez autant que possible à partir d’aliments frais et peu transformés, en variant les sources de nutriments sur la semaine.
-Aucun aliment n’est strictement interdit, mais il est préférable de limiter les produits ultra-transformés, les sucres ajoutés et les plats industriels.
+- Aucun aliment n’est strictement interdit, mais il est préférable de limiter les produits ultra-transformés, les sucres ajoutés et les plats industriels.
+
 **Faites la part belle aux légumes non amylacés (en gras et bleu)**
 - Consommez au moins 3 portions de légumes par jour, en privilégiant les légumes verts à feuilles, les crucifères, les légumes colorés et les courges.
-Remplissez la moitié de votre assiette de légumes à chaque repas pour augmenter l’apport en fibres et limiter l’absorption des glucides.
+- Remplissez la moitié de votre assiette de légumes à chaque repas pour augmenter l’apport en fibres et limiter l’absorption des glucides.
+
 **Choisissez des céréales complètes et des légumineuses (en gras et bleu)**
 - Remplacez les céréales raffinées (pain blanc, riz blanc) par des céréales complètes (pain complet, riz brun, quinoa, avoine).
-Intégrez des légumineuses (lentilles, pois chiches, haricots) au moins deux fois par semaine pour leur richesse en fibres et protéines végétales.
+- Intégrez des légumineuses (lentilles, pois chiches, haricots) au moins deux fois par semaine pour leur richesse en fibres et protéines végétales.
+
 **Privilégiez les protéines maigres et les bonnes graisses (en gras et bleu)**
 - Optez pour des sources de protéines maigres : volaille sans peau, poissons gras (saumon, sardine, maquereau) riches en oméga-3, œufs.
-Consommez des huiles végétales (olive, colza, tournesol), des avocats, des noix et des graines en quantité modérée pour favoriser les acides gras insaturés.
+- Consommez des huiles végétales (olive, colza, tournesol), des avocats, des noix et des graines en quantité modérée pour favoriser les acides gras insaturés.
+
 **Contrôlez la qualité et la quantité des glucides (en gras et bleu)**
 - Répartissez les glucides de façon régulière à chaque repas et collation, en visant 45 à 75 g de glucides par repas, et 15 à 30 g par collation si nécessaire.
-Privilégiez les aliments à faible ou moyen indice glycémique (IG) : légumes, fruits à coque, légumineuses, céréales complètes.
-Limitez les aliments à IG élevé (pain blanc, pommes de terre, sodas, pâtisseries).
+- Privilégiez les aliments à faible ou moyen indice glycémique (IG) : légumes, fruits à coque, légumineuses, céréales complètes.
+- Limitez les aliments à IG élevé (pain blanc, pommes de terre, sodas, pâtisseries).
+
 **Assurez un apport suffisant en fibres (en gras et bleu)**
 - Consommez au moins 5 portions de fruits et légumes par jour, dont 2 à 3 fruits (entiers, non en jus).
-Les fibres ralentissent l’absorption des sucres et facilitent le contrôle de la glycémie.
+- Les fibres ralentissent l’absorption des sucres et facilitent le contrôle de la glycémie.
+
 **Maîtrisez les portions et respectez votre satiété (en gras et bleu)**
 - Utilisez des assiettes plus petites, remplissez la moitié de légumes, et limitez la portion de féculents à la taille de votre poing.
-Écoutez vos signaux de faim et de satiété, prenez le temps de savourer vos repas.
+- Écoutez vos signaux de faim et de satiété, prenez le temps de savourer vos repas.
+
 **Structurez vos repas et collations (en gras et bleu)**
 - Prenez 3 repas principaux par jour à horaires réguliers, sans sauter de repas.
-Si besoin, ajoutez 1 à 2 collations nutritives pour prévenir les hypoglycémies ou combler la faim, en privilégiant des aliments riches en fibres et protéines.
+- Si besoin, ajoutez 1 à 2 collations nutritives pour prévenir les hypoglycémies ou combler la faim, en privilégiant des aliments riches en fibres et protéines.
+
 **Limitez le sel, l’alcool et les graisses saturées (en gras et bleu)**
 - Réduisez la consommation de sel pour prévenir l’hypertension.
-Limitez l’alcool à un verre par jour pour les femmes, deux pour les hommes, en tenant compte de ses effets sur la glycémie.
-Privilégiez la volaille et limitez les viandes rouges et charcuteries à 500g par semaine maximum.
+- Limitez l’alcool à un verre par jour pour les femmes, deux pour les hommes, en tenant compte de ses effets sur la glycémie.
+- Privilégiez la volaille et limitez les viandes rouges et charcuteries à 500g par semaine maximum.
+
 **Adaptez votre alimentation à votre mode de vie (en gras et bleu)**
 - Tenez compte de vos horaires, préférences alimentaires et activité physique pour construire des repas adaptés et durables.
+
 **N’hésitez pas à consulter un(e) diététicien(ne) pour un accompagnement personnalisé (en gras et rouge)**`;
 
 
@@ -112,11 +122,12 @@ const RichTextDisplay: React.FC<{ text: string }> = ({ text }) => {
   const elements: JSX.Element[] = [];
   let currentListItems: string[] = [];
   let currentSectionTitle: React.ReactNode = null;
+  let inList = false;
 
   const flushList = () => {
     if (currentListItems.length > 0) {
       elements.push(
-        <div key={`section-${elements.length}`} className="mb-3">
+        <div key={`section-list-${elements.length}`} className="mb-3">
           {currentSectionTitle && <div className="mb-1">{currentSectionTitle}</div>}
           <ul className="list-disc pl-5 space-y-0.5">
             {currentListItems.map((item, idx) => (
@@ -127,6 +138,7 @@ const RichTextDisplay: React.FC<{ text: string }> = ({ text }) => {
       );
       currentListItems = [];
       currentSectionTitle = null;
+      inList = false;
     } else if (currentSectionTitle) {
         elements.push(<div key={`title-only-${elements.length}`} className="mb-1">{currentSectionTitle}</div>);
         currentSectionTitle = null;
@@ -152,14 +164,22 @@ const RichTextDisplay: React.FC<{ text: string }> = ({ text }) => {
       }
       currentSectionTitle = <p className={titleClasses}>{titleContent}</p>;
     } else if (listItemMatch) {
+      if (!inList && currentSectionTitle) {
+        // Title exists, start a new list under it
+        inList = true;
+      } else if (!inList) {
+        // No title, but it's a list item, flush any previous non-list title
+        flushList();
+        inList = true;
+      }
       currentListItems.push(listItemMatch[1]);
-    } else if (line.trim() !== "") { // Pour les paragraphes simples entre les sections
-      flushList(); // S'assurer que la liste précédente est traitée
+    } else if (line.trim() !== "") { 
+      flushList(); 
       elements.push(<p key={`p-${index}`} className="mb-1 text-sm">{line}</p>);
     }
   });
 
-  flushList(); // S'assurer que la dernière liste ou le dernier titre est traité
+  flushList(); 
 
   return <div className="prose prose-sm dark:prose-invert max-w-none">{elements}</div>;
 };
@@ -224,24 +244,31 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     "diabeatz-food-preferences",
     initialFoodCategories
   );
-
   const [processedFoodCategories, setProcessedFoodCategories] = useState<FoodCategory[]>(initialFoodCategories);
 
+  // For "Par Dates" mode
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
-  const [durationInDays, setDurationInDays] = useState<string>("1"); // For 'Par Durée' mode input
+  
+  // For "Par Durée" mode
+  const [durationInDays, setDurationInDays] = useState<string>("1"); 
+  const [durationModeStartDate, setDurationModeStartDate] = useState<Date | undefined>(undefined);
+
+  // Selection mode
   const [selectionMode, setSelectionMode] = useState<'dates' | 'duration'>('dates');
 
-  // For display purposes
+  // For display purposes (calculated values)
   const [displayDurationFromDates, setDisplayDurationFromDates] = useState<string>("1 jour");
-  const [displayStartDateForDurationMode, setDisplayStartDateForDurationMode] = useState<Date | undefined>(undefined);
   const [displayEndDateFromDuration, setDisplayEndDateFromDuration] = useState<Date | undefined>(undefined);
 
 
   const [savedFormSettings, setSavedFormSettings] = useLocalStorage<FormSettings | null>("diabeatz-form-settings", null);
   const [isClient, setIsClient] = useState(false);
+  
   const [isStartDatePickerOpen, setIsStartDatePickerOpen] = useState(false);
   const [isEndDatePickerOpen, setIsEndDatePickerOpen] = useState(false);
+  const [isDurationModeStartDatePickerOpen, setIsDurationModeStartDatePickerOpen] = useState(false);
+
   const [isEditTipsDialogOpen, setIsEditTipsDialogOpen] = useState(false);
   const [editingTips, setEditingTips] = useState<string>("");
 
@@ -269,16 +296,21 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     if (isClient) {
       const tomorrow = addDays(new Date(), 1);
       tomorrow.setHours(0, 0, 0, 0);
+
+      // Initial default for "Par Dates" mode
       if (!startDate) setStartDate(tomorrow);
       if (!endDate) setEndDate(new Date(tomorrow)); // for 1 day duration initially
-      if (!displayStartDateForDurationMode) setDisplayStartDateForDurationMode(tomorrow);
       
+      // Initial default for "Par Durée" mode
+      if (!durationModeStartDate) setDurationModeStartDate(tomorrow);
+      // durationInDays is already "1" by default via useState
+
       if (savedFormSettings) {
-        handleLoadSettings();
+        handleLoadSettings(); // This will override defaults if settings exist
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClient]);
+  }, [isClient]); // Removed other dependencies to ensure it only runs once after mount or when savedSettings is first available
 
 
   useEffect(() => {
@@ -306,14 +338,14 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
 
       storedCategory.items.forEach(storedItem => {
         if (!mergedItems.some(mi => mi.id === storedItem.id)) {
-          mergedItems.push(storedItem);
+          mergedItems.push(storedItem); // Add custom items from storage
         }
       });
-
+      
       return {
-        ...(initialCategoryDefinition || {}),
-        ...storedCategory,
-        categoryName: storedCategory.categoryName,
+        ...(initialCategoryDefinition || {}), // Base structure from initial data
+        ...storedCategory, // Overwrite with stored data (like categoryName if it could change, though not here)
+        categoryName: storedCategory.categoryName, // Ensure categoryName is from storage
         items: mergedItems.sort((a, b) => a.name.localeCompare(b.name)),
       };
     });
@@ -330,17 +362,17 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     }
   }, [startDate, endDate]);
 
-  // Update displayable endDate when durationInDays or displayStartDateForDurationMode changes (for "Par Durée" mode)
+  // Update displayable endDate when durationInDays or durationModeStartDate changes (for "Par Durée" mode)
   useEffect(() => {
-    if (displayStartDateForDurationMode && isValid(displayStartDateForDurationMode)) {
+    if (durationModeStartDate && isValid(durationModeStartDate)) {
       const numDays = parseInt(durationInDays, 10);
       if (!isNaN(numDays) && numDays >= 1 && numDays <= 365) {
-        setDisplayEndDateFromDuration(addDays(displayStartDateForDurationMode, numDays - 1));
+        setDisplayEndDateFromDuration(addDays(durationModeStartDate, numDays - 1));
       } else {
         setDisplayEndDateFromDuration(undefined); // Or handle as invalid
       }
     }
-  }, [durationInDays, displayStartDateForDurationMode]);
+  }, [durationInDays, durationModeStartDate]);
 
   const handleDurationInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -402,11 +434,11 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       }
     } else { // selectionMode === 'duration'
       const numDays = parseInt(durationInDays, 10);
-      finalStartDate = displayStartDateForDurationMode; // This is tomorrow by default
-      if (finalStartDate && isValid(finalStartDate) && !isNaN(numDays) && numDays >= 1 && numDays <= 365) {
+      if (durationModeStartDate && isValid(durationModeStartDate) && !isNaN(numDays) && numDays >= 1 && numDays <= 365) {
         planDurationForAI = `${numDays} jour${numDays > 1 ? 's' : ''}`;
+        finalStartDate = durationModeStartDate;
       } else {
-        toast({ title: "Durée invalide", description: "Veuillez entrer une durée en jours valide (1-365).", variant: "destructive" });
+        toast({ title: "Configuration de durée invalide", description: "Veuillez entrer une durée valide (1-365 jours) et une date de début.", variant: "destructive" });
         setIsLoading(false);
         return;
       }
@@ -529,11 +561,12 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     const settingsToSave: FormSettings = {
       planName: currentFormValues.planName,
       diabeticResearchSummary: currentFormValues.diabeticResearchSummary,
-      foodPreferences: foodCategoriesFromStorage,
+      foodPreferences: foodCategoriesFromStorage, // Save the raw preferences
       selectionMode: selectionMode,
       startDate: startDate ? startDate.toISOString() : undefined,
       endDate: endDate ? endDate.toISOString() : undefined,
       durationInDays: durationInDays,
+      durationModeStartDate: durationModeStartDate ? durationModeStartDate.toISOString() : undefined,
     };
     setSavedFormSettings(settingsToSave);
     toast({
@@ -549,6 +582,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         diabeticResearchSummary: savedFormSettings.diabeticResearchSummary,
       });
 
+      // Hydrate food preferences from storage, ensuring all items have all fields
       const hydratedFoodPrefs = initialFoodCategories.map(initialCat => {
         const storedCat = savedFormSettings.foodPreferences.find(sc => sc.categoryName === initialCat.categoryName);
         if (storedCat) {
@@ -556,7 +590,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                 const storedItem = storedCat.items.find(si => si.id === initItem.id);
                 return {
                     ...initItem,
-                    ...(storedItem || {}),
+                    ...(storedItem || {}), // Apply stored item over initial, then fill missing fields
                     calories: storedItem?.calories ?? initItem.calories,
                     carbs: storedItem?.carbs ?? initItem.carbs,
                     protein: storedItem?.protein ?? initItem.protein,
@@ -567,6 +601,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                     notes: storedItem?.notes ?? initItem.notes,
                 };
             });
+             // Add custom items from storage that weren't in initial data
             storedCat.items.forEach(storedItem => {
                 if (!mergedItems.some(mi => mi.id === storedItem.id)) {
                     mergedItems.push(storedItem);
@@ -574,20 +609,24 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
             });
             return { ...initialCat, ...storedCat, items: mergedItems.sort((a,b) => a.name.localeCompare(b.name)) };
         }
-        return initialCat;
+        return initialCat; // Return initial category if not found in storage
       });
-       savedFormSettings.foodPreferences.forEach(storedCat => {
+      // Ensure categories present in storage but not in initialFoodCategories are also included
+      savedFormSettings.foodPreferences.forEach(storedCat => {
         if(!hydratedFoodPrefs.some(hp => hp.categoryName === storedCat.categoryName)) {
-            hydratedFoodPrefs.push(storedCat);
+            hydratedFoodPrefs.push(storedCat); // Add custom categories from storage
         }
       });
       setFoodCategoriesInStorage(hydratedFoodPrefs);
 
+
       setSelectionMode(savedFormSettings.selectionMode || 'dates');
 
       const tomorrow = addDays(new Date(), 1);
-      tomorrow.setHours(0, 0, 0, 0);
-      let newStartDate = tomorrow;
+      tomorrow.setHours(0,0,0,0);
+
+      // For "Par Dates" mode
+      let newStartDate = new Date(tomorrow); // Default to tomorrow
       if (savedFormSettings.startDate) {
         const parsed = parseISO(savedFormSettings.startDate);
         if (isValid(parsed)) {
@@ -608,8 +647,18 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         }
       }
       setEndDate(newEndDate);
+      
+      // For "Par Durée" mode
       setDurationInDays(savedFormSettings.durationInDays || "1");
-      setDisplayStartDateForDurationMode(newStartDate);
+      let newDurationModeStartDate = new Date(tomorrow); // Default to tomorrow
+      if (savedFormSettings.durationModeStartDate) {
+        const parsedDurationStart = parseISO(savedFormSettings.durationModeStartDate);
+        if (isValid(parsedDurationStart)) {
+          parsedDurationStart.setHours(0,0,0,0);
+          newDurationModeStartDate = parsedDurationStart;
+        }
+      }
+      setDurationModeStartDate(newDurationModeStartDate);
 
 
       toast({
@@ -624,7 +673,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [savedFormSettings, form, setFoodCategoriesInStorage, setStartDate, setEndDate, setDurationInDays, setSelectionMode, setDisplayStartDateForDurationMode]);
+  }, [savedFormSettings, form, setFoodCategoriesInStorage]); // Keep minimal dependencies for useCallback
 
 
   const handleAddNewFoodChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -660,7 +709,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     const newFoodItem: FoodItem = {
       id: `custom-${Date.now()}`,
       name: newFoodData.name.trim(),
-      categoryName: newFoodData.categoryName, // This is set by the Select
       ig: newFoodData.ig || "(IG: N/A)",
       calories: newFoodData.calories || "",
       carbs: newFoodData.carbs || "",
@@ -843,12 +891,44 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                         )}
 
                         {selectionMode === 'duration' && (
-                           <div className="flex flex-col sm:flex-row gap-3 items-start">
-                            <div className="w-full sm:w-1/3">
+                           <div className="flex flex-col sm:flex-row gap-3 items-end">
+                            <div className="flex-1 min-w-[150px] sm:min-w-[180px]">
+                               <Label htmlFor="duration-mode-start-date-picker" className="text-sm font-medium mb-1 block">Date de début</Label>
+                               <Popover open={isDurationModeStartDatePickerOpen} onOpenChange={setIsDurationModeStartDatePickerOpen}>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    id="duration-mode-start-date-picker"
+                                    variant={"outline"}
+                                    className={cn("w-full justify-start text-left font-normal h-10", !durationModeStartDate && "text-muted-foreground")}
+                                  >
+                                    <CalendarDays className="mr-2 h-4 w-4" />
+                                    {durationModeStartDate && isValid(durationModeStartDate) ? format(durationModeStartDate, "PPP", { locale: fr }) : <span>Choisir une date</span>}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                  <Calendar
+                                    mode="single"
+                                    selected={durationModeStartDate}
+                                    onSelect={(date) => {
+                                      if (date) {
+                                        date.setHours(0,0,0,0);
+                                        const today = new Date(); today.setHours(0,0,0,0);
+                                        if (isBefore(date, today)) date = today;
+                                        setDurationModeStartDate(date);
+                                      }
+                                      setIsDurationModeStartDatePickerOpen(false);
+                                    }}
+                                    disabled={(date) => { const yesterday = addDays(new Date(), -1); yesterday.setHours(0,0,0,0); return date < yesterday; }}
+                                    initialFocus
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+                            <div className="w-full sm:w-auto md:w-32">
                               <Label htmlFor="duration-input-field" className="text-sm font-medium mb-1 block">Durée en jours</Label>
                               <Input
                                 id="duration-input-field"
-                                type="text"
+                                type="text" 
                                 value={durationInDays}
                                 onChange={handleDurationInputChange}
                                 onBlur={handleDurationInputBlur}
@@ -856,18 +936,15 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                                 placeholder="Jours"
                               />
                             </div>
-                            <div className="flex-1 pt-1 sm:pt-7 text-sm text-muted-foreground space-y-1">
-                                {displayStartDateForDurationMode && isValid(displayStartDateForDurationMode) && (
-                                    <div>Début: {format(displayStartDateForDurationMode, "PPP", { locale: fr })}</div>
-                                )}
+                            <div className="flex-1 pt-1 sm:pt-0 text-sm text-muted-foreground space-y-1 min-w-[150px] sm:min-w-[180px]">
                                 {displayEndDateFromDuration && isValid(displayEndDateFromDuration) && (
-                                    <div>Fin: {format(displayEndDateFromDuration, "PPP", { locale: fr })}</div>
+                                    <div><span className="font-medium">Fin du plan:</span> {format(displayEndDateFromDuration, "PPP", { locale: fr })}</div>
                                 )}
                             </div>
                           </div>
                         )}
                         <FormDescriptionComponent className="mt-2">
-                          Configurez la période de votre plan en choisissant par dates ou par durée.
+                          Choisissez la date de début et de fin OU indiquez le nombre de jours souhaité (la date de début par défaut sera alors le lendemain).
                         </FormDescriptionComponent>
                       </FormItem>
                     </div>
@@ -890,7 +967,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="ml-4 shrink-0"
+                    className="ml-4 shrink-0" // Keep some margin from the accordion arrow
                     onClick={() => {
                         setNewFoodData(initialNewFoodData);
                         setAddFoodFormError(null);
@@ -1066,10 +1143,10 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
               <DialogTitle>Modifier les Conseils Alimentaires</DialogTitle>
-              <DialogDescriptionComponent>
+              <DialogDescriptionComponentUI>
                 Modifiez le texte des conseils ci-dessous. Utilisez `**texte**` pour le gras.
                 Les annotations comme (en gras et bleu) seront interprétées pour le style.
-              </DialogDescriptionComponent>
+              </DialogDescriptionComponentUI>
             </DialogHeader>
             <div className="py-4">
               <Textarea
@@ -1097,9 +1174,9 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>Valeurs nutritionnelles pour {selectedFoodItemForNutritionalInfo?.name}</DialogTitle>
-              <DialogDescriptionComponent>
+              <DialogDescriptionComponentUI>
                 Modifiez les informations nutritionnelles ci-dessous. Ces valeurs sont indicatives.
-              </DialogDescriptionComponent>
+              </DialogDescriptionComponentUI>
             </DialogHeader>
             <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
               {(Object.keys(editableNutritionalInfo) as Array<keyof EditableNutritionalInfo>).map((key) => {
@@ -1155,16 +1232,16 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>Ajouter un nouvel aliment</DialogTitle>
-              <DialogDescriptionComponent>
+              <DialogDescriptionComponentUI>
                 Remplissez les informations ci-dessous pour ajouter un aliment à vos préférences.
-              </DialogDescriptionComponent>
+              </DialogDescriptionComponentUI>
             </DialogHeader>
             <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-3">
               {addFoodFormError && (
                 <Alert variant="destructive">
                   <AlertTriangle className="h-4 w-4" />
                   <AlertTitle>Erreur</AlertTitle>
-                  <AlertDescriptionComponentUI>{addFoodFormError}</AlertDescriptionComponentUI>
+                  <AlertDescription>{addFoodFormError}</AlertDescription>
                 </Alert>
               )}
               <div className="grid grid-cols-4 items-center gap-4">
