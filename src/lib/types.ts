@@ -48,4 +48,6 @@ export interface FormSettings {
   diabeticResearchSummary: string;
   foodPreferences: FoodCategory[];
   startDate?: string; // ISO string for localStorage
+  endDate?: string; // ISO string for localStorage
 }
+
