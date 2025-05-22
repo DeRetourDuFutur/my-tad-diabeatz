@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star, CalendarDays, Save, Upload, ListFilter, PlusCircle, BookOpenText, BarChart2, Apple, Carrot, Nut, Wheat, Bean, Beef, Milk, Shell as OilIcon, Blend } from "lucide-react"; // Added Shell as OilIcon
+import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star, CalendarDays, Save, Upload, ListFilter, PlusCircle, BookOpenText, BarChart2, Apple, Carrot, Nut, Wheat, Bean, Beef, Milk, Shell as OilIcon, Blend } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import {
   Accordion,
@@ -242,13 +242,15 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     initialFoodCategories
   );
   const [processedFoodCategories, setProcessedFoodCategories] = useState<FoodCategory[]>(initialFoodCategories);
-
+  
   const [selectionMode, setSelectionMode] = useState<'dates' | 'duration'>('dates');
   
+  // States for "Par Dates" mode
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [displayDurationFromDates, setDisplayDurationFromDates] = useState<string>("1 jour");
   
+  // States for "Par Durée" mode
   const [durationInDays, setDurationInDays] = useState<string>("1"); 
   const [durationModeStartDate, setDurationModeStartDate] = useState<Date | undefined>(undefined);
   const [displayEndDateFromDuration, setDisplayEndDateFromDuration] = useState<Date | undefined>(undefined);
@@ -279,7 +281,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     },
   });
 
- useEffect(() => {
+  useEffect(() => {
     setIsClient(true);
   }, []);
 
@@ -287,17 +289,26 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     if (isClient) {
       const tomorrow = startOfDay(addDays(new Date(), 1));
       if (savedFormSettings) {
-        handleLoadSettings();
+        // handleLoadSettings will be called which sets dates
       } else {
-        // Initialize dates and duration if not loading from settings
+        // Initialize dates for "Par Dates" mode
         setStartDate(tomorrow);
-        setEndDate(new Date(tomorrow)); // for 1 day duration initially for "dates" mode
+        setEndDate(new Date(tomorrow)); // for 1 day duration initially
+        // Initialize date and duration for "Par Durée" mode
         setDurationModeStartDate(tomorrow);
         setDurationInDays("1");
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isClient]);
+
+  // Effect to handle loading settings once they are available from localStorage
+  useEffect(() => {
+    if (isClient && savedFormSettings) {
+        handleLoadSettings();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isClient, savedFormSettings]); // Trigger when savedFormSettings is hydrated
 
   useEffect(() => {
     const hydratedCategories = foodCategoriesFromStorage.map(storedCategory => {
@@ -339,6 +350,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   }, [foodCategoriesFromStorage]);
 
 
+  // Update display duration when in "Par Dates" mode and dates change
   useEffect(() => {
     if (selectionMode === 'dates' && startDate && endDate && isValid(startDate) && isValid(endDate) && !isBefore(endDate, startDate)) {
       const diff = differenceInDays(endDate, startDate) + 1;
@@ -349,6 +361,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   }, [startDate, endDate, selectionMode]);
 
 
+  // Update display end date when in "Par Durée" mode and duration or start date changes
   useEffect(() => {
     if (selectionMode === 'duration' && durationModeStartDate && isValid(durationModeStartDate)) {
       const numDays = parseInt(durationInDays, 10);
@@ -412,7 +425,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     let planDurationForAI = "";
-    let finalStartDateForAI: Date | undefined;
+    let finalStartDateForAI: Date | undefined; // This will be used to ensure plan starts from a sensible date
 
     if (selectionMode === 'dates') {
       if (startDate && endDate && isValid(startDate) && isValid(endDate) && !isBefore(endDate, startDate)) {
@@ -428,7 +441,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       const numDays = parseInt(durationInDays, 10);
       if (durationModeStartDate && isValid(durationModeStartDate) && !isNaN(numDays) && numDays >= 1 && numDays <= 365) {
         planDurationForAI = `${numDays} jour${numDays > 1 ? 's' : ''}`;
-        finalStartDateForAI = durationModeStartDate;
+        finalStartDateForAI = durationModeStartDate; 
       } else {
         toast({ title: "Configuration de durée invalide", description: "Veuillez entrer une durée valide (1-365 jours) et une date de début.", variant: "destructive" });
         setIsLoading(false);
@@ -441,6 +454,15 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       setIsLoading(false);
       return;
     }
+    
+    // Further check: Ensure the finalStartDateForAI is not in the past
+    const today = startOfDay(new Date());
+    if (isBefore(finalStartDateForAI, today)) {
+        toast({ title: "Date de début passée", description: "La date de début du plan ne peut pas être dans le passé.", variant: "destructive"});
+        setIsLoading(false);
+        return;
+    }
+
 
     const likedFoodsList: string[] = [];
     const foodsToAvoidList: string[] = [];
@@ -571,7 +593,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     if (savedFormSettings) {
       form.reset({
         planName: savedFormSettings.planName || "",
-        diabeticResearchSummary: savedFormSettings.diabeticResearchSummary,
+        diabeticResearchSummary: savedFormSettings.diabeticResearchSummary || defaultResearchSummary,
       });
 
       const hydratedFoodPrefs = initialFoodCategories.map(initialCat => {
@@ -612,7 +634,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       setSelectionMode(savedFormSettings.selectionMode || 'dates');
       const tomorrow = startOfDay(addDays(new Date(), 1));
 
-      let newStartDate = new Date(tomorrow);
+      let newStartDate = tomorrow;
       if (savedFormSettings.startDate) {
         const parsed = parseISO(savedFormSettings.startDate);
         if (isValid(parsed)) {
@@ -634,7 +656,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       setEndDate(newEndDate);
       
       setDurationInDays(savedFormSettings.durationInDays || "1");
-      let newDurationModeStartDate = new Date(tomorrow); 
+      let newDurationModeStartDate = tomorrow; 
       if (savedFormSettings.durationModeStartDate) {
         const parsedDurationStart = parseISO(savedFormSettings.durationModeStartDate);
         if (isValid(parsedDurationStart)) {
@@ -656,14 +678,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [savedFormSettings, form, setFoodCategoriesInStorage]); 
-
-
-  useEffect(() => {
-    if (isClient && savedFormSettings && (!startDate || !endDate || !durationModeStartDate)) {
-        handleLoadSettings();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClient, savedFormSettings]);
 
 
   const handleAddNewFoodChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -742,7 +756,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       <div className="space-y-6">
         <Card className="shadow-lg"><CardHeader><CardTitle className="text-lg font-semibold">Chargement...</CardTitle></CardHeader><CardContent><Loader2 className="animate-spin" /></CardContent></Card>
         <Card className="shadow-lg"><CardHeader><CardTitle className="text-lg font-semibold">Chargement...</CardTitle></CardHeader><CardContent><Loader2 className="animate-spin" /></CardContent></Card>
-        <Card className="shadow-lg"><CardHeader><CardTitle className="text-lg font-semibold">Chargement...</CardTitle></CardHeader><CardContent><Loader2 className="animate-spin" /></CardContent></Card>
       </div>
     );
   }
@@ -755,14 +768,14 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
          
           <AccordionItem value="config-base-item" className="border-b-0">
              <Card className="shadow-lg">
-                <AccordionTrigger className="w-full text-left p-0 hover:no-underline">
-                  <CardHeader className="flex flex-row items-center justify-between w-full p-4">
-                    <div className="flex items-center gap-2">
-                        <Wand2 className="h-5 w-5 text-secondary-foreground" />
-                        <CardTitle className="text-lg font-semibold">Planification</CardTitle>
-                    </div>
-                  </CardHeader>
-                </AccordionTrigger>
+                <CardHeader className="flex flex-row items-center justify-between w-full p-4">
+                    <AccordionTrigger className="w-full text-left p-0 hover:no-underline group">
+                        <div className="flex items-center gap-2">
+                            <Wand2 className="h-5 w-5 text-secondary-foreground" />
+                            <CardTitle className="text-lg font-semibold">Planification</CardTitle>
+                        </div>
+                    </AccordionTrigger>
+                </CardHeader>
                 <AccordionContent className="pt-0">
                   <CardContent>
                     <div className="space-y-6">
@@ -783,7 +796,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                       <FormItem>
                         <FormLabel className="text-base font-medium mb-2 block">Calendrier / Durée</FormLabel>
                          <FormDescriptionComponent className="mb-3">
-                          Choisissez la date de début et de fin du plan ou indiquez le nombre de jours souhaité.
+                           Choisissez la date de début et de fin du plan ou indiquez le nombre de jours souhaité.
                         </FormDescriptionComponent>
                         <RadioGroup
                           value={selectionMode}
@@ -877,7 +890,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                                 </PopoverContent>
                               </Popover>
                             </div>
-                            <div className="sm:h-10 sm:flex sm:items-center text-sm text-primary min-w-[80px] text-right sm:text-left sm:justify-start">
+                            <div className="h-10 flex items-center text-sm text-primary min-w-[80px] text-right sm:text-left sm:justify-start">
                               {displayDurationFromDates !== "Durée invalide" && displayDurationFromDates}
                             </div>
                           </div>
@@ -932,7 +945,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                                 placeholder="Jours"
                               />
                             </div>
-                            <div className="flex-1 text-sm text-primary sm:h-10 sm:flex sm:items-center min-w-[150px] sm:min-w-[180px]">
+                            <div className="h-10 flex items-center flex-1 text-sm text-primary min-w-[150px] sm:min-w-[180px]">
                                 {displayEndDateFromDuration && isValid(displayEndDateFromDuration) && (
                                     <div>
                                         <span className="font-medium text-muted-foreground">Fin du plan : </span>
@@ -951,8 +964,8 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
 
           <AccordionItem value="prefs-aliments-item" className="border-b-0">
             <Card className="shadow-lg">
-              <div className="flex flex-row items-center justify-between w-full p-4">
-                  <AccordionTrigger className="flex p-0 hover:no-underline group text-left flex-1">
+              <CardHeader className="flex flex-row items-center justify-between w-full p-4">
+                  <AccordionTrigger className="w-full text-left p-0 hover:no-underline group flex-1">
                     <div className="flex items-center gap-2">
                       <ListFilter className="h-5 w-5 text-secondary-foreground" />
                       <CardTitle className="text-lg font-semibold">Préférences alimentaires</CardTitle>
@@ -972,7 +985,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Ajouter un aliment
                   </Button>
-              </div>
+              </CardHeader>
               <AccordionContent className="pt-0">
                   <CardContent>
                       <FormDescriptionComponent className="mb-2">
@@ -1068,36 +1081,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                 </AccordionContent>
             </Card>
           </AccordionItem>
-          
-          <AccordionItem value="conseils-aliments-item" className="border-b-0">
-             <Card className="shadow-lg">
-                <AccordionTrigger className="w-full text-left p-0 hover:no-underline">
-                  <CardHeader className="flex flex-row items-center justify-between w-full p-4">
-                     <div className="flex items-center gap-2">
-                       <BookOpenText className="h-5 w-5 text-secondary-foreground" />
-                       <CardTitle className="text-lg font-semibold text-foreground">
-                         Conseils alimentaires optimisés pour Diabète de Type 2
-                       </CardTitle>
-                     </div>
-                  </CardHeader>
-                </AccordionTrigger>
-                <AccordionContent className="pt-0">
-                  <CardContent>
-                    <div className="mb-3 p-3 border rounded-md bg-background/50 max-h-60 overflow-y-auto">
-                      <RichTextDisplay text={form.watch('diabeticResearchSummary')} />
-                    </div>
-                    <Button
-                      type="button"
-                      variant="link"
-                      onClick={handleOpenEditTipsDialog}
-                      className="text-sm p-0 h-auto"
-                    >
-                      Modifier les conseils
-                    </Button>
-                  </CardContent>
-                </AccordionContent>
-              </Card>
-          </AccordionItem>
         </Accordion>
 
         <div className="space-y-2 sm:space-y-0 sm:flex sm:gap-2 pt-4">
@@ -1111,7 +1094,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                 onClick={handleLoadSettings}
                 className="w-full sm:flex-1"
                 disabled={!isClient || (!savedFormSettings && (typeof window !== 'undefined' && !localStorage.getItem("diabeatz-form-settings")))}
-
             >
                 <Upload className="mr-2 h-4 w-4" />
                 Charger les paramètres
@@ -1131,6 +1113,44 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
             </>
         )}
         </Button>
+        
+        <Accordion type="single" collapsible className="w-full space-y-6">
+            <AccordionItem value="conseils-aliments-item" className="border-b-0">
+                <Card className="shadow-lg">
+                    <CardHeader className="flex flex-row items-center justify-between w-full p-4">
+                        <AccordionTrigger className="w-full text-left p-0 hover:no-underline group">
+                            <div className="flex items-center gap-2">
+                                <BookOpenText className="h-5 w-5 text-secondary-foreground" />
+                                <CardTitle className="text-lg font-semibold text-foreground">
+                                    Conseils alimentaires optimisés pour Diabète de Type 2
+                                </CardTitle>
+                            </div>
+                        </AccordionTrigger>
+                    </CardHeader>
+                    <AccordionContent className="pt-0">
+                        <CardContent>
+                            <FormField
+                                control={form.control}
+                                name="diabeticResearchSummary"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <RichTextDisplay text={field.value} />
+                                        <Button
+                                            type="button"
+                                            variant="link"
+                                            onClick={handleOpenEditTipsDialog}
+                                            className="text-sm p-0 h-auto mt-2"
+                                        >
+                                            Modifier les conseils
+                                        </Button>
+                                    </FormItem>
+                                )}
+                            />
+                        </CardContent>
+                    </AccordionContent>
+                </Card>
+            </AccordionItem>
+        </Accordion>
 
       </form>
         <Dialog open={isEditTipsDialogOpen} onOpenChange={setIsEditTipsDialogOpen}>
