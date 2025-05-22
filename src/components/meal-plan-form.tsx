@@ -79,19 +79,26 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
 
   const [savedFormSettings, setSavedFormSettings] = useLocalStorage<FormSettings | null>("diabeatz-form-settings", null);
   const [isClient, setIsClient] = useState(false);
+  const [isStartDatePickerOpen, setIsStartDatePickerOpen] = useState(false);
+  const [isEndDatePickerOpen, setIsEndDatePickerOpen] = useState(false);
+
 
   useEffect(() => {
-    setIsClient(true);
     // Initialize dates on client mount to avoid hydration errors
-    const tomorrow = addDays(new Date(), 1);
-    if (!startDate) { // Only set if not already set (e.g. by loaded settings)
+    // and only if they haven't been set by loaded settings.
+    if (!startDate) {
+      const tomorrow = addDays(new Date(), 1);
+      tomorrow.setHours(0,0,0,0); 
       setStartDate(tomorrow);
+      if (!endDate) { 
+        const alsoTomorrow = new Date(tomorrow);
+        setEndDate(alsoTomorrow);
+        // durationInDays will be set by the effect below
+      }
     }
-    if (!endDate) { // Only set if not already set
-      setEndDate(tomorrow);
-    }
+    setIsClient(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run once on mount
+  }, []); 
 
 
   useEffect(() => {
@@ -142,7 +149,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         setDurationInDays(diff.toString());
       }
     }
-  }, [startDate, endDate]);
+  }, [startDate, endDate]); // CORRECTED: Only depends on startDate and endDate
 
   // Update endDate when durationInDays (from input) or startDate changes
   useEffect(() => {
@@ -155,20 +162,16 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         }
       }
     }
-  }, [durationInDays, startDate]);
+  }, [durationInDays, startDate]); // CORRECTED: Only depends on durationInDays and startDate
 
 
   const handleDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    if (value === "" || /^\d+$/.test(value)) { 
-      const numValue = parseInt(value, 10);
-      if (value === "" || (numValue >= 1 && numValue <= 365) ) {
-         setDurationInDays(value);
-      } else if (numValue > 365) {
-         setDurationInDays("365");
-      } else { 
-         setDurationInDays(value); // Allow temporary "0" or other values for user input before blur
-      }
+    // Allow empty string for intermediate input, or positive numbers up to 3 digits
+    if (value === "" || (/^\d{1,3}$/.test(value) && parseInt(value, 10) <= 365)) { 
+      setDurationInDays(value);
+    } else if (/^\d+$/.test(value) && parseInt(value, 10) > 365) {
+      setDurationInDays("365"); // Cap at 365
     }
   };
   
@@ -275,7 +278,8 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       console.error("Error generating meal plan:", error);
       toast({
         title: "Erreur de Génération",
-        description: "Impossible de générer le plan repas. Veuillez réessayer.",
+        // @ts-ignore
+        description: error.message || "Impossible de générer le plan repas. Veuillez réessayer.",
         variant: "destructive",
       });
     } finally {
@@ -320,7 +324,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     });
   };
 
-  const handleLoadSettings = () => {
+  const handleLoadSettings = useCallback(() => {
     if (savedFormSettings) {
       form.reset({
         planName: savedFormSettings.planName || "",
@@ -329,17 +333,24 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       setFoodCategoriesInStorage(savedFormSettings.foodPreferences); 
       
       let newStartDate = addDays(new Date(), 1);
+      newStartDate.setHours(0,0,0,0);
       if (savedFormSettings.startDate) {
         const parsed = parseISO(savedFormSettings.startDate);
-        if (isValid(parsed)) newStartDate = parsed;
+        if (isValid(parsed)) {
+            parsed.setHours(0,0,0,0);
+            newStartDate = parsed;
+        }
       }
       setStartDate(newStartDate);
 
-      let newEndDate = addDays(newStartDate, 0);
+      let newEndDate = new Date(newStartDate); // Default to same as start day (1 day duration)
       if (savedFormSettings.endDate) {
         const parsed = parseISO(savedFormSettings.endDate);
-        if (isValid(parsed) && parsed >= newStartDate) {
-          newEndDate = parsed;
+        if (isValid(parsed)) {
+            parsed.setHours(0,0,0,0);
+            if (parsed >= newStartDate) { // Ensure end date is not before start date
+                 newEndDate = parsed;
+            }
         }
       }
       setEndDate(newEndDate);
@@ -356,7 +367,8 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         variant: "destructive",
       });
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedFormSettings, form.reset, setFoodCategoriesInStorage, setStartDate, setEndDate, toast]);
 
 
   return (
@@ -393,7 +405,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                 <div className="flex-grow flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                   <div className="flex-1 min-w-[140px] sm:min-w-[170px]">
                     <Label htmlFor="start-date-picker-trigger" className="text-sm font-medium mb-1 block">Date de début</Label>
-                    <Popover>
+                    <Popover open={isStartDatePickerOpen} onOpenChange={setIsStartDatePickerOpen}>
                       <PopoverTrigger asChild>
                         <Button
                           id="start-date-picker-trigger"
@@ -415,22 +427,23 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                             if (date) {
                                 const today = new Date();
                                 today.setHours(0,0,0,0);
-                                if (date < today) { // Cannot select past dates
-                                  // Do nothing or provide feedback; current logic defaults to tomorrow if an invalid date is programmatically set
+                                if (date < today) { 
+                                  // Do nothing
                                 } else {
+                                  date.setHours(0,0,0,0);
                                   setStartDate(date);
-                                  // If new start date is after end date, adjust end date
                                   if (endDate && date > endDate) {
-                                    setEndDate(date); 
+                                    setEndDate(new Date(date)); 
                                   }
                                 }
                             }
+                            setIsStartDatePickerOpen(false);
                           }}
                           disabled={(date) => {
                               const minSelectableDate = new Date();
-                              minSelectableDate.setDate(minSelectableDate.getDate()); 
+                              minSelectableDate.setDate(minSelectableDate.getDate() -1); 
                               minSelectableDate.setHours(0,0,0,0);
-                              return date < minSelectableDate; // Disable past dates, allow today
+                              return date < minSelectableDate;
                             } 
                           } 
                           initialFocus
@@ -440,7 +453,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                   </div>
                   <div className="flex-1 min-w-[140px] sm:min-w-[170px]">
                     <Label htmlFor="end-date-picker-trigger" className="text-sm font-medium mb-1 block">Date de fin</Label>
-                    <Popover>
+                    <Popover open={isEndDatePickerOpen} onOpenChange={setIsEndDatePickerOpen}>
                       <PopoverTrigger asChild>
                         <Button
                           id="end-date-picker-trigger"
@@ -461,14 +474,15 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                           selected={endDate}
                           onSelect={(date) => {
                             if (date && startDate && isValid(startDate)) {
+                                date.setHours(0,0,0,0);
                                 if (date >= startDate) {
                                     setEndDate(date);
                                 }
-                                // else do nothing or provide feedback: end date cannot be before start date
                             }
+                            setIsEndDatePickerOpen(false);
                           }}
                           disabled={(date) => {
-                            const minDate = startDate && isValid(startDate) ? new Date(startDate) : new Date(new Date().setDate(new Date().getDate()));
+                            const minDate = startDate && isValid(startDate) ? new Date(startDate) : new Date(new Date().setDate(new Date().getDate() -1));
                             minDate.setHours(0,0,0,0);
                             return date < minDate;
                           }}
@@ -610,7 +624,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                 variant="outline" 
                 onClick={handleLoadSettings} 
                 className="flex-1" 
-                disabled={!isClient || (!savedFormSettings && typeof window !== 'undefined' && !localStorage.getItem("diabeatz-form-settings"))}
+                disabled={!isClient || (!savedFormSettings && (typeof window !== 'undefined' && !localStorage.getItem("diabeatz-form-settings")))}
               >
                 <Upload className="mr-2 h-4 w-4" />
                 Charger les paramètres
@@ -628,6 +642,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     
 
     
+
 
 
 
