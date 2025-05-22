@@ -20,8 +20,8 @@ export function SavedMealPlans({ savedPlans, onLoadPlan, onDeletePlan }: SavedMe
   return (
     <Card className="shadow-lg">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-xl">
-          <ListChecks className="h-6 w-6 text-primary" />
+        <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+          <ListChecks className="h-5 w-5 text-primary" />
           Plans sauvegardés
         </CardTitle>
         <CardDescription>Chargez ou supprimez vos plans repas précédemment sauvegardés.</CardDescription>

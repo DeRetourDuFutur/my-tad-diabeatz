@@ -111,7 +111,7 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
     return (
       <Card className="flex flex-col items-center justify-center p-8 min-h-[300px] text-center shadow-lg">
         <ChefHat className="h-16 w-16 text-muted-foreground mb-4" />
-        <CardTitle className="text-xl mb-2">Vos plans repas</CardTitle>
+        <CardTitle className="text-lg font-semibold mb-2">Vos plans repas</CardTitle>
         <CardDescription>
           Utilisez le formulaire pour générer un nouveau plan repas personnalisé.
         </CardDescription>

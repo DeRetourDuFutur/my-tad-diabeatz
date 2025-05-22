@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star, CalendarDays, Save, Upload, Info, ListFilter, PlusCircle } from "lucide-react";
+import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star, CalendarDays, Save, Upload, Info, ListFilter, PlusCircle, BookOpenText } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import {
   Accordion,
@@ -235,14 +235,15 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
 
 
  useEffect(() => {
-    const tomorrow = addDays(new Date(), 1);
-    tomorrow.setHours(0, 0, 0, 0);
-    
     if (!startDate) {
+      const tomorrow = addDays(new Date(), 1);
+      tomorrow.setHours(0, 0, 0, 0);
       setStartDate(tomorrow);
     }
     if (!endDate) {
-      setEndDate(new Date(tomorrow)); 
+      const tomorrow = addDays(new Date(), 1);
+      tomorrow.setHours(0, 0, 0, 0);
+      setEndDate(tomorrow);
     }
     setIsClient(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -650,8 +651,8 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl">
-              <Wand2 className="h-6 w-6 text-primary" />
+            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+              <Wand2 className="h-5 w-5 text-primary" />
               Configuration de base
             </CardTitle>
             <CardDescription>
@@ -831,7 +832,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                             <div className="grid grid-cols-[1fr_auto_auto_auto_auto] items-start gap-x-2">
                               <div>
                                 <span className="text-sm font-medium">{item.name} <span className="text-xs text-muted-foreground">{item.ig}</span></span>
-                                {/* Nutritional info display removed from here */}
                               </div>
                               <Button
                                 type="button"
@@ -893,7 +893,10 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
 
         <Card className="shadow-lg">
           <CardHeader>
-             <CardTitle className="text-xl">Conseils alimentaires optimisés pour Diabète de Type 2</CardTitle>
+             <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+               <BookOpenText className="h-5 w-5 text-primary" />
+               Conseils alimentaires optimisés pour Diabète de Type 2
+             </CardTitle>
           </CardHeader>
           <CardContent>
             <Accordion type="single" collapsible className="w-full">
