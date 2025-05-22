@@ -15,7 +15,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription as FormDescriptionComponentUI, // Renamed to avoid conflict
+  FormDescription as FormDescriptionComponentUI,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -41,7 +41,7 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription as DialogDescriptionComponent, // Renamed to avoid conflict
+  DialogDescription as DialogDescriptionComponent, 
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -73,6 +73,7 @@ const formSchema = z.object({
 
 type MealPlanFormProps = {
   onMealPlanGenerated: (mealPlan: GenerateMealPlanOutput, planName?: string) => void;
+  onGenerationError: (error: string) => void; // New prop for error handling
 };
 
 const defaultResearchSummary = `**Privilégiez la variété et la fraîcheur (en gras et bleu)**
@@ -236,13 +237,14 @@ const categoryIcons: Record<string, React.ElementType> = {
 };
 
 
-export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
+export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPlanFormProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [isDataLoading, setIsDataLoading] = useState(true); // For Firestore loading
+  const [isDataLoading, setIsDataLoading] = useState(true);
   const { toast } = useToast();
-
-  const [foodPreferences, setFoodPreferences] = useState<FoodCategory[]>(initialFoodCategories);
   
+  const [foodPreferences, setFoodPreferences] = useState<FoodCategory[]>([]);
+  const [processedFoodPreferences, setProcessedFoodPreferences] = useState<FoodCategory[]>(initialFoodCategories);
+
   const [selectionMode, setSelectionMode] = useState<'dates' | 'duration'>('dates');
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
@@ -278,96 +280,96 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       diabeticResearchSummary: defaultResearchSummary,
     },
   });
-
-  // Fetch food preferences from Firestore on mount
+  
   useEffect(() => {
-    const fetchPreferences = async () => {
-      setIsDataLoading(true);
-      const prefDocRef = doc(db, "userSettings", "globalFoodPreferences");
-      try {
-        const docSnap = await getDoc(prefDocRef);
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          if (data.preferences && Array.isArray(data.preferences)) {
-             // Hydrate with initialFoodCategories to ensure all items and fields are present
-            const fetchedPrefs = data.preferences as FoodCategory[];
-            const hydratedPrefs = initialFoodCategories.map(initialCat => {
-              const fetchedCat = fetchedPrefs.find(fc => fc.categoryName === initialCat.categoryName);
-              if (fetchedCat) {
-                const mergedItems = initialCat.items.map(initItem => {
-                  const fetchedItem = fetchedCat.items.find(fi => fi.id === initItem.id || fi.name === initItem.name); // Match by id or name for robustness
-                  return { ...initItem, ...(fetchedItem || {}) };
-                });
-                 // Add any custom items from Firestore not in initialFoodCategories
-                fetchedCat.items.forEach(fetchedItem => {
-                  if (!mergedItems.some(mi => mi.id === fetchedItem.id || mi.name === fetchedItem.name)) {
-                    mergedItems.push(fetchedItem);
-                  }
-                });
-                return { ...initialCat, ...fetchedCat, items: mergedItems.sort((a,b) => a.name.localeCompare(b.name))};
-              }
-              return initialCat;
-            });
-            // Ensure all initial categories are present if not in Firestore
-            initialFoodCategories.forEach(initialCat => {
-              if(!hydratedPrefs.some(hp => hp.categoryName === initialCat.categoryName)){
-                hydratedPrefs.push(initialCat);
-              }
-            });
-            setFoodPreferences(hydratedPrefs.sort((a,b) => a.categoryName.localeCompare(b.categoryName)));
+    setIsClient(true);
+  }, []);
 
-          } else {
-            setFoodPreferences(initialFoodCategories); // Use defaults if structure is wrong
-          }
+  const fetchPreferences = useCallback(async () => {
+    if (!isClient) return;
+    setIsDataLoading(true);
+    const prefDocRef = doc(db, "userSettings", "globalFoodPreferences");
+    try {
+      const docSnap = await getDoc(prefDocRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.preferences && Array.isArray(data.preferences)) {
+          setFoodPreferences(data.preferences as FoodCategory[]);
         } else {
-          // No document, use initial and save them to Firestore
-          await setDoc(prefDocRef, { preferences: initialFoodCategories, lastUpdated: Timestamp.now() });
           setFoodPreferences(initialFoodCategories);
         }
-      } catch (error) {
-        console.error("Error fetching food preferences:", error);
-        toast({ title: "Erreur de chargement des préférences", description: "Impossible de charger les préférences alimentaires. Utilisation des valeurs par défaut.", variant: "destructive" });
+      } else {
+        await setDoc(prefDocRef, { preferences: initialFoodCategories, lastUpdated: Timestamp.now() });
         setFoodPreferences(initialFoodCategories);
       }
-      setIsDataLoading(false);
-    };
-
-    if (isClient) { // Ensure this runs only on client
-      fetchPreferences();
+    } catch (error) {
+      console.error("Error fetching food preferences:", error);
+      toast({ title: "Erreur de chargement des préférences", description: "Impossible de charger les préférences alimentaires.", variant: "destructive" });
+      setFoodPreferences(initialFoodCategories);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClient]); // toast is stable
+    setIsDataLoading(false);
+  }, [isClient, toast]);
+
+  useEffect(() => {
+    fetchPreferences();
+  }, [fetchPreferences]);
+
+ useEffect(() => {
+    // Hydrate processedFoodPreferences from foodPreferences (from Firestore)
+    // and ensure all fields from initialFoodCategories are present.
+    const hydrated = initialFoodCategories.map(initialCat => {
+      const storedCat = foodPreferences.find(sc => sc.categoryName === initialCat.categoryName);
+      if (storedCat) {
+        const mergedItems = initialCat.items.map(initItem => {
+          const storedItem = storedCat.items.find(si => si.id === initItem.id || si.name === initItem.name);
+          return { ...initItem, ...(storedItem || {}) }; // Merge, giving preference to stored item's preference flags
+        });
+         // Add custom items from Firestore not in initialFoodCategories for this category
+        storedCat.items.forEach(storedItem => {
+            if (!mergedItems.some(mi => mi.id === storedItem.id || mi.name === storedItem.name)) {
+                mergedItems.push(storedItem);
+            }
+        });
+        return { ...initialCat, ...storedCat, items: mergedItems.sort((a, b) => a.name.localeCompare(b.name)) };
+      }
+      return initialCat;
+    });
+     // Ensure all initial categories are present even if not in Firestore yet
+    initialFoodCategories.forEach(initialCat => {
+        if(!hydrated.some(hp => hp.categoryName === initialCat.categoryName)){
+            hydrated.push(initialCat);
+        }
+    });
+
+    setProcessedFoodPreferences(hydrated.sort((a,b) => a.categoryName.localeCompare(b.categoryName)));
+  }, [foodPreferences]);
+
 
   const savePreferencesToFirestore = async (updatedPreferences: FoodCategory[]) => {
     const prefDocRef = doc(db, "userSettings", "globalFoodPreferences");
     try {
       await setDoc(prefDocRef, { preferences: updatedPreferences, lastUpdated: Timestamp.now() });
-      // toast({ title: "Préférences sauvegardées!", description: "Vos préférences alimentaires ont été mises à jour." });
+      // Update local state immediately for responsiveness
+      setFoodPreferences(updatedPreferences);
     } catch (error) {
       console.error("Error saving food preferences:", error);
       toast({ title: "Erreur de sauvegarde", description: "Impossible de sauvegarder les préférences alimentaires.", variant: "destructive" });
     }
   };
 
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
   useEffect(() => {
     if (isClient) {
       const tomorrow = startOfDay(addDays(new Date(), 1));
-      setStartDate(tomorrow);
-      setEndDate(new Date(tomorrow)); // Duration 1 day
-      setDurationInDays("1");
-      setDurationModeStartDate(tomorrow);
-
+      if (!startDate) setStartDate(tomorrow);
+      if (!endDate) setEndDate(tomorrow); // Duration 1 day by default
+      if (!durationModeStartDate) setDurationModeStartDate(tomorrow);
+      
       if (savedFormSettings) {
-        handleLoadSettings(); // This will override dates if they were saved
+        handleLoadSettings();
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClient]); // handleLoadSettings is not stable here, but it's called conditionally
+  }, [isClient]);
 
 
   useEffect(() => {
@@ -418,7 +420,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   };
 
   const handleFoodPreferenceChange = (categoryId: string, itemId: string, type: "isFavorite" | "isDisliked" | "isAllergenic", checked: boolean) => {
-    const updatedPreferences = foodPreferences.map(category =>
+    const updatedPreferences = processedFoodPreferences.map(category =>
       category.categoryName === categoryId
         ? {
             ...category,
@@ -435,12 +437,13 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
           }
         : category
     );
-    setFoodPreferences(updatedPreferences);
-    savePreferencesToFirestore(updatedPreferences);
+    // setProcessedFoodPreferences(updatedPreferences); // This will be updated via foodPreferences effect
+    savePreferencesToFirestore(updatedPreferences); // Save directly to Firestore
   };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
+    onGenerationError(""); // Clear previous errors
     let planDurationForAI = "";
     let finalStartDateForAI: Date | undefined;
 
@@ -479,11 +482,10 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         return;
     }
 
-
     const likedFoodsList: string[] = [];
     const foodsToAvoidList: string[] = [];
 
-    foodPreferences.forEach(category => {
+    processedFoodPreferences.forEach(category => {
       category.items.forEach(item => {
         let foodEntry = `${item.name} ${item.ig}`;
         if (item.isDisliked || item.isAllergenic) {
@@ -503,7 +505,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     if (likedFoodsList.length === 0) {
       toast({
         title: "Aucun aliment sélectionné",
-        description: "Veuillez sélectionner au moins un aliment que vous aimez et auquel vous n'êtes pas allergique/que vous n'aimez pas.",
+        description: "Veuillez sélectionner au moins un aliment que vous aimez.",
         variant: "destructive",
       });
       setIsLoading(false);
@@ -527,14 +529,15 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         title: "Plan Repas Généré!",
         description: "Votre nouveau plan repas est prêt.",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error generating meal plan:", error);
+      const errorMessage = error.message || "Impossible de générer le plan repas. Veuillez réessayer.";
       toast({
         title: "Erreur de Génération",
-        // @ts-ignore
-        description: error.message || "Impossible de générer le plan repas. Veuillez réessayer.",
+        description: errorMessage,
         variant: "destructive",
       });
+      onGenerationError(errorMessage); // Propagate error to HomePage
     } finally {
       setIsLoading(false);
     }
@@ -569,7 +572,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   const handleSaveNutritionalInfo = () => {
     if (!selectedFoodItemForNutritionalInfo || !selectedFoodCategoryName) return;
 
-    const updatedPreferences = foodPreferences.map(category =>
+    const updatedPrefs = processedFoodPreferences.map(category =>
         category.categoryName === selectedFoodCategoryName ?
         {
             ...category,
@@ -583,18 +586,17 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
             ),
         } : category
     );
-    setFoodPreferences(updatedPreferences);
-    savePreferencesToFirestore(updatedPreferences);
+    savePreferencesToFirestore(updatedPrefs); // Save to Firestore
     setIsNutritionalInfoDialogOpen(false);
     toast({ title: "Informations nutritionnelles mises à jour!", description: `Pour ${selectedFoodItemForNutritionalInfo.name}.` });
   };
-
 
   const handleSaveSettings = () => {
     const currentFormValues = form.getValues();
     const settingsToSave: FormSettings = {
       planName: currentFormValues.planName,
       diabeticResearchSummary: currentFormValues.diabeticResearchSummary,
+      // foodPreferences are saved directly to Firestore
       selectionMode: selectionMode,
       startDate: startDate ? startDate.toISOString() : undefined,
       endDate: endDate ? endDate.toISOString() : undefined,
@@ -618,30 +620,33 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       setSelectionMode(savedFormSettings.selectionMode || 'dates');
       const tomorrow = startOfDay(addDays(new Date(), 1));
 
-      let newStartDate = tomorrow;
+      let newStartDate = startDate; // Keep current if not in settings
       if (savedFormSettings.startDate) {
         const parsed = parseISO(savedFormSettings.startDate);
         if (isValid(parsed)) newStartDate = startOfDay(parsed);
       }
-      setStartDate(newStartDate);
+      setStartDate(newStartDate || tomorrow);
 
-      let newEndDate = new Date(newStartDate); 
+      let newEndDate = endDate; // Keep current if not in settings
       if (savedFormSettings.endDate) {
         const parsedEnd = parseISO(savedFormSettings.endDate);
         if (isValid(parsedEnd)) {
             const startOfDayEnd = startOfDay(parsedEnd);
-            if (!isBefore(startOfDayEnd, newStartDate)) newEndDate = startOfDayEnd;
+            if (newStartDate && !isBefore(startOfDayEnd, newStartDate)) newEndDate = startOfDayEnd;
+            else if (!newStartDate) newEndDate = startOfDayEnd; // if startDate was null from settings
         }
       }
-      setEndDate(newEndDate);
+      setEndDate(newEndDate || newStartDate || tomorrow);
       
       setDurationInDays(savedFormSettings.durationInDays || "1");
-      let newDurationModeStartDate = tomorrow; 
+      let newDurationModeStartDate = durationModeStartDate; // Keep current if not in settings
       if (savedFormSettings.durationModeStartDate) {
         const parsedDurationStart = parseISO(savedFormSettings.durationModeStartDate);
         if (isValid(parsedDurationStart)) newDurationModeStartDate = startOfDay(parsedDurationStart);
       }
-      setDurationModeStartDate(newDurationModeStartDate);
+      setDurationModeStartDate(newDurationModeStartDate || tomorrow);
+      
+      // Food preferences are loaded from Firestore, no need to load from FormSettings here
 
       toast({
         title: "Paramètres chargés!",
@@ -655,7 +660,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [savedFormSettings, form]); // setFoodPreferences removed as it's now handled by Firestore fetch
+  }, [savedFormSettings, form]); 
 
 
   const handleAddNewFoodChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -675,7 +680,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     }
 
     let foodAlreadyExists = false;
-    foodPreferences.forEach(category => {
+    processedFoodPreferences.forEach(category => {
       if (category.categoryName === newFoodData.categoryName) {
         if (category.items.some(item => item.name.toLowerCase() === newFoodData.name.trim().toLowerCase())) {
           setAddFoodFormError(`L'aliment "${newFoodData.name.trim()}" existe déjà dans la catégorie "${newFoodData.categoryName}".`);
@@ -703,7 +708,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       isAllergenic: false,
     };
 
-    const updatedPreferences = foodPreferences.map(cat => {
+    const updatedPreferences = processedFoodPreferences.map(cat => {
       if (cat.categoryName === newFoodData.categoryName) {
         return {
           ...cat,
@@ -712,7 +717,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       }
       return cat;
     });
-    setFoodPreferences(updatedPreferences);
     savePreferencesToFirestore(updatedPreferences);
 
     toast({
@@ -768,7 +772,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                       
                       <FormItem>
                         <FormLabel className="text-base font-medium mb-2 block">Calendrier / Durée</FormLabel>
-                         <FormDescriptionComponentUI className="mb-3">
+                         <FormDescriptionComponentUI className="mb-3 text-xs">
                            Choisissez la date de début et de fin du plan ou indiquez le nombre de jour(s) souhaité(s).
                         </FormDescriptionComponentUI>
                         <RadioGroup
@@ -950,13 +954,13 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
               </div>
               <AccordionContent className="pt-0">
                   <CardContent>
-                      <FormDescriptionComponentUI className="mb-2">
+                      <FormDescriptionComponentUI className="mb-2 text-xs">
                         Cochez vos aliments favoris, à éviter ou allergènes.<br/>
                         Les aliments favoris seront privilégiés pour vos plans de repas.
                       </FormDescriptionComponentUI>
                       <div className="max-h-[400px] overflow-y-auto p-1 rounded-md border mt-2">
                       <Accordion type="multiple" className="w-full">
-                          {foodPreferences.map(category => {
+                          {processedFoodPreferences.map(category => {
                           const CategoryIcon = categoryIcons[category.categoryName] || ListFilter;
                           return (
                               <AccordionItem value={category.categoryName} key={category.categoryName} className="border-b-0 last:border-b-0">
@@ -1079,19 +1083,19 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="conseils-aliments-item" className="border-b-0">
                 <Card className="shadow-lg">
-                    <AccordionTrigger className="w-full text-left p-0 hover:no-underline group">
-                        <CardHeader className="flex flex-row items-center justify-between w-full p-4">
-                            <div className="flex items-center gap-2">
-                                <BookOpenText className="h-5 w-5 text-secondary-foreground" />
-                                <CardTitle className="text-lg font-semibold text-foreground">
-                                    Conseils alimentaires optimisés pour Diabète de Type 2
-                                </CardTitle>
-                            </div>
-                        </CardHeader>
+                   <AccordionTrigger className="w-full text-left p-0 hover:no-underline group">
+                      <CardHeader className="flex flex-row items-center justify-between w-full p-4">
+                        <div className="flex items-center gap-2">
+                          <BookOpenText className="h-5 w-5 text-secondary-foreground" />
+                          <CardTitle className="text-lg font-semibold text-foreground">
+                            Conseils alimentaires optimisés pour Diabète de Type 2
+                          </CardTitle>
+                        </div>
+                      </CardHeader>
                     </AccordionTrigger>
                     <AccordionContent className="pt-0">
                         <CardContent>
-                            <FormField
+                             <FormField
                                 control={form.control}
                                 name="diabeticResearchSummary"
                                 render={({ field }) => (
@@ -1318,3 +1322,4 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     </Form>
   );
 }
+

@@ -32,7 +32,7 @@ export default function HomePage() {
     setHasMounted(true);
     fetchSavedPlans();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // toast should be stable
+  }, []); 
 
   const fetchSavedPlans = async () => {
     setIsLoadingPlans(true);
@@ -43,11 +43,11 @@ export default function HomePage() {
       const plans: StoredMealPlan[] = [];
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        // Ensure createdAt is correctly handled (it might be a string from GenerateMealPlanOutput if not yet saved)
+        
         let createdAt = data.createdAt;
         if (typeof createdAt === 'string') {
           createdAt = Timestamp.fromDate(new Date(createdAt));
-        } else if (!(createdAt instanceof Timestamp) && createdAt.seconds) { // Handle Firestore Timestamp-like objects
+        } else if (!(createdAt instanceof Timestamp) && createdAt && typeof createdAt.seconds === 'number' && typeof createdAt.nanoseconds === 'number') { 
           createdAt = new Timestamp(createdAt.seconds, createdAt.nanoseconds);
         }
 
@@ -65,8 +65,14 @@ export default function HomePage() {
     setCurrentMealPlan(mealPlan);
     setCurrentMealPlanId(null); 
     setCurrentMealPlanName(planName || ""); 
-    setAiError(null);
+    setAiError(null); // Clear previous AI errors on new generation
   };
+
+  const handleGenerationError = (errorMsg: string) => {
+    setAiError(errorMsg);
+    setCurrentMealPlan(null); // Clear any existing plan on error
+  };
+
 
   const handleOpenSaveDialog = () => {
     if (!currentMealPlan || !currentMealPlan.days || currentMealPlan.days.length === 0) {
@@ -82,7 +88,7 @@ export default function HomePage() {
 
   const handleSavePlan = async (name: string) => {
     if (!currentMealPlan) return;
-    setIsLoadingPlans(true); // Indicate loading while saving
+    setIsLoadingPlans(true); 
 
     const planDataToSave = {
       ...currentMealPlan,
@@ -93,9 +99,8 @@ export default function HomePage() {
     try {
       if (currentMealPlanId) { 
         const planDocRef = doc(db, "mealPlans", currentMealPlanId);
-        // Ensure we update createdAt only if it's a new save or explicitly changing it
-        // For updates, we might want to keep original createdAt or add an updatedAt field
-        const updatedPlanData = { ...planDataToSave, createdAt: savedPlans.find(p=>p.id === currentMealPlanId)?.createdAt || Timestamp.now() };
+        const existingPlan = savedPlans.find(p => p.id === currentMealPlanId);
+        const updatedPlanData = { ...planDataToSave, createdAt: existingPlan?.createdAt || Timestamp.now() };
         await setDoc(planDocRef, updatedPlanData);
         toast({ title: "Plan Mis à Jour!", description: `Le plan repas "${name}" a été mis à jour.` });
       } else { 
@@ -105,7 +110,7 @@ export default function HomePage() {
         toast({ title: "Plan Sauvegardé!", description: `Le plan repas "${name}" a été sauvegardé.` });
       }
       setCurrentMealPlanName(name);
-      await fetchSavedPlans(); // Refresh the list
+      await fetchSavedPlans(); 
     } catch (error) {
       console.error("Error saving plan:", error);
       toast({ title: "Erreur de Sauvegarde", description: "Impossible de sauvegarder le plan repas.", variant: "destructive" });
@@ -121,6 +126,7 @@ export default function HomePage() {
       setCurrentMealPlan(mealData as GenerateMealPlanOutput); 
       setCurrentMealPlanId(id);
       setCurrentMealPlanName(name);
+      setAiError(null); // Clear AI error when loading a plan
       toast({ title: "Plan Chargé", description: `Le plan repas "${name}" est affiché.` });
     }
   };
@@ -136,7 +142,7 @@ export default function HomePage() {
         setCurrentMealPlanId(null);
         setCurrentMealPlanName("");
       }
-      await fetchSavedPlans(); // Refresh the list
+      await fetchSavedPlans(); 
     } catch (error) {
       console.error("Error deleting plan:", error);
       toast({ title: "Erreur de Suppression", description: "Impossible de supprimer le plan repas.", variant: "destructive" });
@@ -152,7 +158,7 @@ export default function HomePage() {
       <main className="flex-grow container mx-auto p-4 md:p-6 lg:p-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1 space-y-6">
-            <MealPlanForm onMealPlanGenerated={handleMealPlanGenerated} />
+            <MealPlanForm onMealPlanGenerated={handleMealPlanGenerated} onGenerationError={handleGenerationError} />
             {isLoadingPlans && !hasMounted ? (
               <div className="flex justify-center items-center h-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
             ) : (
@@ -192,3 +198,4 @@ export default function HomePage() {
     </div>
   );
 }
+

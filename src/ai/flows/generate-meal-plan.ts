@@ -73,7 +73,20 @@ export type GenerateMealPlanOutput = z.infer<typeof GenerateMealPlanOutputSchema
 export async function generateMealPlan(
   input: GenerateMealPlanInput
 ): Promise<GenerateMealPlanOutput> {
-  return generateMealPlanFlow(input);
+  try {
+    const result = await generateMealPlanFlow(input);
+    if (!result) {
+      // This case should ideally be handled by generateMealPlanFlow throwing an error
+      throw new Error("L'IA n'a pas réussi à générer un plan (pas de résultat).");
+    }
+    return result;
+  } catch (error: any) {
+    console.error("[generateMealPlan Flow Error]", error);
+    // Re-throw a more user-friendly or generic error if needed,
+    // or let the original error propagate if it's informative enough.
+    // For Vercel, the original error might be more useful in logs.
+    throw new Error(error.message || "Une erreur est survenue lors de la communication avec le service d'IA.");
+  }
 }
 
 const prompt = ai.definePrompt({
@@ -141,7 +154,13 @@ const generateMealPlanFlow = ai.defineFlow(
     outputSchema: GenerateMealPlanOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
-    return output!;
+    const {output, usage} = await prompt(input); // LLM call
+    if (!output) {
+      console.error('AI prompt did not return an output. Usage data:', usage);
+      // Consider logging more details about the input or other context if helpful
+      throw new Error("L'IA n'a pas pu générer de plan. Le prompt n'a pas retourné de sortie.");
+    }
+    return output;
   }
 );
+
