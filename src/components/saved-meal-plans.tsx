@@ -27,7 +27,7 @@ export function SavedMealPlans({ savedPlans, onLoadPlan, onDeletePlan }: SavedMe
     <Card className="shadow-lg">
       <Accordion type="single" collapsible defaultValue="saved-plans-item">
         <AccordionItem value="saved-plans-item" className="border-b-0">
-          <AccordionTrigger className="p-0 [&[data-state=open]>div>button>svg]:rotate-180">
+          <AccordionTrigger className="w-full text-left p-0 hover:no-underline">
             <CardHeader className="flex flex-row items-center justify-between w-full p-4">
               <div className="flex items-center gap-2">
                 <ListChecks className="h-5 w-5 text-secondary-foreground" />

@@ -31,7 +31,7 @@ const MealComponentCard: React.FC<{ component: MealComponent; typeTitle?: string
   if (isSnack) IconForType = Cookie;
   else if (typeTitle === "Entrée") IconForType = Soup;
   else if (typeTitle === "Plat Principal") IconForType = Beef;
-  else if (typeTitle === "Fromage") IconForType = Grape;
+  else if (typeTitle === "Fromage") IconForType = Grape; 
   else if (typeTitle === "Dessert") IconForType = Apple;
 
 
@@ -118,7 +118,7 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
       <Card className="shadow-lg">
         <Accordion type="single" collapsible defaultValue="meal-display-placeholder-item">
           <AccordionItem value="meal-display-placeholder-item" className="border-b-0">
-            <AccordionTrigger className="p-0 [&[data-state=open]>div>button>svg]:rotate-180">
+            <AccordionTrigger className="w-full text-left p-0 hover:no-underline">
               <CardHeader className="flex flex-row items-center justify-between w-full p-4">
                 <div className="flex items-center gap-2">
                   <ChefHat className="h-5 w-5 text-secondary-foreground" />
