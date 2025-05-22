@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star, CalendarDays, Save, Upload, ListFilter, PlusCircle, BookOpenText, Apple, Carrot, Nut, Wheat, Bean, Beef, Milk, Shell as OilIcon, Blend, BarChart2, Info } from "lucide-react";
+import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star, CalendarDays, Save, Upload, ListFilter, PlusCircle, BookOpenText, BarChart2, Apple, Carrot, Nut, Wheat, Bean, Beef, Milk, Shell as OilIcon, Blend } from "lucide-react"; // Added Shell for OilIcon, Blend
 import { useState, useEffect, useCallback } from "react";
 import {
   Accordion,
@@ -263,19 +263,25 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     },
   });
 
-  useEffect(() => {
+ useEffect(() => {
     setIsClient(true);
-    // Initialize dates only if they are not already set (e.g., by loaded settings)
-    if (!startDate) {
+  }, []);
+
+  // Effect to initialize dates client-side if not already set
+  useEffect(() => {
+    if (!isClient) return;
+
+    if (!startDate) { // Only set if startDate is not already set (e.g., by loaded settings)
         const tomorrow = addDays(new Date(), 1);
         tomorrow.setHours(0, 0, 0, 0);
         setStartDate(tomorrow);
-        if (!endDate) { // Also initialize endDate if not set
+        if (!endDate || !isValid(endDate)) { // If endDate also not set or invalid, initialize it
           setEndDate(new Date(tomorrow));
+          // durationInDays is initialized to "1", this will be confirmed/set by the effect below
         }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Runs once on client mount
+  }, [isClient]); // Run only when isClient changes (once on mount)
 
 
   useEffect(() => {
@@ -301,7 +307,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         };
       });
 
-      // Add items from storage that were not in initialFoodCategories (custom added food)
       storedCategory.items.forEach(storedItem => {
         if (!mergedItems.some(mi => mi.id === storedItem.id)) {
           mergedItems.push(storedItem);
@@ -309,9 +314,9 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       });
 
       return {
-        ...(initialCategoryDefinition || {}), // Spread initial category definition for safety, though categoryName should always match
+        ...(initialCategoryDefinition || {}), 
         ...storedCategory,
-        categoryName: storedCategory.categoryName, // Ensure categoryName from storage takes precedence
+        categoryName: storedCategory.categoryName, 
         items: mergedItems.sort((a, b) => a.name.localeCompare(b.name)),
       };
     });
@@ -319,51 +324,54 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   }, [foodCategoriesFromStorage]);
 
 
-  // Effect to update durationInDays when startDate or endDate changes
+  // Effect to update durationInDays when startDate or endDate changes (e.g., via date pickers)
   useEffect(() => {
     if (startDate && endDate && isValid(startDate) && isValid(endDate) && endDate >= startDate) {
       const diff = differenceInDays(endDate, startDate) + 1;
       if (durationInDays !== diff.toString()) {
-         setDurationInDays(diff.toString());
+        setDurationInDays(diff.toString());
       }
-    } else if (startDate && !endDate && durationInDays !== "1") { // If only startDate is set, default to 1 day
+    } else if (startDate && isValid(startDate) && (!endDate || !isValid(endDate))) {
+      if (durationInDays !== "1") {
         setDurationInDays("1");
+      }
+      if (!endDate || !isValid(endDate) || (startDate && endDate && endDate.getTime() !== startDate.getTime())) {
+           setEndDate(new Date(startDate));
+      }
     }
-  }, [startDate, endDate, durationInDays]); // Added durationInDays to prevent re-trigger if already correct
+  }, [startDate, endDate]);
 
-  // Effect to update endDate when durationInDays or startDate changes
+  // Effect to update endDate when durationInDays (from input) or startDate changes
   useEffect(() => {
-    if (!startDate || !isValid(startDate) || !isClient) return;
+    if (!isClient || !startDate || !isValid(startDate)) return;
 
     const numDays = parseInt(durationInDays, 10);
-    if (!isNaN(numDays) && numDays >= 1 && numDays <= 365) { // Added upper limit for sanity
+
+    if (!isNaN(numDays) && numDays >= 1 && numDays <= 365) {
       const newEndDate = addDays(new Date(startDate), numDays - 1);
       if (!endDate || !isValid(endDate) || newEndDate.getTime() !== endDate.getTime()) {
         setEndDate(newEndDate);
       }
     }
-  }, [durationInDays, startDate, isClient, endDate]); // Added endDate to prevent re-trigger if already correct
+  }, [durationInDays, startDate, isClient]);
 
 
   const handleDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    // Allow empty string for temporary input, or numbers up to 3 digits (max 365)
     if (value === "" || (/^\d{1,3}$/.test(value) && parseInt(value, 10) <= 365 && parseInt(value,10) >=0 )) {
       setDurationInDays(value);
     } else if (/^\d+$/.test(value) && parseInt(value, 10) > 365) {
-      setDurationInDays("365"); // Cap at 365
+      setDurationInDays("365");
     }
   };
 
   const handleDurationBlur = () => {
-    // On blur, if the input is empty, invalid, or 0, default to "1"
     const numDays = parseInt(durationInDays, 10);
     if (isNaN(numDays) || numDays <= 0) {
       setDurationInDays("1");
-    } else if (numDays > 365) { // Cap at 365 if somehow bypassed
+    } else if (numDays > 365) {
         setDurationInDays("365");
     } else {
-      // Ensure it's a clean number string
       setDurationInDays(numDays.toString());
     }
   };
@@ -537,17 +545,14 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         diabeticResearchSummary: savedFormSettings.diabeticResearchSummary,
       });
 
-      // Hydrate food preferences from saved settings, ensuring all items from initialFoodCategories are present
-      // and custom items from storage are also kept.
       const hydratedFoodPrefs = initialFoodCategories.map(initialCat => {
         const storedCat = savedFormSettings.foodPreferences.find(sc => sc.categoryName === initialCat.categoryName);
         if (storedCat) {
             const mergedItems = initialCat.items.map(initItem => {
                 const storedItem = storedCat.items.find(si => si.id === initItem.id);
                 return {
-                    ...initItem, // Start with defaults from initialFoodCategories
-                    ...(storedItem || {}), // Override with stored preferences
-                     // Ensure all nutritional fields are present, falling back to initial data or empty strings
+                    ...initItem, 
+                    ...(storedItem || {}),
                     calories: storedItem?.calories ?? initItem.calories,
                     carbs: storedItem?.carbs ?? initItem.carbs,
                     protein: storedItem?.protein ?? initItem.protein,
@@ -558,7 +563,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                     notes: storedItem?.notes ?? initItem.notes,
                 };
             });
-             // Add custom items from storage that were not in the initial category definition
             storedCat.items.forEach(storedItem => {
                 if (!mergedItems.some(mi => mi.id === storedItem.id)) {
                     mergedItems.push(storedItem);
@@ -566,9 +570,8 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
             });
             return { ...initialCat, ...storedCat, items: mergedItems.sort((a,b) => a.name.localeCompare(b.name)) };
         }
-        return initialCat; // Fallback to initial category if not found in storage (should not happen if saved correctly)
+        return initialCat; 
       });
-       // Add categories from storage that might not have been in initialFoodCategories (if structure changed or user added new cats somehow)
        savedFormSettings.foodPreferences.forEach(storedCat => {
         if(!hydratedFoodPrefs.some(hp => hp.categoryName === storedCat.categoryName)) {
             hydratedFoodPrefs.push(storedCat);
@@ -578,7 +581,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
 
       setFoodCategoriesInStorage(hydratedFoodPrefs);
 
-      let newStartDate = addDays(new Date(), 1);
+      let newStartDate = addDays(new Date(), 1); // Default to tomorrow
       newStartDate.setHours(0,0,0,0);
       if (savedFormSettings.startDate) {
         const parsed = parseISO(savedFormSettings.startDate);
@@ -589,12 +592,12 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       }
       setStartDate(newStartDate);
 
-      let newEndDate = new Date(newStartDate);
+      let newEndDate = new Date(newStartDate); // Default to start date (1 day duration)
       if (savedFormSettings.endDate) {
         const parsed = parseISO(savedFormSettings.endDate);
         if (isValid(parsed)) {
             parsed.setHours(0,0,0,0);
-            if (parsed >= newStartDate) { // Ensure end date is not before start date
+            if (parsed >= newStartDate) { 
                  newEndDate = parsed;
             }
         }
@@ -620,7 +623,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [savedFormSettings, form.reset, setFoodCategoriesInStorage]);
+  }, [savedFormSettings, form, setFoodCategoriesInStorage]);
 
   const handleAddNewFoodChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -639,25 +642,23 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     }
 
     let foodAlreadyExists = false;
-    const updatedCategories = foodCategoriesFromStorage.map(category => { // Check against current live data
+    const updatedCategories = foodCategoriesFromStorage.map(category => { 
       if (category.categoryName === newFoodData.categoryName) {
         if (category.items.some(item => item.name.toLowerCase() === newFoodData.name.trim().toLowerCase())) {
           setAddFoodFormError(`L'aliment "${newFoodData.name.trim()}" existe déjà dans la catégorie "${newFoodData.categoryName}".`);
           foodAlreadyExists = true;
-          return category; // Return category as is, no changes
+          return category; 
         }
       }
       return category;
     });
 
     if(foodAlreadyExists) {
-      // Do not update storage if food already exists and an error is shown.
-      // The 'updatedCategories' above was just for the check.
       return;
     }
 
     const newFoodItem: FoodItem = {
-      id: `custom-${Date.now()}`, // Consider crypto.randomUUID() for more robust IDs if available
+      id: `custom-${Date.now()}`, 
       name: newFoodData.name.trim(),
       categoryName: newFoodData.categoryName,
       ig: newFoodData.ig || "(IG: N/A)",
@@ -685,8 +686,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         newCategories[targetCategoryIndex] = updatedCategory;
         return newCategories;
       }
-      // If category doesn't exist (should not happen with Select for existing categories), create it.
-      // This path is unlikely if using the Select component for categories.
       return [...prevCategories, { categoryName: newFoodData.categoryName, items: [newFoodItem] }];
     });
 
@@ -695,7 +694,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       description: `${newFoodItem.name} a été ajouté à la catégorie ${newFoodData.categoryName}.`,
     });
     setIsAddFoodDialogOpen(false);
-    setNewFoodData(initialNewFoodData); // Reset form
+    setNewFoodData(initialNewFoodData); 
   };
 
 
@@ -705,161 +704,162 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         <Accordion type="multiple" defaultValue={["config-base-item", "prefs-aliments-item", "conseils-aliments-item"]} className="w-full space-y-6">
           
           <AccordionItem value="config-base-item" className="border-b-0">
-            <Card className="shadow-lg">
-              <AccordionTrigger className="w-full p-0 text-left hover:no-underline [&[data-state=open]>div>button>svg]:rotate-180">
-                <CardHeader className="flex flex-row items-center justify-between w-full p-4">
+             <Card className="shadow-lg">
+                <AccordionTrigger className="w-full text-left p-0 hover:no-underline">
+                  <CardHeader className="flex flex-row items-center justify-between w-full p-4">
                     <div className="flex items-center gap-2">
                         <Wand2 className="h-5 w-5 text-secondary-foreground" />
                         <CardTitle className="text-lg font-semibold">Configuration de base</CardTitle>
                     </div>
-                </CardHeader>
-              </AccordionTrigger>
-              <AccordionContent className="pt-0">
-                <CardContent>
-                  <div className="space-y-6">
-                    <FormField
-                      control={form.control}
-                      name="planName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Nom du plan (optionnel)</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Ex: Mon plan semaine prochaine" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                  </CardHeader>
+                </AccordionTrigger>
+                <AccordionContent className="pt-0">
+                  <CardContent>
+                    <div className="space-y-6">
+                      <FormField
+                        control={form.control}
+                        name="planName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Nom du plan (optionnel)</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Ex: Mon plan semaine prochaine" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                    <FormItem>
-                      <FormLabel>Calendrier du plan</FormLabel>
-                      <div className="flex flex-col md:flex-row gap-4 md:gap-3 items-end md:items-stretch">
-                        <div className="flex-grow flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                          <div className="flex-1 min-w-[140px] sm:min-w-[170px]">
-                            <Label htmlFor="start-date-picker-trigger" className="text-sm font-medium mb-1 block">Date de début</Label>
-                            <Popover open={isStartDatePickerOpen} onOpenChange={setIsStartDatePickerOpen}>
-                              <PopoverTrigger asChild>
-                                <Button
-                                  id="start-date-picker-trigger"
-                                  variant={"outline"}
-                                  className={cn(
-                                    "w-full justify-start text-left font-normal h-10",
-                                    !startDate && "text-muted-foreground"
-                                  )}
-                                >
-                                  <CalendarDays className="mr-2 h-4 w-4" />
-                                  {startDate && isValid(startDate) ? format(startDate, "PPP", { locale: fr }) : <span>Choisir une date</span>}
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar
-                                  mode="single"
-                                  selected={startDate}
-                                  onSelect={(date) => {
-                                    if (date) {
-                                        const today = new Date();
-                                        today.setHours(0,0,0,0); // Compare with start of today
-                                        if (date >= today ) { 
-                                          date.setHours(0,0,0,0); // Ensure time is zeroed out
-                                          setStartDate(date);
-                                          if (endDate && date > endDate) { // If new start date is after current end date
-                                            setEndDate(new Date(date)); // Set end date to new start date
+                      <FormItem>
+                        <FormLabel>Calendrier du plan</FormLabel>
+                        <div className="flex flex-col md:flex-row gap-4 md:gap-3 items-end md:items-stretch">
+                          <div className="flex-grow flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                            <div className="flex-1 min-w-[140px] sm:min-w-[170px]">
+                              <Label htmlFor="start-date-picker-trigger" className="text-sm font-medium mb-1 block">Date de début</Label>
+                              <Popover open={isStartDatePickerOpen} onOpenChange={setIsStartDatePickerOpen}>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    id="start-date-picker-trigger"
+                                    variant={"outline"}
+                                    className={cn(
+                                      "w-full justify-start text-left font-normal h-10",
+                                      !startDate && "text-muted-foreground"
+                                    )}
+                                  >
+                                    <CalendarDays className="mr-2 h-4 w-4" />
+                                    {startDate && isValid(startDate) ? format(startDate, "PPP", { locale: fr }) : <span>Choisir une date</span>}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                  <Calendar
+                                    mode="single"
+                                    selected={startDate}
+                                    onSelect={(date) => {
+                                      if (date) {
+                                          const today = new Date();
+                                          today.setHours(0,0,0,0); 
+                                          if (date >= today ) { 
+                                            date.setHours(0,0,0,0); 
+                                            setStartDate(date);
+                                            if (endDate && date > endDate) { 
+                                              setEndDate(new Date(date)); 
+                                            } else if (!endDate) { // If no end date, set it to start date
+                                              setEndDate(new Date(date));
+                                            }
                                           }
-                                        }
+                                      }
+                                      setIsStartDatePickerOpen(false);
+                                    }}
+                                    disabled={(date) => {
+                                        const todayForDisable = new Date();
+                                        todayForDisable.setHours(0,0,0,0);
+                                        return date < todayForDisable; 
+                                      }
                                     }
-                                    setIsStartDatePickerOpen(false);
-                                  }}
-                                  disabled={(date) => {
-                                      const todayForDisable = new Date();
-                                      todayForDisable.setHours(0,0,0,0);
-                                      return date < todayForDisable; // Disable past dates
-                                    }
-                                  }
-                                  initialFocus
-                                />
-                              </PopoverContent>
-                            </Popover>
+                                    initialFocus
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+                            <div className="flex-1 min-w-[140px] sm:min-w-[170px]">
+                              <Label htmlFor="end-date-picker-trigger" className="text-sm font-medium mb-1 block">Date de fin</Label>
+                              <Popover open={isEndDatePickerOpen} onOpenChange={setIsEndDatePickerOpen}>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    id="end-date-picker-trigger"
+                                    variant={"outline"}
+                                    className={cn(
+                                      "w-full justify-start text-left font-normal h-10",
+                                      !endDate && "text-muted-foreground"
+                                    )}
+                                    disabled={!startDate || !isValid(startDate)}
+                                  >
+                                    <CalendarDays className="mr-2 h-4 w-4" />
+                                    {endDate && isValid(endDate) ? format(endDate, "PPP", { locale: fr }) : <span>Choisir une date</span>}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                  <Calendar
+                                    mode="single"
+                                    selected={endDate}
+                                    onSelect={(date) => {
+                                      if (date && startDate && isValid(startDate)) {
+                                          date.setHours(0,0,0,0); 
+                                          if (date >= startDate) { 
+                                              setEndDate(date);
+                                          }
+                                      }
+                                      setIsEndDatePickerOpen(false);
+                                    }}
+                                    disabled={(date) => {
+                                      const minDate = startDate && isValid(startDate) ? new Date(startDate) : new Date(0); 
+                                      minDate.setHours(0,0,0,0);
+                                      return date < minDate;
+                                    }}
+                                    initialFocus
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                            </div>
                           </div>
-                          <div className="flex-1 min-w-[140px] sm:min-w-[170px]">
-                            <Label htmlFor="end-date-picker-trigger" className="text-sm font-medium mb-1 block">Date de fin</Label>
-                            <Popover open={isEndDatePickerOpen} onOpenChange={setIsEndDatePickerOpen}>
-                              <PopoverTrigger asChild>
-                                <Button
-                                  id="end-date-picker-trigger"
-                                  variant={"outline"}
-                                  className={cn(
-                                    "w-full justify-start text-left font-normal h-10",
-                                    !endDate && "text-muted-foreground"
-                                  )}
-                                  disabled={!startDate || !isValid(startDate)}
-                                >
-                                  <CalendarDays className="mr-2 h-4 w-4" />
-                                  {endDate && isValid(endDate) ? format(endDate, "PPP", { locale: fr }) : <span>Choisir une date</span>}
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar
-                                  mode="single"
-                                  selected={endDate}
-                                  onSelect={(date) => {
-                                    if (date && startDate && isValid(startDate)) {
-                                        date.setHours(0,0,0,0); // Ensure time is zeroed out
-                                        if (date >= startDate) { // End date must be on or after start date
-                                            setEndDate(date);
-                                        }
-                                    }
-                                    setIsEndDatePickerOpen(false);
-                                  }}
-                                  disabled={(date) => {
-                                    // Disable dates before startDate or if startDate is invalid
-                                    const minDate = startDate && isValid(startDate) ? new Date(startDate) : new Date(0); // Fallback to distant past if no valid start
-                                    minDate.setHours(0,0,0,0);
-                                    return date < minDate;
-                                  }}
-                                  initialFocus
-                                />
-                              </PopoverContent>
-                            </Popover>
+                          <div className="w-full md:w-auto flex-shrink-0">
+                            <Label htmlFor="duration-input" className="text-sm font-medium mb-1 block">Durée en jours</Label>
+                            <Input
+                                id="duration-input"
+                                type="text" 
+                                value={durationInDays}
+                                onChange={handleDurationChange}
+                                onBlur={handleDurationBlur}
+                                className="h-10 text-center w-full md:w-24 bg-secondary"
+                                placeholder="Jours"
+                            />
                           </div>
                         </div>
-                        <div className="w-full md:w-auto flex-shrink-0">
-                          <Label htmlFor="duration-input" className="text-sm font-medium mb-1 block">Durée en jours</Label>
-                          <Input
-                              id="duration-input"
-                              type="text" // Changed to text to allow temporary empty/zero state
-                              value={durationInDays}
-                              onChange={handleDurationChange}
-                              onBlur={handleDurationBlur}
-                              className="h-10 text-center w-full md:w-24 bg-secondary"
-                              placeholder="Jours"
-                          />
-                        </div>
-                      </div>
-                      <FormDescriptionComponent>
-                        Choisissez la date de début et de fin du plan ou indiquez le nombre de jours souhaité.
-                      </FormDescriptionComponent>
-                    </FormItem>
-                  </div>
-                </CardContent>
-              </AccordionContent>
-            </Card>
+                        <FormDescriptionComponent>
+                          Choisissez la date de début et de fin du plan ou indiquez le nombre de jours souhaité.
+                        </FormDescriptionComponent>
+                      </FormItem>
+                    </div>
+                  </CardContent>
+                </AccordionContent>
+              </Card>
           </AccordionItem>
 
           <AccordionItem value="prefs-aliments-item" className="border-b-0">
             <Card className="shadow-lg">
               <CardHeader className="flex flex-row items-center justify-between w-full p-4">
-                  <AccordionTrigger className="text-left hover:no-underline p-0 group [&[data-state=open]>svg]:-rotate-180">
-                    <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                        <ListFilter className="h-5 w-5 text-secondary-foreground" />
-                        <CardTitle className="text-lg font-semibold">Préférences alimentaires</CardTitle>
-                        </div>
-                        <CardDescription className="mb-0 ml-7 -mt-1 text-xs text-muted-foreground">
+                <AccordionTrigger className="text-left hover:no-underline p-0 group flex-1">
+                  <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                      <ListFilter className="h-5 w-5 text-secondary-foreground" />
+                      <CardTitle className="text-lg font-semibold">Préférences alimentaires</CardTitle>
+                      </div>
+                      <CardDescription className="mb-0 ml-7 -mt-1 text-xs text-muted-foreground text-left">
                         Cochez vos aliments favoris, à éviter ou allergènes.<br/>
                         Les aliments favoris seront privilégiés pour vos plans de repas.
-                        </CardDescription>
-                    </div>
-                  </AccordionTrigger>
+                      </CardDescription>
+                  </div>
+                </AccordionTrigger>
                 <Button
                   type="button"
                   variant="outline"
@@ -877,7 +877,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
               </CardHeader>
               <AccordionContent className="pt-0">
                   <CardContent>
-                      <div className="max-h-[400px] overflow-y-auto p-1 rounded-md border mt-4">
+                      <div className="max-h-[400px] overflow-y-auto p-1 rounded-md border mt-2">
                       <Accordion type="multiple" className="w-full">
                           {processedFoodCategories.map(category => {
                           const CategoryIcon = categoryIcons[category.categoryName] || ListFilter;
@@ -969,16 +969,16 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
 
           <AccordionItem value="conseils-aliments-item" className="border-b-0">
             <Card className="shadow-lg">
-              <AccordionTrigger className="w-full p-0 text-left hover:no-underline [&[data-state=open]>div>button>svg]:rotate-180">
-                 <CardHeader className="flex flex-row items-center justify-between w-full p-4">
-                    <div className="flex items-center gap-2">
-                        <BookOpenText className="h-5 w-5 text-secondary-foreground" />
-                        <CardTitle className="text-lg font-semibold text-foreground">
-                            Conseils alimentaires optimisés pour Diabète de Type 2
-                        </CardTitle>
-                    </div>
-                </CardHeader>
-              </AccordionTrigger>
+                <AccordionTrigger className="w-full text-left p-0 hover:no-underline">
+                     <CardHeader className="flex flex-row items-center justify-between w-full p-4">
+                        <div className="flex items-center gap-2">
+                            <BookOpenText className="h-5 w-5 text-secondary-foreground" />
+                            <CardTitle className="text-lg font-semibold text-foreground">
+                                Conseils alimentaires optimisés pour Diabète de Type 2
+                            </CardTitle>
+                        </div>
+                    </CardHeader>
+                </AccordionTrigger>
               <AccordionContent className="pt-0">
                   <CardContent>
                     <div className="mb-3 p-3 border rounded-md bg-background/50 max-h-60 overflow-y-auto">
@@ -998,7 +998,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
           </AccordionItem>
         </Accordion>
 
-        <div className="space-y-4">
+        <div className="space-y-4 pt-4">
             <Button type="submit" disabled={isLoading} className="w-full">
             {isLoading ? (
                 <>
@@ -1234,5 +1234,3 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     </Form>
   );
 }
-
-    
