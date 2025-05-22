@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star, CalendarDays, Save, Upload, ListFilter, PlusCircle, BookOpenText, BarChart2, Apple, Carrot, Nut, Wheat, Bean, Beef, Milk, Shell as OilIcon, Blend } from "lucide-react";
+import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star, CalendarDays, Save, Upload, ListFilter, PlusCircle, BookOpenText, BarChart2, Apple, Carrot, Nut, Wheat, Bean, Beef, Milk, Shell as OilIcon, Blend } from "lucide-react"; // Added Shell as OilIcon
 import { useState, useEffect, useCallback } from "react";
 import {
   Accordion,
@@ -63,7 +63,6 @@ import { Alert, AlertTitle, AlertDescription as AlertDescriptionShadcn } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 
-// Schema now only manages fields directly controlled by react-hook-form
 const formSchema = z.object({
   planName: z.string().optional(),
   diabeticResearchSummary: z.string().min(20, { message: "Veuillez fournir un résumé de recherche pertinent." }),
@@ -287,19 +286,18 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   useEffect(() => {
     if (isClient) {
       const tomorrow = startOfDay(addDays(new Date(), 1));
-
       if (savedFormSettings) {
         handleLoadSettings();
       } else {
-        // Initialize dates only if not loading from settings
-        if (!startDate) setStartDate(tomorrow);
-        if (!endDate) setEndDate(new Date(tomorrow)); // for 1 day duration initially for "dates" mode
-        if (!durationModeStartDate) setDurationModeStartDate(tomorrow);
-        // durationInDays is already "1" by default via useState for "duration" mode
+        // Initialize dates and duration if not loading from settings
+        setStartDate(tomorrow);
+        setEndDate(new Date(tomorrow)); // for 1 day duration initially for "dates" mode
+        setDurationModeStartDate(tomorrow);
+        setDurationInDays("1");
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClient]); // Removed savedFormSettings from deps to avoid re-init loop
+  }, [isClient]);
 
   useEffect(() => {
     const hydratedCategories = foodCategoriesFromStorage.map(storedCategory => {
@@ -356,11 +354,11 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       const numDays = parseInt(durationInDays, 10);
       if (!isNaN(numDays) && numDays >= 1 && numDays <= 365) {
          const newEndDate = addDays(durationModeStartDate, numDays - 1);
-         if (!isEqual(newEndDate, displayEndDateFromDuration || new Date(0))) { // Avoid unnecessary updates
+         if (!isEqual(newEndDate, displayEndDateFromDuration || new Date(0))) { 
             setDisplayEndDateFromDuration(newEndDate);
          }
       } else {
-        if (displayEndDateFromDuration !== undefined) { // Avoid unnecessary updates
+        if (displayEndDateFromDuration !== undefined) { 
             setDisplayEndDateFromDuration(undefined); 
         }
       }
@@ -414,13 +412,13 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     let planDurationForAI = "";
-    let finalStartDate: Date | undefined;
+    let finalStartDateForAI: Date | undefined;
 
     if (selectionMode === 'dates') {
       if (startDate && endDate && isValid(startDate) && isValid(endDate) && !isBefore(endDate, startDate)) {
         const diff = differenceInDays(endDate, startDate) + 1;
         planDurationForAI = `${diff} jour${diff > 1 ? 's' : ''}`;
-        finalStartDate = startDate;
+        finalStartDateForAI = startDate;
       } else {
         toast({ title: "Dates invalides", description: "Veuillez sélectionner une date de début et de fin valides.", variant: "destructive" });
         setIsLoading(false);
@@ -430,7 +428,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       const numDays = parseInt(durationInDays, 10);
       if (durationModeStartDate && isValid(durationModeStartDate) && !isNaN(numDays) && numDays >= 1 && numDays <= 365) {
         planDurationForAI = `${numDays} jour${numDays > 1 ? 's' : ''}`;
-        finalStartDate = durationModeStartDate;
+        finalStartDateForAI = durationModeStartDate;
       } else {
         toast({ title: "Configuration de durée invalide", description: "Veuillez entrer une durée valide (1-365 jours) et une date de début.", variant: "destructive" });
         setIsLoading(false);
@@ -438,7 +436,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       }
     }
 
-    if (!planDurationForAI || !finalStartDate) {
+    if (!planDurationForAI || !finalStartDateForAI) {
       toast({ title: "Configuration de période invalide", description: "Veuillez configurer la période du plan.", variant: "destructive" });
       setIsLoading(false);
       return;
@@ -661,7 +659,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
 
 
   useEffect(() => {
-    if (isClient && savedFormSettings && (startDate === undefined || endDate === undefined || durationModeStartDate === undefined)) {
+    if (isClient && savedFormSettings && (!startDate || !endDate || !durationModeStartDate)) {
         handleLoadSettings();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -726,6 +724,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         newCategories[targetCategoryIndex] = updatedCategory;
         return newCategories;
       }
+      // If category doesn't exist, create it (though this case might not happen if select is populated from existing categories)
       return [...prevCategories, { categoryName: newFoodData.categoryName, items: [newFoodItem] }];
     });
 
@@ -824,7 +823,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                                       if (date) {
                                         const newStartDate = startOfDay(date);
                                         const today = startOfDay(new Date());
-                                        if (isBefore(newStartDate, today)) { // Allow today
+                                        if (isBefore(newStartDate, today)) { 
                                           setStartDate(today);
                                           if (endDate && isBefore(endDate, today)) setEndDate(new Date(today));
                                         } else {
@@ -870,7 +869,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                                       setIsEndDatePickerOpen(false);
                                     }}
                                     disabled={(date) => {
-                                      const minDate = startDate && isValid(startDate) ? new Date(startDate) : startOfDay(addDays(new Date(),-1)); // ensure minDate is valid
+                                      const minDate = startDate && isValid(startDate) ? new Date(startDate) : startOfDay(addDays(new Date(),-1)); 
                                       return isBefore(startOfDay(date), minDate);
                                     }}
                                     initialFocus
@@ -936,7 +935,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                             <div className="flex-1 text-sm text-primary sm:h-10 sm:flex sm:items-center min-w-[150px] sm:min-w-[180px]">
                                 {displayEndDateFromDuration && isValid(displayEndDateFromDuration) && (
                                     <div>
-                                        <span className="font-medium text-muted-foreground">Fin du plan: </span>
+                                        <span className="font-medium text-muted-foreground">Fin du plan : </span>
                                         {format(displayEndDateFromDuration, "PPP", { locale: fr })}
                                     </div>
                                 )}
@@ -953,7 +952,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
           <AccordionItem value="prefs-aliments-item" className="border-b-0">
             <Card className="shadow-lg">
               <div className="flex flex-row items-center justify-between w-full p-4">
-                  <AccordionTrigger className="flex p-0 hover:no-underline group text-left">
+                  <AccordionTrigger className="flex p-0 hover:no-underline group text-left flex-1">
                     <div className="flex items-center gap-2">
                       <ListFilter className="h-5 w-5 text-secondary-foreground" />
                       <CardTitle className="text-lg font-semibold">Préférences alimentaires</CardTitle>
