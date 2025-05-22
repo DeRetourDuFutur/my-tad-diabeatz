@@ -22,7 +22,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star, CalendarDays } from "lucide-react";
+import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star, CalendarDays, Save, Upload } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import {
   Accordion,
@@ -49,6 +49,7 @@ import {
 import { cn } from "@/lib/utils";
 import { format, addDays } from "date-fns";
 import { fr } from "date-fns/locale";
+import type { FormSettings } from "@/lib/types";
 
 
 const formSchema = z.object({
@@ -77,21 +78,28 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   const [startDate, setStartDate] = useState<Date | undefined>(new Date());
   const [endDate, setEndDate] = useState<Date | undefined>();
 
+  const [savedFormSettings, setSavedFormSettings] = useLocalStorage<FormSettings | null>("diabeatz-form-settings", null);
+
 
   useEffect(() => {
     const hydratedCategories = foodCategoriesFromStorage.map(storedCategory => {
       const initialCategoryDefinition = initialFoodCategories.find(
         initCat => initCat.categoryName === storedCategory.categoryName
       );
+      // Ensure initialCategoryDefinition exists before trying to access its items
+      const initialItems = initialCategoryDefinition ? initialCategoryDefinition.items : [];
+      
       return {
         categoryName: storedCategory.categoryName, 
         items: storedCategory.items.map(storedItem => {
-          const initialItemDefinition = initialCategoryDefinition?.items.find(
+          const initialItemDefinition = initialItems.find(
             initItem => initItem.id === storedItem.id
           );
+          // Merge stored item with initial definition, prioritizing stored item if defined,
+          // but falling back to initial definition for potentially new fields.
           return {
-            ...(initialItemDefinition || {}), 
-            ...storedItem,                   
+            ...initialItemDefinition, // Provides defaults for new fields like nutritional info
+            ...storedItem,            // Overrides with user's saved preferences (isFavorite, etc.)
           };
         }),
       };
@@ -235,6 +243,45 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         {item.notes && <div className="italic">{item.notes}</div>}
       </div>
     );
+  };
+
+  const handleSaveSettings = () => {
+    const currentFormValues = form.getValues();
+    const settingsToSave: FormSettings = {
+      planName: currentFormValues.planName,
+      planDuration: currentFormValues.planDuration,
+      diabeticResearchSummary: currentFormValues.diabeticResearchSummary,
+      foodPreferences: foodCategoriesFromStorage, // foodCategoriesFromStorage has the latest preferences
+      startDate: startDate ? startDate.toISOString() : undefined,
+    };
+    setSavedFormSettings(settingsToSave);
+    toast({
+      title: "Paramètres sauvegardés!",
+      description: "Votre configuration de formulaire a été enregistrée.",
+    });
+  };
+
+  const handleLoadSettings = () => {
+    if (savedFormSettings) {
+      form.reset({
+        planName: savedFormSettings.planName || "",
+        planDuration: savedFormSettings.planDuration,
+        diabeticResearchSummary: savedFormSettings.diabeticResearchSummary,
+      });
+      // This will trigger the useEffect to update processedFoodCategories
+      setFoodCategoriesInStorage(savedFormSettings.foodPreferences); 
+      setStartDate(savedFormSettings.startDate ? new Date(savedFormSettings.startDate) : new Date());
+      toast({
+        title: "Paramètres chargés!",
+        description: "Votre configuration de formulaire a été restaurée.",
+      });
+    } else {
+      toast({
+        title: "Aucun paramètre trouvé",
+        description: "Aucun paramètre de formulaire n'a été trouvé pour le chargement.",
+        variant: "destructive",
+      });
+    }
   };
 
 
@@ -439,11 +486,21 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                 </>
               )}
             </Button>
+
+            <div className="flex gap-2 mt-4">
+              <Button type="button" variant="outline" onClick={handleSaveSettings} className="flex-1">
+                <Save className="mr-2 h-4 w-4" />
+                Sauvegarder les paramètres
+              </Button>
+              <Button type="button" variant="outline" onClick={handleLoadSettings} className="flex-1" disabled={!savedFormSettings}>
+                <Upload className="mr-2 h-4 w-4" />
+                Charger les paramètres
+              </Button>
+            </div>
+
           </form>
         </Form>
       </CardContent>
     </Card>
   );
 }
-
-      

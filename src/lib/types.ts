@@ -1,4 +1,6 @@
 
+import type { FoodCategory } from '@/lib/food-data';
+
 // This represents a single dish or component of a meal
 export type MealComponent = {
   title: string;
@@ -38,4 +40,12 @@ export interface StoredMealPlan extends GenerateMealPlanOutput {
   id: string;
   name: string;
   createdAt: string; // ISO date string
+}
+
+export interface FormSettings {
+  planName?: string;
+  planDuration: string;
+  diabeticResearchSummary: string;
+  foodPreferences: FoodCategory[];
+  startDate?: string; // ISO string for localStorage
 }
