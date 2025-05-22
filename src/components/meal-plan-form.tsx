@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star, CalendarDays, Save, Upload, Info, ListFilter, PlusCircle, BookOpenText } from "lucide-react";
+import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star, CalendarDays, Save, Upload, Info, ListFilter, PlusCircle, BookOpenText, Apple, Carrot, Nut, Wheat, Bean, Beef, Milk, Shell as OilIcon, Blend } from "lucide-react"; // Added category icons
 import { useState, useEffect, useCallback } from "react";
 import {
   Accordion,
@@ -59,7 +59,7 @@ import { cn } from "@/lib/utils";
 import { format, addDays, differenceInDays, isValid, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import type { FormSettings } from "@/lib/types";
-import { Alert, AlertTitle} from "@/components/ui/alert";
+import { Alert, AlertTitle } from "@/components/ui/alert";
 
 
 const formSchema = z.object({
@@ -200,6 +200,18 @@ const initialNewFoodData: NewFoodData = {
   fiber: "",
   sodium: "",
   notes: "",
+};
+
+const categoryIcons: Record<string, React.ElementType> = {
+  "Fruits": Apple,
+  "Légumes": Carrot,
+  "Fruits à coque et Graines": Nut,
+  "Céréales, Grains et Féculents": Wheat,
+  "Légumineuses": Bean,
+  "Viandes, Volailles, Poissons et Œufs": Beef,
+  "Produits Laitiers et Alternatives Végétales": Milk,
+  "Matières Grasses (avec modération)": OilIcon,
+  "Assaisonnements et Autres": Blend,
 };
 
 
@@ -532,7 +544,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         });
         
         return {
-          ...(initialCatDef || {}), // Ensure category-level defaults if any
+          ...(initialCatDef || {}), 
           ...storedCat,
           items: mergedItems.sort((a, b) => a.name.localeCompare(b.name)),
         };
@@ -562,7 +574,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       }
       setEndDate(newEndDate);
       
-      // This will trigger the useEffect that updates durationInDays based on startDate and endDate
       const diff = differenceInDays(newEndDate, newStartDate) + 1;
       setDurationInDays(diff.toString());
 
@@ -609,7 +620,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     });
 
     if(foodAlreadyExists) {
-      setFoodCategoriesInStorage(updatedCategories); // This ensures the UI doesn't "lose" the category if an error happens
+      setFoodCategoriesInStorage(updatedCategories); 
       return;
     }
     
@@ -633,7 +644,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         newCategories[targetCategoryIndex] = updatedCategory;
         return newCategories;
       }
-      // Should not happen if category selection is enforced, but as a fallback:
       return [...prevCategories, { categoryName: newFoodData.categoryName, items: [newFoodItem] }];
     });
 
@@ -703,8 +713,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                                   const today = new Date();
                                   today.setHours(0,0,0,0);
                                   if (date < today) { 
-                                    // Silently ignore or set to today if you prefer
-                                    // setStartDate(today); // Example: force today
+                                    // Silently ignore
                                   } else {
                                     date.setHours(0,0,0,0);
                                     setStartDate(date);
@@ -717,7 +726,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                             }}
                             disabled={(date) => {
                                 const minSelectableDate = new Date();
-                                 minSelectableDate.setDate(minSelectableDate.getDate() -1); // Allows selecting today
+                                 minSelectableDate.setDate(minSelectableDate.getDate() -1); 
                                 minSelectableDate.setHours(0,0,0,0);
                                 return date < minSelectableDate;
                               } 
@@ -819,72 +828,77 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
             </p>
             <div className="max-h-[400px] overflow-y-auto p-1 rounded-md border">
               <Accordion type="multiple" className="w-full">
-                {processedFoodCategories.map(category => (
-                  <AccordionItem value={category.categoryName} key={category.categoryName} className="border-b-0 last:border-b-0">
-                    <AccordionTrigger className="py-3 px-2 text-md font-semibold text-primary hover:no-underline hover:bg-muted/50 rounded-md">
-                      {category.categoryName}
-                    </AccordionTrigger>
-                    <AccordionContent className="pt-1 pb-2 px-2">
-                      <ul className="space-y-2 pl-2">
-                        {category.items.map(item => (
-                          <li key={item.id} className="py-1.5 border-b border-border/50 last:border-b-0">
-                            <div className="grid grid-cols-[1fr_auto_auto_auto_auto] items-start gap-x-2">
-                              <div>
-                                <span className="text-sm font-medium">{item.name} <span className="text-xs text-muted-foreground">{item.ig}</span></span>
+                {processedFoodCategories.map(category => {
+                  const CategoryIcon = categoryIcons[category.categoryName] || ListFilter;
+                  return (
+                    <AccordionItem value={category.categoryName} key={category.categoryName} className="border-b-0 last:border-b-0">
+                      <AccordionTrigger className="py-3 px-2 text-md font-semibold hover:no-underline hover:bg-muted/50 rounded-md flex items-center gap-2">
+                        <CategoryIcon className="h-4 w-4 text-primary" />
+                        <span className="text-primary">{category.categoryName}</span>
+                      </AccordionTrigger>
+                      <AccordionContent className="pt-1 pb-2 px-2">
+                        <ul className="space-y-1 pl-2">
+                          {category.items.map(item => (
+                            <li key={item.id} className="py-1 border-b border-border/50 last:border-b-0">
+                              <div className="grid grid-cols-[1fr_auto_auto_auto_auto] items-start gap-x-2">
+                                <div>
+                                  <span className="text-sm font-medium">{item.name}</span>
+                                  <span className="text-xs text-muted-foreground ml-1">{item.ig}</span>
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="p-1 h-auto justify-self-end"
+                                  onClick={() => handleOpenNutritionalInfoDialog(item)}
+                                  title="Valeurs nutritionnelles"
+                                >
+                                  <Info className="h-3.5 w-3.5" />
+                                </Button>
+                                <div className="flex items-center space-x-1 justify-self-end">
+                                  <Checkbox
+                                    id={`${item.id}-favorite`}
+                                    checked={item.isFavorite}
+                                    onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isFavorite", !!checked)}
+                                    aria-label={`Marquer ${item.name} comme favori`}
+                                    disabled={item.isDisliked || item.isAllergenic}
+                                  />
+                                  <Label htmlFor={`${item.id}-favorite`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${ (item.isDisliked || item.isAllergenic) ? 'opacity-50 cursor-not-allowed' : ''}`} title="Favori">
+                                    <Star className="h-3.5 w-3.5" />
+                                  </Label>
+                                </div>
+                                <div className="flex items-center space-x-1 justify-self-end">
+                                  <Checkbox
+                                    id={`${item.id}-disliked`}
+                                    checked={item.isDisliked}
+                                    onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isDisliked", !!checked)}
+                                    aria-label={`Marquer ${item.name} comme non aimé`}
+                                    disabled={item.isFavorite}
+                                  />
+                                  <Label htmlFor={`${item.id}-disliked`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${item.isFavorite ? 'opacity-50 cursor-not-allowed' : ''}`} title="Je n'aime pas">
+                                    <ThumbsDown className="h-3.5 w-3.5" />
+                                  </Label>
+                                </div>
+                                <div className="flex items-center space-x-1 justify-self-end">
+                                  <Checkbox
+                                    id={`${item.id}-allergenic`}
+                                    checked={item.isAllergenic}
+                                    onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isAllergenic", !!checked)}
+                                    aria-label={`Marquer ${item.name} comme allergène`}
+                                    disabled={item.isFavorite}
+                                  />
+                                  <Label htmlFor={`${item.id}-allergenic`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${item.isFavorite ? 'opacity-50 cursor-not-allowed' : ''}`} title="Allergie/Intolérance">
+                                    <AlertTriangle className="h-3.5 w-3.5" />
+                                  </Label>
+                                </div>
                               </div>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="p-1 h-auto justify-self-end"
-                                onClick={() => handleOpenNutritionalInfoDialog(item)}
-                                title="Valeurs nutritionnelles"
-                              >
-                                <Info className="h-3.5 w-3.5" />
-                              </Button>
-                              <div className="flex items-center space-x-1 justify-self-end">
-                                <Checkbox
-                                  id={`${item.id}-favorite`}
-                                  checked={item.isFavorite}
-                                  onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isFavorite", !!checked)}
-                                  aria-label={`Marquer ${item.name} comme favori`}
-                                  disabled={item.isDisliked || item.isAllergenic}
-                                />
-                                <Label htmlFor={`${item.id}-favorite`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${ (item.isDisliked || item.isAllergenic) ? 'opacity-50 cursor-not-allowed' : ''}`} title="Favori">
-                                  <Star className="h-3.5 w-3.5" />
-                                </Label>
-                              </div>
-                              <div className="flex items-center space-x-1 justify-self-end">
-                                <Checkbox
-                                  id={`${item.id}-disliked`}
-                                  checked={item.isDisliked}
-                                  onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isDisliked", !!checked)}
-                                  aria-label={`Marquer ${item.name} comme non aimé`}
-                                  disabled={item.isFavorite}
-                                />
-                                <Label htmlFor={`${item.id}-disliked`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${item.isFavorite ? 'opacity-50 cursor-not-allowed' : ''}`} title="Je n'aime pas">
-                                  <ThumbsDown className="h-3.5 w-3.5" />
-                                </Label>
-                              </div>
-                              <div className="flex items-center space-x-1 justify-self-end">
-                                <Checkbox
-                                  id={`${item.id}-allergenic`}
-                                  checked={item.isAllergenic}
-                                  onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isAllergenic", !!checked)}
-                                  aria-label={`Marquer ${item.name} comme allergène`}
-                                  disabled={item.isFavorite}
-                                />
-                                <Label htmlFor={`${item.id}-allergenic`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${item.isFavorite ? 'opacity-50 cursor-not-allowed' : ''}`} title="Allergie/Intolérance">
-                                  <AlertTriangle className="h-3.5 w-3.5" />
-                                </Label>
-                              </div>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
+                            </li>
+                          ))}
+                        </ul>
+                      </AccordionContent>
+                    </AccordionItem>
+                  );
+                })}
               </Accordion>
             </div>
           </CardContent>
@@ -904,7 +918,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                   Afficher/Masquer les conseils
                 </AccordionTrigger>
                 <AccordionContent className="pt-1 pb-2 px-2">
-                  <FormField
+                   <FormField
                     control={form.control}
                     name="diabeticResearchSummary"
                     render={({ field }) => ( 
@@ -932,36 +946,38 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
             </Accordion>
           </CardContent>
         </Card>
+        
+        <div className="space-y-4">
+            <Button type="submit" disabled={isLoading} className="w-full">
+            {isLoading ? (
+                <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Génération en cours...
+                </>
+            ) : (
+                <>
+                <Wand2 className="mr-2 h-4 w-4" />
+                Générer le Plan Repas
+                </>
+            )}
+            </Button>
 
-        <Button type="submit" disabled={isLoading} className="w-full">
-          {isLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Génération en cours...
-            </>
-          ) : (
-            <>
-              <Wand2 className="mr-2 h-4 w-4" />
-              Générer le Plan Repas
-            </>
-          )}
-        </Button>
-
-        <div className="flex gap-2 mt-4">
-          <Button type="button" variant="outline" onClick={handleSaveSettings} className="flex-1">
-            <Save className="mr-2 h-4 w-4" />
-            Sauvegarder les paramètres
-          </Button>
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={handleLoadSettings} 
-            className="flex-1" 
-            disabled={!isClient || (!savedFormSettings && (typeof window !== 'undefined' && !localStorage.getItem("diabeatz-form-settings")))}
-          >
-            <Upload className="mr-2 h-4 w-4" />
-            Charger les paramètres
-          </Button>
+            <div className="flex gap-2">
+            <Button type="button" variant="outline" onClick={handleSaveSettings} className="flex-1">
+                <Save className="mr-2 h-4 w-4" />
+                Sauvegarder les paramètres
+            </Button>
+            <Button 
+                type="button" 
+                variant="outline" 
+                onClick={handleLoadSettings} 
+                className="flex-1" 
+                disabled={!isClient || (!savedFormSettings && (typeof window !== 'undefined' && !localStorage.getItem("diabeatz-form-settings")))}
+            >
+                <Upload className="mr-2 h-4 w-4" />
+                Charger les paramètres
+            </Button>
+            </div>
         </div>
       </form>
         <Dialog open={isEditTipsDialogOpen} onOpenChange={setIsEditTipsDialogOpen}>
