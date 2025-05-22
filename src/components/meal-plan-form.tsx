@@ -764,7 +764,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                           <FormItem>
                             <FormLabel>Nom du plan (optionnel)</FormLabel>
                             <FormControl>
-                              <Input placeholder="Ex: Mon plan semaine prochaine" {...field} />
+                              <Input placeholder="Ex. : Plan alimentaire personnalisé" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -772,7 +772,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                       />
                       
                       <FormItem>
-                        <FormLabel className="text-base font-medium">Calendrier ou Durée</FormLabel>
+                        <FormLabel className="text-base font-medium">Calendrier / Durée</FormLabel>
                          <FormDescriptionComponent className="mb-3">
                           Choisissez la date de début et de fin du plan ou indiquez le nombre de jours souhaité.
                         </FormDescriptionComponent>
@@ -792,7 +792,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                         </RadioGroup>
 
                         {selectionMode === 'dates' && (
-                          <div className="flex flex-col sm:flex-row gap-3 items-start">
+                          <div className="flex flex-col sm:flex-row gap-3 items-end">
                             <div className="flex-1 min-w-[150px] sm:min-w-[180px]">
                               <Label htmlFor="start-date-picker" className="text-sm font-medium mb-1 block">Date de début</Label>
                               <Popover open={isStartDatePickerOpen} onOpenChange={setIsStartDatePickerOpen}>
@@ -868,7 +868,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                                 </PopoverContent>
                               </Popover>
                             </div>
-                            <div className="pt-7 text-sm text-muted-foreground min-w-[80px] text-right sm:text-left">
+                            <div className="pt-1 text-sm text-primary min-w-[80px] text-right sm:text-left">
                               {displayDurationFromDates}
                             </div>
                           </div>
@@ -923,9 +923,9 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                                 placeholder="Jours"
                               />
                             </div>
-                            <div className="flex-1 pt-1 sm:pt-0 text-sm text-muted-foreground space-y-1 min-w-[150px] sm:min-w-[180px]">
+                            <div className="flex-1 pt-1 text-sm text-primary space-y-1 min-w-[150px] sm:min-w-[180px]">
                                 {displayEndDateFromDuration && isValid(displayEndDateFromDuration) && (
-                                    <div><span className="font-medium">Fin du plan:</span> {format(displayEndDateFromDuration, "PPP", { locale: fr })}</div>
+                                    <div><span className="font-medium text-muted-foreground">Fin du plan:</span> {format(displayEndDateFromDuration, "PPP", { locale: fr })}</div>
                                 )}
                             </div>
                           </div>
@@ -940,7 +940,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
           <AccordionItem value="prefs-aliments-item" className="border-b-0">
             <Card className="shadow-lg">
               <div className="flex flex-row items-center justify-between w-full p-4">
-                  <AccordionTrigger className="flex-1 p-0 hover:no-underline group text-left">
+                  <AccordionTrigger className="flex p-0 hover:no-underline group text-left">
                     <div className="flex items-center gap-2">
                       <ListFilter className="h-5 w-5 text-secondary-foreground" />
                       <CardTitle className="text-lg font-semibold">Préférences alimentaires</CardTitle>
@@ -1323,3 +1323,4 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     </Form>
   );
 }
+
