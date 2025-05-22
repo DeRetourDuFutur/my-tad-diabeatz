@@ -72,8 +72,8 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
 
   const [processedFoodCategories, setProcessedFoodCategories] = useState<FoodCategory[]>(initialFoodCategories);
 
-  const [startDate, setStartDate] = useState<Date | undefined>(new Date());
-  const [endDate, setEndDate] = useState<Date | undefined>(addDays(new Date(), 0)); 
+  const [startDate, setStartDate] = useState<Date | undefined>(addDays(new Date(), 1));
+  const [endDate, setEndDate] = useState<Date | undefined>(addDays(new Date(), 1)); 
   const [durationInDays, setDurationInDays] = useState<string>("1");
 
 
@@ -118,7 +118,9 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       const diff = differenceInDays(endDate, startDate) + 1;
       setDurationInDays(diff.toString());
     } else if (startDate && endDate && isValid(startDate) && isValid(endDate) && endDate < startDate) {
-      setDurationInDays("0"); // Or some indicator of invalid range
+      // If endDate is before startDate, reset endDate to startDate and duration to 1
+      setEndDate(startDate);
+      setDurationInDays("1");
     }
   }, [startDate, endDate]);
 
@@ -127,45 +129,47 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     const numDays = parseInt(durationInDays, 10);
     if (!isNaN(numDays) && numDays > 0 && startDate && isValid(startDate)) {
       const newEndDate = addDays(startDate, numDays - 1);
-      // Only update if newEndDate is different to avoid infinite loops
       if (!endDate || !isValid(endDate) || newEndDate.getTime() !== endDate.getTime()) {
-         // Check if newEndDate is not before startDate to prevent invalid range from duration input
         if (newEndDate >= startDate) {
             setEndDate(newEndDate);
         } else {
-            // If duration makes endDate before startDate, reset duration to 1 or based on current valid endDate
-            if (endDate && endDate >= startDate) {
-                 const diff = differenceInDays(endDate, startDate) + 1;
-                 setDurationInDays(diff.toString());
-            } else {
-                 setDurationInDays("1");
-                 setEndDate(addDays(startDate, 0));
-            }
+            // This case should ideally not be hit if duration is always > 0
+            setEndDate(startDate); // Reset endDate to startDate
+            setDurationInDays("1"); // And duration to 1
         }
       }
-    } else if (!isNaN(numDays) && numDays <= 0 && startDate && isValid(startDate)) {
-        // Handle cases where user enters 0 or negative, reset to 1 day
-        setDurationInDays("1");
-        if(!endDate || !isValid(endDate) || addDays(startDate,0).getTime() !== endDate.getTime()){
-             setEndDate(addDays(startDate, 0));
+    } else if ((!isNaN(numDays) && numDays <= 0 && startDate && isValid(startDate)) || (durationInDays === "" && startDate && isValid(startDate))) {
+        // Handle cases where user enters 0, negative, or empty string
+        // We reset duration to 1 and endDate accordingly
+        const newEndDate = addDays(startDate, 0);
+        if(!endDate || !isValid(endDate) || newEndDate.getTime() !== endDate.getTime()){
+             setEndDate(newEndDate);
+        }
+        if(durationInDays !== "1") { // avoid re-setting if already "1"
+            setDurationInDays("1");
         }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [durationInDays, startDate]);
 
 
   const handleDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    // Allow empty input temporarily, or positive numbers
-    if (value === "" || (parseInt(value, 10) > 0 && /^\d*$/.test(value))) {
-      setDurationInDays(value);
-    } else if (parseInt(value, 10) <= 0 && value !== "") {
-      setDurationInDays("1"); // Reset to 1 if 0 or negative
+    if (value === "" || /^\d+$/.test(value)) { // Allow empty or positive integers
+      const numValue = parseInt(value, 10);
+      if (value === "" || (numValue > 0 && numValue <= 365) ) { // Limit to 365 days for sensibility
+         setDurationInDays(value);
+      } else if (numValue <=0 && value !== "") {
+         setDurationInDays("1");
+      } else if (numValue > 365) {
+         setDurationInDays("365");
+      }
     }
   };
   
   const handleDurationBlur = () => {
     if (durationInDays === "" || parseInt(durationInDays, 10) <= 0) {
-      setDurationInDays("1"); // Default to 1 if empty or invalid on blur
+      setDurationInDays("1"); 
     }
   };
 
@@ -314,13 +318,13 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       });
       setFoodCategoriesInStorage(savedFormSettings.foodPreferences); 
       
-      const loadedStartDate = savedFormSettings.startDate ? parseISO(savedFormSettings.startDate) : new Date();
+      const loadedStartDate = savedFormSettings.startDate ? parseISO(savedFormSettings.startDate) : addDays(new Date(), 1);
       const loadedEndDate = savedFormSettings.endDate ? parseISO(savedFormSettings.endDate) : addDays(loadedStartDate, 0);
 
       if (isValid(loadedStartDate)) {
         setStartDate(loadedStartDate);
       } else {
-        setStartDate(new Date()); // Fallback
+        setStartDate(addDays(new Date(), 1)); // Fallback to tomorrow
       }
       
       if (isValid(loadedEndDate) && loadedEndDate >= loadedStartDate) {
@@ -328,10 +332,9 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       } else if (isValid(loadedStartDate)) {
         setEndDate(addDays(loadedStartDate, 0)); // Fallback based on valid start date
       } else {
-        setEndDate(addDays(new Date(),0)); // Fallback
+        setEndDate(addDays(new Date(), 1)); // Fallback to tomorrow
       }
       
-      // This will trigger the useEffect to set durationInDays based on loaded dates
       toast({
         title: "Paramètres chargés!",
         description: "Votre configuration de formulaire a été restaurée.",
@@ -369,9 +372,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                   <FormControl>
                     <Input placeholder="Ex: Mon plan semaine prochaine" {...field} />
                   </FormControl>
-                  <FormDescription>
-                    Donnez un nom à votre plan pour le retrouver facilement.
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -379,10 +379,10 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
             
             <FormItem>
               <FormLabel>Calendrier du plan</FormLabel>
-              <div className="flex flex-col sm:flex-row gap-4 items-start">
-                {/* Left Column: Date Pickers (60%) */}
-                <div className="w-full sm:w-3/5 space-y-3">
-                  <div>
+              <div className="flex flex-col md:flex-row gap-4 items-start">
+                {/* Date Pickers Column */}
+                <div className="w-full md:w-3/5 flex flex-col sm:flex-row gap-3">
+                  <div className="flex-1 min-w-[150px]">
                     <Label htmlFor="start-date-picker-trigger" className="text-sm font-medium">Date de début</Label>
                     <Popover>
                       <PopoverTrigger asChild>
@@ -405,7 +405,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                           onSelect={(date) => {
                             if (date) {
                                 setStartDate(date);
-                                if (endDate && date > endDate) setEndDate(date); // Ensure end date is not before start
+                                if (endDate && date > endDate) setEndDate(date); 
                             }
                           }}
                           disabled={(date) => date < new Date(new Date().setDate(new Date().getDate() -1)) } 
@@ -414,7 +414,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                       </PopoverContent>
                     </Popover>
                   </div>
-                  <div>
+                  <div className="flex-1 min-w-[150px]">
                     <Label htmlFor="end-date-picker-trigger" className="text-sm font-medium">Date de fin</Label>
                     <Popover>
                       <PopoverTrigger asChild>
@@ -436,15 +436,15 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                           mode="single"
                           selected={endDate}
                           onSelect={setEndDate}
-                          disabled={(date) => startDate && isValid(startDate) ? date < startDate : date < new Date(new Date().setDate(new Date().getDate() -1)) } 
+                          disabled={(date) => startDate && isValid(startDate) ? date < startDate : date < new Date(new Date().setDate(new Date().getDate())) } // Min end date is startDate or today if startDate not set
                           initialFocus
                         />
                       </PopoverContent>
                     </Popover>
                   </div>
                 </div>
-                {/* Right Column: Duration Input (40%) */}
-                <div className="w-full sm:w-2/5 space-y-3 sm:pt-0 pt-2"> {/* Adjusted padding top for small screens */}
+                {/* Duration Input Column */}
+                <div className="w-full md:w-2/5 md:max-w-[120px]"> 
                    <div>
                     <Label htmlFor="duration-input" className="text-sm font-medium">Durée choisie (jours)</Label>
                     <Input
@@ -461,7 +461,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                 </div>
               </div>
               <FormDescription>
-                Choisissez la date de début et de fin du plan. Cela vous indiquera la durée du plan en jours.
+                Choisissez la date de début et de fin du plan ou indiquez le nombre de jours souhaité.
               </FormDescription>
             </FormItem>
 
@@ -587,4 +587,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     </Card>
   );
 }
+    
+
     
