@@ -1,0 +1,45 @@
+
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# Dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# Next.js build output
+/.next/
+/out/
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# API keys and secrets
+.env
+.env*.local
+!.env.example
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# Local ESlint cache
+.eslintcache
+
+# Turbopack
+.turbo
+
+# Operating System files
+.DS_Store
+Thumbs.db
+
+# Firebase
+# If you have firebase emulators data
+# .firebase/emulators/
+# *.snapshot
+
+# IDE files
+.vscode/
+.idea/
