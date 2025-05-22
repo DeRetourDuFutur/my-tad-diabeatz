@@ -18,7 +18,7 @@ import {
   FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+// Removed Textarea from here as it's no longer directly used for an editable field in the same way
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -122,7 +122,7 @@ const RichTextDisplay: React.FC<{ text: string }> = ({ text }) => {
     if (titleMatch) {
       flushList();
       let titleContent = titleMatch[1];
-      let titleClasses = "font-semibold my-2 text-foreground"; // Default bold
+      let titleClasses = "font-semibold my-2 text-foreground"; 
       if (titleContent.includes("(en gras et vert)")) {
         titleClasses = "font-semibold my-2 text-primary";
         titleContent = titleContent.replace("(en gras et vert)", "").trim();
@@ -171,12 +171,12 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   const [isEndDatePickerOpen, setIsEndDatePickerOpen] = useState(false);
 
 
-  useEffect(() => {
-    if (!startDate && !endDate) { // Only initialize if both are undefined
+ useEffect(() => {
+    if (!startDate && !endDate) { 
       const tomorrow = addDays(new Date(), 1);
       tomorrow.setHours(0, 0, 0, 0);
       setStartDate(tomorrow);
-      setEndDate(new Date(tomorrow)); // Duration of 1 day by default
+      setEndDate(new Date(tomorrow)); 
     }
     setIsClient(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -223,7 +223,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     },
   });
  
-  useEffect(() => {
+   useEffect(() => {
     if (startDate && endDate && isValid(startDate) && isValid(endDate) && endDate >= startDate) {
       const diff = differenceInDays(endDate, startDate) + 1;
       if (durationInDays !== diff.toString()) {
@@ -673,17 +673,7 @@ Les aliments favoris seront privilégiés pour vos plans de repas.
                         <div className="mb-3 p-3 border rounded-md bg-background/50 max-h-60 overflow-y-auto">
                            <RichTextDisplay text={field.value} />
                         </div>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Modifiez les conseils si besoin..."
-                            className="min-h-[150px] resize-y"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormDescription className="mt-2">
-                          Ce résumé aide l'IA à adapter le plan à vos besoins et aux dernières recommandations. Vous pouvez le modifier.
-                        </FormDescription>
-                        <FormMessage />
+                        {/* The FormControl, Textarea, FormDescription, and FormMessage for diabeticResearchSummary are removed */}
                       </FormItem>
                     )}
                   />
