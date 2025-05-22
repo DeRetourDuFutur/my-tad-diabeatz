@@ -59,6 +59,7 @@ import { cn } from "@/lib/utils";
 import { format, addDays, differenceInDays, isValid, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import type { FormSettings } from "@/lib/types";
+import { Alert, AlertTitle} from "@/components/ui/alert";
 
 
 const formSchema = z.object({
@@ -235,15 +236,13 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
 
 
  useEffect(() => {
+    const tomorrow = addDays(new Date(), 1);
+    tomorrow.setHours(0, 0, 0, 0);
     if (!startDate) {
-      const tomorrow = addDays(new Date(), 1);
-      tomorrow.setHours(0, 0, 0, 0);
       setStartDate(tomorrow);
     }
     if (!endDate) {
-      const tomorrow = addDays(new Date(), 1);
-      tomorrow.setHours(0, 0, 0, 0);
-      setEndDate(tomorrow);
+      setEndDate(new Date(tomorrow)); // Initial endDate is same as startDate for 1 day duration
     }
     setIsClient(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -901,7 +900,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
           <CardContent>
             <Accordion type="single" collapsible className="w-full">
               <AccordionItem value="dietary-advice-section">
-                <AccordionTrigger className="text-md font-semibold text-foreground hover:no-underline hover:bg-muted/50 rounded-md py-3 px-2">
+                <AccordionTrigger className="text-sm font-semibold text-foreground hover:no-underline hover:bg-muted/50 rounded-md py-3 px-2">
                   Afficher/Masquer les conseils
                 </AccordionTrigger>
                 <AccordionContent className="pt-1 pb-2 px-2">
