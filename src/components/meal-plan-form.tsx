@@ -125,10 +125,16 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       let daysToAdd = 0;
       switch (duration) {
         case "1 jour": daysToAdd = 0; break;
+        case "2 jours": daysToAdd = 1; break;
         case "3 jours": daysToAdd = 2; break;
+        case "4 jours": daysToAdd = 3; break;
         case "5 jours": daysToAdd = 4; break;
+        case "6 jours": daysToAdd = 5; break;
         case "1 semaine": daysToAdd = 6; break;
         case "2 semaines": daysToAdd = 13; break;
+        case "3 semaines": daysToAdd = 20; break;
+        case "4 semaines": daysToAdd = 27; break;
+        case "1 mois": daysToAdd = 29; break; // Approx 30 jours
         default:
           setEndDate(startDate);
           return;
@@ -321,7 +327,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
               name="planDuration"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Durée et Période du plan</FormLabel>
+                  <FormLabel>Durée du plan</FormLabel>
                   <div className="flex gap-4 items-center">
                     <div className="w-1/2">
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -333,10 +339,16 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="1 jour">1 jour</SelectItem>
+                          <SelectItem value="2 jours">2 jours</SelectItem>
                           <SelectItem value="3 jours">3 jours</SelectItem>
+                          <SelectItem value="4 jours">4 jours</SelectItem>
                           <SelectItem value="5 jours">5 jours</SelectItem>
+                          <SelectItem value="6 jours">6 jours</SelectItem>
                           <SelectItem value="1 semaine">1 semaine</SelectItem>
                           <SelectItem value="2 semaines">2 semaines</SelectItem>
+                          <SelectItem value="3 semaines">3 semaines</SelectItem>
+                          <SelectItem value="4 semaines">4 semaines</SelectItem>
+                          <SelectItem value="1 mois">1 mois</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -377,7 +389,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                     </div>
                   </div>
                   <FormDescription>
-                    Choisissez la durée et la date de début. L'IA utilisera la durée sélectionnée pour la génération.
+                    Choisissez la durée et la date de début du plan.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -504,3 +516,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     </Card>
   );
 }
+
+
+    
