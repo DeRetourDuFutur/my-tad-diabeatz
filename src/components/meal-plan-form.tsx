@@ -97,6 +97,64 @@ const defaultResearchSummary = `**Privilégiez la variété et la fraîcheur (en
 
 **N’hésitez pas à consulter un(e) diététicien(ne) pour un accompagnement personnalisé (en gras et rouge)**`;
 
+const RichTextDisplay: React.FC<{ text: string }> = ({ text }) => {
+  const lines = text.split('\n');
+  const elements: JSX.Element[] = [];
+  let currentListItems: string[] = [];
+
+  const flushList = () => {
+    if (currentListItems.length > 0) {
+      elements.push(
+        <ul key={`ul-${elements.length}`} className="list-disc pl-5 mb-2 space-y-0.5">
+          {currentListItems.map((item, idx) => (
+            <li key={`li-${elements.length}-${idx}`}>{item}</li>
+          ))}
+        </ul>
+      );
+      currentListItems = [];
+    }
+  };
+
+  lines.forEach((line, index) => {
+    const titleMatch = line.match(/^\*\*(.*?)\*\*/);
+    const listItemMatch = line.match(/^- (.*)/);
+
+    if (titleMatch) {
+      flushList();
+      let titleContent = titleMatch[1];
+      let titleClasses = "font-semibold my-2 text-foreground"; // Default bold
+      if (titleContent.includes("(en gras et vert)")) {
+        titleClasses = "font-semibold my-2 text-primary";
+        titleContent = titleContent.replace("(en gras et vert)", "").trim();
+      } else if (titleContent.includes("(en gras et rouge)")) {
+        titleClasses = "font-semibold my-2 text-destructive";
+        titleContent = titleContent.replace("(en gras et rouge)", "").trim();
+      } else if (titleContent.includes("(en gras)")) {
+         titleContent = titleContent.replace("(en gras)", "").trim();
+      }
+      elements.push(<p key={`title-${index}`} className={titleClasses}>{titleContent}</p>);
+    } else if (listItemMatch) {
+      currentListItems.push(listItemMatch[1]);
+    } else if (line.trim() === "" && currentListItems.length > 0) {
+      // If it's an empty line and we have pending list items, flush the list.
+      // This helps create spacing between blocks of list items if original text had empty lines.
+      // However, the goal is compact lists, so this might be adjusted.
+      // For now, let's flush on explicit empty lines.
+      flushList();
+       // elements.push(<div key={`space-${index}`} className="h-1"></div>); // Optional: add space for empty lines
+    } else if (line.trim() !== "") {
+      // Treat non-empty, non-title, non-list-item lines as paragraphs
+      flushList();
+      elements.push(<p key={`p-${index}`} className="mb-1">{line}</p>);
+    }
+  });
+
+  flushList(); // Ensure any remaining list items are rendered
+
+  return <div className="text-sm prose prose-sm dark:prose-invert max-w-none">{elements}</div>;
+};
+
+
 export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -119,12 +177,13 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   const [isEndDatePickerOpen, setIsEndDatePickerOpen] = useState(false);
 
 
-  useEffect(() => {
+ useEffect(() => {
+    // Initialize dates on client mount
     if (!startDate) {
       const tomorrow = addDays(new Date(), 1);
       tomorrow.setHours(0,0,0,0); 
       setStartDate(tomorrow);
-      if (!endDate) { 
+      if (!endDate) { // Only set endDate if it's not already set (e.g., by loaded settings)
         const alsoTomorrow = new Date(tomorrow);
         setEndDate(alsoTomorrow);
       }
@@ -174,6 +233,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     },
   });
 
+  // Effect to update durationInDays when dates change
   useEffect(() => {
     if (startDate && endDate && isValid(startDate) && isValid(endDate) && endDate >= startDate) {
       const diff = differenceInDays(endDate, startDate) + 1;
@@ -184,10 +244,11 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps  
   }, [startDate, endDate]); 
 
+  // Effect to update endDate when durationInDays or startDate change
   useEffect(() => {
     const numDays = parseInt(durationInDays, 10);
     if (startDate && isValid(startDate)) {
-      if (!isNaN(numDays) && numDays >= 1 && numDays <= 365) {
+      if (!isNaN(numDays) && numDays >= 1 && numDays <= 365) { // Max 365 days
         const newEndDate = addDays(startDate, numDays - 1);
         if (!endDate || !isValid(endDate) || newEndDate.getTime() !== endDate.getTime()) {
           setEndDate(newEndDate);
@@ -200,21 +261,22 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
 
   const handleDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
+    // Allow empty string for intermediate input, or numbers up to 3 digits (max 365)
     if (value === "" || (/^\d{1,3}$/.test(value) && parseInt(value, 10) <= 365)) { 
       setDurationInDays(value);
     } else if (/^\d+$/.test(value) && parseInt(value, 10) > 365) {
-      setDurationInDays("365"); 
+      setDurationInDays("365"); // Cap at 365
     }
   };
   
   const handleDurationBlur = () => {
     const numDays = parseInt(durationInDays, 10);
     if (isNaN(numDays) || numDays <= 0) {
-      setDurationInDays("1"); 
+      setDurationInDays("1"); // Default to 1 if invalid or empty
     } else if (numDays > 365) {
-      setDurationInDays("365"); 
+      setDurationInDays("365"); // Cap at 365
     } else {
-      setDurationInDays(numDays.toString()); 
+      setDurationInDays(numDays.toString()); // Ensure it's a string
     }
   };
 
@@ -364,7 +426,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       });
       setFoodCategoriesInStorage(savedFormSettings.foodPreferences); 
       
-      let newStartDate = addDays(new Date(), 1);
+      let newStartDate = addDays(new Date(), 1); // Default to tomorrow if not in settings
       newStartDate.setHours(0,0,0,0);
       if (savedFormSettings.startDate) {
         const parsed = parseISO(savedFormSettings.startDate);
@@ -375,18 +437,19 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       }
       setStartDate(newStartDate);
 
-      let newEndDate = new Date(newStartDate); 
+      let newEndDate = new Date(newStartDate); // Default to same as start date
       if (savedFormSettings.endDate) {
         const parsed = parseISO(savedFormSettings.endDate);
         if (isValid(parsed)) {
             parsed.setHours(0,0,0,0);
-            if (parsed >= newStartDate) { 
+            if (parsed >= newStartDate) { // Ensure end date is not before start date
                  newEndDate = parsed;
             }
         }
       }
       setEndDate(newEndDate);
       
+      // This will trigger the useEffect to update durationInDays based on loaded dates
       toast({
         title: "Paramètres chargés!",
         description: "Votre configuration de formulaire a été restaurée.",
@@ -433,6 +496,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
             <FormItem>
               <FormLabel>Calendrier du plan</FormLabel>
               <div className="flex flex-col md:flex-row gap-4 md:gap-3 items-end">
+                {/* Date Pickers Column */}
                 <div className="flex-grow flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                   <div className="flex-1 min-w-[140px] sm:min-w-[170px]">
                     <Label htmlFor="start-date-picker-trigger" className="text-sm font-medium mb-1 block">Date de début</Label>
@@ -464,7 +528,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                                   date.setHours(0,0,0,0);
                                   setStartDate(date);
                                   if (endDate && date > endDate) {
-                                    setEndDate(new Date(date)); 
+                                    setEndDate(new Date(date)); // Ensure end date is not before start date
                                   }
                                 }
                             }
@@ -472,7 +536,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                           }}
                           disabled={(date) => {
                               const minSelectableDate = new Date();
-                              minSelectableDate.setDate(minSelectableDate.getDate() -1); 
+                              minSelectableDate.setDate(minSelectableDate.getDate() -1); // Allow today
                               minSelectableDate.setHours(0,0,0,0);
                               return date < minSelectableDate;
                             } 
@@ -493,7 +557,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                             "w-full justify-start text-left font-normal h-10",
                             !endDate && "text-muted-foreground"
                           )}
-                          disabled={!startDate || !isValid(startDate)} 
+                          disabled={!startDate || !isValid(startDate)} // Disable if no start date
                         >
                           <CalendarDays className="mr-2 h-4 w-4" />
                           {endDate && isValid(endDate) ? format(endDate, "PPP", { locale: fr }) : <span>Choisir une date</span>}
@@ -506,7 +570,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                           onSelect={(date) => {
                             if (date && startDate && isValid(startDate)) {
                                 date.setHours(0,0,0,0);
-                                if (date >= startDate) {
+                                if (date >= startDate) { // Ensure end date is not before start date
                                     setEndDate(date);
                                 }
                             }
@@ -523,11 +587,12 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                     </Popover>
                   </div>
                 </div>
+                {/* Duration Input Column */}
                 <div className="w-full md:w-auto flex-shrink-0">
                   <Label htmlFor="duration-input" className="text-sm font-medium mb-1 block">Durée en jours</Label>
                   <Input
                       id="duration-input"
-                      type="text" 
+                      type="text" // Use text to allow empty intermediate state
                       value={durationInDays}
                       onChange={handleDurationChange}
                       onBlur={handleDurationBlur}
@@ -546,7 +611,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
               <Label className="text-lg font-semibold">Préférences alimentaires</Label>
               <p className="text-sm text-muted-foreground whitespace-pre-line">
                 Cochez vos aliments favoris, à éviter ou allergènes.
-                Les aliments favoris seront privilégiés pour vos plans de repas.
+Les aliments favoris seront privilégiés pour vos plans de repas.
               </p>
               <div className="max-h-[400px] overflow-y-auto p-1 rounded-md border">
                 <Accordion type="multiple" className="w-full">
@@ -622,15 +687,18 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                     name="diabeticResearchSummary"
                     render={({ field }) => (
                       <FormItem className="mt-2">
+                        <div className="mb-3 p-3 border rounded-md bg-background/50 max-h-60 overflow-y-auto">
+                           <RichTextDisplay text={field.value} />
+                        </div>
                         <FormControl>
                           <Textarea
-                            placeholder="Ex: Focus sur les aliments à faible IG, contrôle des portions..."
+                            placeholder="Modifiez les conseils si besoin..."
                             className="min-h-[150px] resize-y"
                             {...field}
                           />
                         </FormControl>
                         <FormDescription className="mt-2">
-                          Ce résumé aide l'IA à adapter le plan à vos besoins et aux dernières recommandations.
+                          Ce résumé aide l'IA à adapter le plan à vos besoins et aux dernières recommandations. Vous pouvez le modifier.
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -687,6 +755,8 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
 
 
 
+
+    
 
     
 
