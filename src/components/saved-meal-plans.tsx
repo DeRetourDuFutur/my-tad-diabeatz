@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { StoredMealPlan } from "@/lib/types";
@@ -21,7 +22,7 @@ export function SavedMealPlans({ savedPlans, onLoadPlan, onDeletePlan }: SavedMe
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-xl">
           <ListChecks className="h-6 w-6 text-primary" />
-          Plans Repas Sauvegardés
+          Plans sauvegardés
         </CardTitle>
         <CardDescription>Chargez ou supprimez vos plans repas précédemment sauvegardés.</CardDescription>
       </CardHeader>
@@ -73,3 +74,4 @@ export function SavedMealPlans({ savedPlans, onLoadPlan, onDeletePlan }: SavedMe
     </Card>
   );
 }
+

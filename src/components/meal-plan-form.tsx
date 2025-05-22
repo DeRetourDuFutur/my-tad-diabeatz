@@ -208,7 +208,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-xl">
           <Wand2 className="h-6 w-6 text-primary" />
-          Créateur de Plan Repas AI
+          Configuration des plans de repas
         </CardTitle>
         <CardDescription>
           Personnalisez vos préférences et générez un plan repas adapté.
@@ -222,7 +222,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
               name="planName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nom du Plan Repas (optionnel)</FormLabel>
+                  <FormLabel>Nom du Plan (optionnel)</FormLabel>
                   <FormControl>
                     <Input placeholder="Ex: Mon plan semaine prochaine" {...field} />
                   </FormControl>
@@ -239,7 +239,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
               name="planDuration"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Durée du Plan Repas</FormLabel>
+                  <FormLabel>Durée du plan</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
@@ -264,7 +264,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
             />
 
             <div className="space-y-4">
-              <Label className="text-lg font-semibold">Vos Préférences Alimentaires</Label>
+              <Label className="text-lg font-semibold">Préférences alimentaires</Label>
               <p className="text-sm text-muted-foreground">
                 Cochez les cases pour marquer les aliments comme favoris, non aimés ou allergènes.
                 Seuls les aliments non marqués comme "non aimé" ou "allergène" seront considérés. Les favoris seront privilégiés.
@@ -285,7 +285,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                                   <span className="text-sm">{item.name} <span className="text-xs text-muted-foreground">{item.ig}</span></span>
                                   {renderNutritionalInfo(item)}
                                 </div>
-
                                 <div className="flex items-center space-x-1 justify-self-end">
                                   <Checkbox
                                     id={`${item.id}-favorite`}
@@ -298,7 +297,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                                     <Star className="h-3.5 w-3.5" />
                                   </Label>
                                 </div>
-
                                 <div className="flex items-center space-x-1 justify-self-end">
                                   <Checkbox
                                     id={`${item.id}-disliked`}
@@ -339,7 +337,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
               name="diabeticResearchSummary"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Résumé de Recherche sur le Diabète</FormLabel>
+                  <FormLabel>Conseils à propos du régime Diabétique Type 2</FormLabel>
                   <FormControl>
                     <Textarea
                       placeholder="Ex: Focus sur les aliments à faible IG, contrôle des portions..."
