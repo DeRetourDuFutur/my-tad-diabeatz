@@ -58,7 +58,7 @@ const defaultResearchSummary = `**Privilégiez la variété et la fraîcheur (en
 - Cuisinez autant que possible à partir d’aliments frais et peu transformés, en variant les sources de nutriments sur la semaine.
 - Aucun aliment n’est strictement interdit, mais il est préférable de limiter les produits ultra-transformés, les sucres ajoutés et les plats industriels.
 
-**Faites la part belle aux légumes non amylacés (en gras)**
+**Faites la part belle aux légumes non amylacés (en gras et vert)**
 - Consommez au moins 3 portions de légumes par jour, en privilégiant les légumes verts à feuilles, les crucifères, les légumes colorés et les courges.
 - Remplissez la moitié de votre assiette de légumes à chaque repas pour augmenter l’apport en fibres et limiter l’absorption des glucides.
 
@@ -136,20 +136,14 @@ const RichTextDisplay: React.FC<{ text: string }> = ({ text }) => {
     } else if (listItemMatch) {
       currentListItems.push(listItemMatch[1]);
     } else if (line.trim() === "" && currentListItems.length > 0) {
-      // If it's an empty line and we have pending list items, flush the list.
-      // This helps create spacing between blocks of list items if original text had empty lines.
-      // However, the goal is compact lists, so this might be adjusted.
-      // For now, let's flush on explicit empty lines.
       flushList();
-       // elements.push(<div key={`space-${index}`} className="h-1"></div>); // Optional: add space for empty lines
     } else if (line.trim() !== "") {
-      // Treat non-empty, non-title, non-list-item lines as paragraphs
       flushList();
       elements.push(<p key={`p-${index}`} className="mb-1">{line}</p>);
     }
   });
 
-  flushList(); // Ensure any remaining list items are rendered
+  flushList(); 
 
   return <div className="text-sm prose prose-sm dark:prose-invert max-w-none">{elements}</div>;
 };
@@ -177,20 +171,16 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   const [isEndDatePickerOpen, setIsEndDatePickerOpen] = useState(false);
 
 
- useEffect(() => {
-    // Initialize dates on client mount
-    if (!startDate) {
+  useEffect(() => {
+    if (!startDate && !endDate) { // Only initialize if both are undefined
       const tomorrow = addDays(new Date(), 1);
-      tomorrow.setHours(0,0,0,0); 
+      tomorrow.setHours(0, 0, 0, 0);
       setStartDate(tomorrow);
-      if (!endDate) { // Only set endDate if it's not already set (e.g., by loaded settings)
-        const alsoTomorrow = new Date(tomorrow);
-        setEndDate(alsoTomorrow);
-      }
+      setEndDate(new Date(tomorrow)); // Duration of 1 day by default
     }
     setIsClient(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); 
+  }, []);
 
 
   useEffect(() => {
@@ -232,8 +222,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       diabeticResearchSummary: defaultResearchSummary,
     },
   });
-
-  // Effect to update durationInDays when dates change
+ 
   useEffect(() => {
     if (startDate && endDate && isValid(startDate) && isValid(endDate) && endDate >= startDate) {
       const diff = differenceInDays(endDate, startDate) + 1;
@@ -244,11 +233,10 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps  
   }, [startDate, endDate]); 
 
-  // Effect to update endDate when durationInDays or startDate change
   useEffect(() => {
     const numDays = parseInt(durationInDays, 10);
     if (startDate && isValid(startDate)) {
-      if (!isNaN(numDays) && numDays >= 1 && numDays <= 365) { // Max 365 days
+      if (!isNaN(numDays) && numDays >= 1 && numDays <= 365) { 
         const newEndDate = addDays(startDate, numDays - 1);
         if (!endDate || !isValid(endDate) || newEndDate.getTime() !== endDate.getTime()) {
           setEndDate(newEndDate);
@@ -261,22 +249,21 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
 
   const handleDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    // Allow empty string for intermediate input, or numbers up to 3 digits (max 365)
     if (value === "" || (/^\d{1,3}$/.test(value) && parseInt(value, 10) <= 365)) { 
       setDurationInDays(value);
     } else if (/^\d+$/.test(value) && parseInt(value, 10) > 365) {
-      setDurationInDays("365"); // Cap at 365
+      setDurationInDays("365"); 
     }
   };
   
   const handleDurationBlur = () => {
     const numDays = parseInt(durationInDays, 10);
     if (isNaN(numDays) || numDays <= 0) {
-      setDurationInDays("1"); // Default to 1 if invalid or empty
+      setDurationInDays("1"); 
     } else if (numDays > 365) {
-      setDurationInDays("365"); // Cap at 365
+      setDurationInDays("365"); 
     } else {
-      setDurationInDays(numDays.toString()); // Ensure it's a string
+      setDurationInDays(numDays.toString()); 
     }
   };
 
@@ -426,7 +413,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       });
       setFoodCategoriesInStorage(savedFormSettings.foodPreferences); 
       
-      let newStartDate = addDays(new Date(), 1); // Default to tomorrow if not in settings
+      let newStartDate = addDays(new Date(), 1); 
       newStartDate.setHours(0,0,0,0);
       if (savedFormSettings.startDate) {
         const parsed = parseISO(savedFormSettings.startDate);
@@ -437,19 +424,18 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       }
       setStartDate(newStartDate);
 
-      let newEndDate = new Date(newStartDate); // Default to same as start date
+      let newEndDate = new Date(newStartDate); 
       if (savedFormSettings.endDate) {
         const parsed = parseISO(savedFormSettings.endDate);
         if (isValid(parsed)) {
             parsed.setHours(0,0,0,0);
-            if (parsed >= newStartDate) { // Ensure end date is not before start date
+            if (parsed >= newStartDate) { 
                  newEndDate = parsed;
             }
         }
       }
       setEndDate(newEndDate);
       
-      // This will trigger the useEffect to update durationInDays based on loaded dates
       toast({
         title: "Paramètres chargés!",
         description: "Votre configuration de formulaire a été restaurée.",
@@ -462,7 +448,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [savedFormSettings, form.reset, setFoodCategoriesInStorage, setStartDate, setEndDate, toast]);
+  }, [savedFormSettings, form.reset, setFoodCategoriesInStorage]);
 
 
   return (
@@ -496,7 +482,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
             <FormItem>
               <FormLabel>Calendrier du plan</FormLabel>
               <div className="flex flex-col md:flex-row gap-4 md:gap-3 items-end">
-                {/* Date Pickers Column */}
                 <div className="flex-grow flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                   <div className="flex-1 min-w-[140px] sm:min-w-[170px]">
                     <Label htmlFor="start-date-picker-trigger" className="text-sm font-medium mb-1 block">Date de début</Label>
@@ -523,12 +508,11 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                                 const today = new Date();
                                 today.setHours(0,0,0,0);
                                 if (date < today) { 
-                                  // Do nothing if trying to select a past date
                                 } else {
                                   date.setHours(0,0,0,0);
                                   setStartDate(date);
                                   if (endDate && date > endDate) {
-                                    setEndDate(new Date(date)); // Ensure end date is not before start date
+                                    setEndDate(new Date(date)); 
                                   }
                                 }
                             }
@@ -536,7 +520,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                           }}
                           disabled={(date) => {
                               const minSelectableDate = new Date();
-                              minSelectableDate.setDate(minSelectableDate.getDate() -1); // Allow today
+                              minSelectableDate.setDate(minSelectableDate.getDate() -1); 
                               minSelectableDate.setHours(0,0,0,0);
                               return date < minSelectableDate;
                             } 
@@ -557,7 +541,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                             "w-full justify-start text-left font-normal h-10",
                             !endDate && "text-muted-foreground"
                           )}
-                          disabled={!startDate || !isValid(startDate)} // Disable if no start date
+                          disabled={!startDate || !isValid(startDate)} 
                         >
                           <CalendarDays className="mr-2 h-4 w-4" />
                           {endDate && isValid(endDate) ? format(endDate, "PPP", { locale: fr }) : <span>Choisir une date</span>}
@@ -570,7 +554,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                           onSelect={(date) => {
                             if (date && startDate && isValid(startDate)) {
                                 date.setHours(0,0,0,0);
-                                if (date >= startDate) { // Ensure end date is not before start date
+                                if (date >= startDate) { 
                                     setEndDate(date);
                                 }
                             }
@@ -587,12 +571,11 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                     </Popover>
                   </div>
                 </div>
-                {/* Duration Input Column */}
                 <div className="w-full md:w-auto flex-shrink-0">
                   <Label htmlFor="duration-input" className="text-sm font-medium mb-1 block">Durée en jours</Label>
                   <Input
                       id="duration-input"
-                      type="text" // Use text to allow empty intermediate state
+                      type="text" 
                       value={durationInDays}
                       onChange={handleDurationChange}
                       onBlur={handleDurationBlur}
@@ -745,23 +728,4 @@ Les aliments favoris seront privilégiés pour vos plans de repas.
     </Card>
   );
 }
-    
 
-    
-
-    
-
-
-
-
-
-
-    
-
-    
-
-    
-
-    
-
-      

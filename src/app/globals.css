@@ -13,7 +13,7 @@
     --popover: 100 22% 98%;
     --popover-foreground: 100 10% 20%;
 
-    --primary: 107 32% 70%; /* Soft olive green #A5C999 */
+    --primary: 107 32% 65%; /* Soft olive green, slightly darker #A0C492 */
     --primary-foreground: 107 60% 15%; /* Dark, saturated green for text on primary */
 
     --secondary: 107 25% 85%; /* Lighter shade of olive green */
@@ -30,9 +30,9 @@
 
     --border: 107 20% 80%;
     --input: 107 20% 88%;
-    --ring: 107 32% 60%; /* Ring color, slightly darker primary */
+    --ring: 107 32% 55%; /* Ring color, darker than new primary */
 
-    --chart-1: 107 32% 70%;
+    --chart-1: 107 32% 65%; /* Match new primary */
     --chart-2: 37 29% 56%;
     --chart-3: 107 25% 85%;
     --chart-4: 100 22% 80%;
@@ -43,12 +43,12 @@
     /* Sidebar specific colors - Light Theme */
     --sidebar-background: 100 22% 92%;
     --sidebar-foreground: 100 10% 20%;
-    --sidebar-primary: 107 32% 65%;
+    --sidebar-primary: 107 32% 60%; /* Adjusted sidebar primary */
     --sidebar-primary-foreground: 107 60% 15%;
     --sidebar-accent: 37 29% 50%;
     --sidebar-accent-foreground: 37 40% 10%;
     --sidebar-border: 107 20% 75%;
-    --sidebar-ring: 107 32% 55%;
+    --sidebar-ring: 107 32% 50%; /* Adjusted sidebar ring */
   }
 
   .dark {
@@ -61,7 +61,7 @@
     --popover: 100 10% 15%;
     --popover-foreground: 100 20% 90%;
 
-    --primary: 107 32% 60%; /* Darker olive for dark mode primary */
+    --primary: 107 32% 55%; /* Darker olive for dark mode primary, adjusted */
     --primary-foreground: 107 30% 95%; /* Light text for dark mode primary */
 
     --secondary: 107 25% 30%;
@@ -78,9 +78,9 @@
 
     --border: 107 20% 25%;
     --input: 107 20% 20%;
-    --ring: 107 32% 50%;
+    --ring: 107 32% 45%; /* Ring color for dark mode, adjusted */
     
-    --chart-1: 107 32% 60%;
+    --chart-1: 107 32% 55%; /* Match new dark primary */
     --chart-2: 37 29% 60%;
     --chart-3: 107 25% 40%;
     --chart-4: 100 15% 30%;
@@ -89,12 +89,12 @@
     /* Sidebar specific colors - Dark Theme */
     --sidebar-background: 100 10% 12%;
     --sidebar-foreground: 100 20% 85%;
-    --sidebar-primary: 107 32% 55%;
+    --sidebar-primary: 107 32% 50%; /* Adjusted dark sidebar primary */
     --sidebar-primary-foreground: 107 30% 95%;
     --sidebar-accent: 37 29% 55%;
     --sidebar-accent-foreground: 37 30% 15%;
     --sidebar-border: 107 20% 20%;
-    --sidebar-ring: 107 32% 45%;
+    --sidebar-ring: 107 32% 40%; /* Adjusted dark sidebar ring */
   }
 }
 
