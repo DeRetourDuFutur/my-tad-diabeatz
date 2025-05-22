@@ -425,7 +425,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     let planDurationForAI = "";
-    let finalStartDateForAI: Date | undefined; // This will be used to ensure plan starts from a sensible date
+    let finalStartDateForAI: Date | undefined;
 
     if (selectionMode === 'dates') {
       if (startDate && endDate && isValid(startDate) && isValid(endDate) && !isBefore(endDate, startDate)) {
@@ -455,7 +455,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       return;
     }
     
-    // Further check: Ensure the finalStartDateForAI is not in the past
     const today = startOfDay(new Date());
     if (isBefore(finalStartDateForAI, today)) {
         toast({ title: "Date de début passée", description: "La date de début du plan ne peut pas être dans le passé.", variant: "destructive"});
@@ -768,14 +767,14 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
          
           <AccordionItem value="config-base-item" className="border-b-0">
              <Card className="shadow-lg">
-                <CardHeader className="flex flex-row items-center justify-between w-full p-4">
-                    <AccordionTrigger className="w-full text-left p-0 hover:no-underline group">
+                <AccordionTrigger className="w-full text-left p-0 hover:no-underline group">
+                    <CardHeader className="flex flex-row items-center justify-between w-full p-4">
                         <div className="flex items-center gap-2">
                             <Wand2 className="h-5 w-5 text-secondary-foreground" />
                             <CardTitle className="text-lg font-semibold">Planification</CardTitle>
                         </div>
-                    </AccordionTrigger>
-                </CardHeader>
+                    </CardHeader>
+                </AccordionTrigger>
                 <AccordionContent className="pt-0">
                   <CardContent>
                     <div className="space-y-6">
@@ -796,7 +795,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                       <FormItem>
                         <FormLabel className="text-base font-medium mb-2 block">Calendrier / Durée</FormLabel>
                          <FormDescriptionComponent className="mb-3">
-                           Choisissez la date de début et de fin du plan ou indiquez le nombre de jours souhaité.
+                           Choisissez la date de début et de fin du plan ou indiquez le nombre de jour(s) souhaité(s).
                         </FormDescriptionComponent>
                         <RadioGroup
                           value={selectionMode}
@@ -890,7 +889,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                                 </PopoverContent>
                               </Popover>
                             </div>
-                            <div className="h-10 flex items-center text-sm text-primary min-w-[80px] text-right sm:text-left sm:justify-start">
+                            <div className="h-10 flex items-center text-sm text-primary min-w-[80px] text-right sm:text-left sm:justify-start pt-1">
                               {displayDurationFromDates !== "Durée invalide" && displayDurationFromDates}
                             </div>
                           </div>
@@ -934,7 +933,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                               </Popover>
                             </div>
                             <div className="w-full sm:w-auto md:w-24">
-                              <Label htmlFor="duration-input-field" className="text-sm font-medium mb-1 block">Durée en jours</Label>
+                              <Label htmlFor="duration-input-field" className="text-sm font-medium mb-1 block">Durée en jour(s)</Label>
                               <Input
                                 id="duration-input-field"
                                 type="text" 
@@ -945,7 +944,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                                 placeholder="Jours"
                               />
                             </div>
-                            <div className="h-10 flex items-center flex-1 text-sm text-primary min-w-[150px] sm:min-w-[180px]">
+                            <div className="h-10 flex items-center flex-1 text-sm text-primary min-w-[150px] sm:min-w-[180px] pt-1">
                                 {displayEndDateFromDuration && isValid(displayEndDateFromDuration) && (
                                     <div>
                                         <span className="font-medium text-muted-foreground">Fin du plan : </span>
@@ -964,7 +963,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
 
           <AccordionItem value="prefs-aliments-item" className="border-b-0">
             <Card className="shadow-lg">
-              <CardHeader className="flex flex-row items-center justify-between w-full p-4">
+              <div className="flex flex-row items-center justify-between w-full p-4">
                   <AccordionTrigger className="w-full text-left p-0 hover:no-underline group flex-1">
                     <div className="flex items-center gap-2">
                       <ListFilter className="h-5 w-5 text-secondary-foreground" />
@@ -985,7 +984,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Ajouter un aliment
                   </Button>
-              </CardHeader>
+              </div>
               <AccordionContent className="pt-0">
                   <CardContent>
                       <FormDescriptionComponent className="mb-2">
@@ -1114,19 +1113,19 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         )}
         </Button>
         
-        <Accordion type="single" collapsible className="w-full space-y-6">
+        <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="conseils-aliments-item" className="border-b-0">
                 <Card className="shadow-lg">
-                    <CardHeader className="flex flex-row items-center justify-between w-full p-4">
-                        <AccordionTrigger className="w-full text-left p-0 hover:no-underline group">
+                    <AccordionTrigger className="w-full text-left p-0 hover:no-underline group">
+                        <CardHeader className="flex flex-row items-center justify-between w-full p-4">
                             <div className="flex items-center gap-2">
                                 <BookOpenText className="h-5 w-5 text-secondary-foreground" />
                                 <CardTitle className="text-lg font-semibold text-foreground">
                                     Conseils alimentaires optimisés pour Diabète de Type 2
                                 </CardTitle>
                             </div>
-                        </AccordionTrigger>
-                    </CardHeader>
+                        </CardHeader>
+                    </AccordionTrigger>
                     <AccordionContent className="pt-0">
                         <CardContent>
                             <FormField

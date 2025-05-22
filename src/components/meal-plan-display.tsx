@@ -122,14 +122,14 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
               <CardHeader className="flex flex-row items-center justify-between w-full p-4">
                 <div className="flex items-center gap-2">
                   <ChefHat className="h-5 w-5 text-secondary-foreground" />
-                  <CardTitle className="text-lg font-semibold">Vos plans repas</CardTitle>
+                  <CardTitle className="text-lg font-semibold">Vos plans alimentaires</CardTitle>
                 </div>
               </CardHeader>
             </AccordionTrigger>
             <AccordionContent className="pt-0">
               <CardContent className="flex flex-col items-center justify-center p-8 min-h-[200px] text-center">
                 <CardDescription>
-                  Utilisez le formulaire pour générer un nouveau plan repas personnalisé.
+                  Utilisez le formulaire pour générer un nouveau plan alimentaire personnalisé.
                 </CardDescription>
               </CardContent>
             </AccordionContent>
@@ -276,3 +276,4 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
     </Card>
   );
 }
+
