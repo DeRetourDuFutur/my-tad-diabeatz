@@ -15,6 +15,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Timestamp } from 'firebase/firestore'; // Import Timestamp
 
 type SavedMealPlansProps = {
   savedPlans: StoredMealPlan[];
@@ -25,7 +26,7 @@ type SavedMealPlansProps = {
 export function SavedMealPlans({ savedPlans, onLoadPlan, onDeletePlan }: SavedMealPlansProps) {
   return (
     <Card className="shadow-lg">
-      <Accordion type="single" collapsible> {/* Removed defaultValue="saved-plans-item" */}
+      <Accordion type="single" collapsible>
         <AccordionItem value="saved-plans-item" className="border-b-0">
           <AccordionTrigger className="w-full text-left p-0 hover:no-underline">
             <CardHeader className="flex flex-row items-center justify-between w-full p-4">
@@ -47,37 +48,52 @@ export function SavedMealPlans({ savedPlans, onLoadPlan, onDeletePlan }: SavedMe
                   </div>
                 ) : (
                   <ul className="space-y-3">
-                    {savedPlans.map((plan, index) => (
-                      <li key={plan.id}>
-                        <div className="flex items-center justify-between p-3 bg-background rounded-md border hover:shadow-md transition-shadow">
-                          <div>
-                            <p className="font-semibold text-sm">{plan.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              Créé le: {format(new Date(plan.createdAt), "PPPp", { locale: fr })}
-                            </p>
+                    {savedPlans.map((plan, index) => {
+                      let dateToFormat: Date;
+                      if (plan.createdAt instanceof Timestamp) {
+                        dateToFormat = plan.createdAt.toDate();
+                      } else if (typeof plan.createdAt === 'string') {
+                        dateToFormat = new Date(plan.createdAt);
+                      } else {
+                        // Fallback or error handling if createdAt is an unexpected type
+                        // For now, let's try to create a date, which might result in "Invalid Date"
+                        // but it's better than crashing.
+                        // @ts-ignore
+                        dateToFormat = new Date(plan.createdAt); 
+                      }
+
+                      return (
+                        <li key={plan.id}>
+                          <div className="flex items-center justify-between p-3 bg-background rounded-md border hover:shadow-md transition-shadow">
+                            <div>
+                              <p className="font-semibold text-sm">{plan.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                Créé le: {isValidDate(dateToFormat) ? format(dateToFormat, "PPPp", { locale: fr }) : "Date invalide"}
+                              </p>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => onLoadPlan(plan.id)}
+                                aria-label={`Charger le plan ${plan.name}`}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => onDeletePlan(plan.id)}
+                                aria-label={`Supprimer le plan ${plan.name}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => onLoadPlan(plan.id)}
-                              aria-label={`Charger le plan ${plan.name}`}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => onDeletePlan(plan.id)}
-                              aria-label={`Supprimer le plan ${plan.name}`}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                        {index < savedPlans.length - 1 && <Separator className="my-2" />}
-                      </li>
-                    ))}
+                          {index < savedPlans.length - 1 && <Separator className="my-2" />}
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
               </ScrollArea>
@@ -87,4 +103,9 @@ export function SavedMealPlans({ savedPlans, onLoadPlan, onDeletePlan }: SavedMe
       </Accordion>
     </Card>
   );
+}
+
+// Helper function to check if a date is valid
+function isValidDate(d: any) {
+  return d instanceof Date && !isNaN(d.getTime());
 }
