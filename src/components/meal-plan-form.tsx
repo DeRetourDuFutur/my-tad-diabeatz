@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star, CalendarDays, Save, Upload, Info, ListFilter, PlusCircle, BookOpenText, Apple, Carrot, Nut, Wheat, Bean, Beef, Milk, Shell as OilIcon, Blend } from "lucide-react"; // Added category icons
+import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star, CalendarDays, Save, Upload, Info, ListFilter, PlusCircle, BookOpenText, Apple, Carrot, Nut, Wheat, Bean, Beef, Milk, Shell as OilIcon, Blend } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import {
   Accordion,
@@ -59,7 +59,7 @@ import { cn } from "@/lib/utils";
 import { format, addDays, differenceInDays, isValid, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import type { FormSettings } from "@/lib/types";
-import { Alert, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertTitle, AlertDescription as AlertDescriptionComponent } from "@/components/ui/alert"; // Renamed to avoid conflict
 
 
 const formSchema = z.object({
@@ -832,9 +832,11 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                   const CategoryIcon = categoryIcons[category.categoryName] || ListFilter;
                   return (
                     <AccordionItem value={category.categoryName} key={category.categoryName} className="border-b-0 last:border-b-0">
-                      <AccordionTrigger className="py-3 px-2 text-md font-semibold hover:no-underline hover:bg-muted/50 rounded-md flex items-center gap-2">
-                        <CategoryIcon className="h-4 w-4 text-primary" />
-                        <span className="text-primary">{category.categoryName}</span>
+                      <AccordionTrigger className="py-3 px-2 text-md font-semibold hover:no-underline hover:bg-muted/50 rounded-md">
+                         <div className="flex items-center gap-2">
+                           <CategoryIcon className="h-4 w-4 text-primary" />
+                           <span className="text-primary">{category.categoryName}</span>
+                         </div>
                       </AccordionTrigger>
                       <AccordionContent className="pt-1 pb-2 px-2">
                         <ul className="space-y-1 pl-2">
@@ -1082,7 +1084,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                 <Alert variant="destructive">
                   <AlertTriangle className="h-4 w-4" />
                   <AlertTitle>Erreur</AlertTitle>
-                  <AlertDescription>{addFoodFormError}</AlertDescription>
+                  <AlertDescriptionComponent>{addFoodFormError}</AlertDescriptionComponent>
                 </Alert>
               )}
               <div className="grid grid-cols-4 items-center gap-4">
