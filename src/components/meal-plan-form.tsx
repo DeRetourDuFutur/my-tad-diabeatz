@@ -133,19 +133,16 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         if (newEndDate >= startDate) {
             setEndDate(newEndDate);
         } else {
-            // This case should ideally not be hit if duration is always > 0
-            setEndDate(startDate); // Reset endDate to startDate
-            setDurationInDays("1"); // And duration to 1
+            setEndDate(startDate); 
+            setDurationInDays("1"); 
         }
       }
     } else if ((!isNaN(numDays) && numDays <= 0 && startDate && isValid(startDate)) || (durationInDays === "" && startDate && isValid(startDate))) {
-        // Handle cases where user enters 0, negative, or empty string
-        // We reset duration to 1 and endDate accordingly
         const newEndDate = addDays(startDate, 0);
         if(!endDate || !isValid(endDate) || newEndDate.getTime() !== endDate.getTime()){
              setEndDate(newEndDate);
         }
-        if(durationInDays !== "1") { // avoid re-setting if already "1"
+        if(durationInDays !== "1") { 
             setDurationInDays("1");
         }
     }
@@ -155,9 +152,9 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
 
   const handleDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    if (value === "" || /^\d+$/.test(value)) { // Allow empty or positive integers
+    if (value === "" || /^\d+$/.test(value)) { 
       const numValue = parseInt(value, 10);
-      if (value === "" || (numValue > 0 && numValue <= 365) ) { // Limit to 365 days for sensibility
+      if (value === "" || (numValue > 0 && numValue <= 365) ) { 
          setDurationInDays(value);
       } else if (numValue <=0 && value !== "") {
          setDurationInDays("1");
@@ -324,15 +321,15 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       if (isValid(loadedStartDate)) {
         setStartDate(loadedStartDate);
       } else {
-        setStartDate(addDays(new Date(), 1)); // Fallback to tomorrow
+        setStartDate(addDays(new Date(), 1)); 
       }
       
       if (isValid(loadedEndDate) && loadedEndDate >= loadedStartDate) {
         setEndDate(loadedEndDate);
       } else if (isValid(loadedStartDate)) {
-        setEndDate(addDays(loadedStartDate, 0)); // Fallback based on valid start date
+        setEndDate(addDays(loadedStartDate, 0)); 
       } else {
-        setEndDate(addDays(new Date(), 1)); // Fallback to tomorrow
+        setEndDate(addDays(new Date(), 1)); 
       }
       
       toast({
@@ -379,11 +376,12 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
             
             <FormItem>
               <FormLabel>Calendrier du plan</FormLabel>
-              <div className="flex flex-col md:flex-row gap-4 items-start">
-                {/* Date Pickers Column */}
-                <div className="w-full md:w-3/5 flex flex-col sm:flex-row gap-3">
-                  <div className="flex-1 min-w-[150px]">
-                    <Label htmlFor="start-date-picker-trigger" className="text-sm font-medium">Date de début</Label>
+              <div className="flex flex-col md:flex-row gap-4 md:gap-3 items-end"> {/* items-end for vertical alignment */}
+                {/* Date Pickers Area - takes up more space */}
+                <div className="flex-grow flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                  {/* Start Date Picker Div */}
+                  <div className="flex-1 min-w-[140px] sm:min-w-[170px]">
+                    <Label htmlFor="start-date-picker-trigger" className="text-sm font-medium mb-1 block">Date de début</Label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
@@ -414,8 +412,9 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                       </PopoverContent>
                     </Popover>
                   </div>
-                  <div className="flex-1 min-w-[150px]">
-                    <Label htmlFor="end-date-picker-trigger" className="text-sm font-medium">Date de fin</Label>
+                  {/* End Date Picker Div */}
+                  <div className="flex-1 min-w-[140px] sm:min-w-[170px]">
+                    <Label htmlFor="end-date-picker-trigger" className="text-sm font-medium mb-1 block">Date de fin</Label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
@@ -436,28 +435,32 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                           mode="single"
                           selected={endDate}
                           onSelect={setEndDate}
-                          disabled={(date) => startDate && isValid(startDate) ? date < startDate : date < new Date(new Date().setDate(new Date().getDate())) } // Min end date is startDate or today if startDate not set
+                          disabled={(date) => {
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0); // Ensure comparison is date-only
+                            const minDate = startDate && isValid(startDate) ? new Date(startDate) : today;
+                            minDate.setHours(0,0,0,0);
+                            return date < minDate;
+                          }}
                           initialFocus
                         />
                       </PopoverContent>
                     </Popover>
                   </div>
                 </div>
-                {/* Duration Input Column */}
-                <div className="w-full md:w-2/5 md:max-w-[120px]"> 
-                   <div>
-                    <Label htmlFor="duration-input" className="text-sm font-medium">Durée choisie (jours)</Label>
-                    <Input
-                        id="duration-input"
-                        type="number"
-                        min="1"
-                        value={durationInDays}
-                        onChange={handleDurationChange}
-                        onBlur={handleDurationBlur}
-                        className="h-10 text-center"
-                        placeholder="Jours"
-                    />
-                   </div>
+                {/* Duration Area */}
+                <div className="w-full md:w-auto flex-shrink-0"> {/* flex-shrink-0 to prevent shrinking too much */}
+                  <Label htmlFor="duration-input" className="text-sm font-medium mb-1 block">Durée en jours</Label>
+                  <Input
+                      id="duration-input"
+                      type="number"
+                      min="1"
+                      value={durationInDays}
+                      onChange={handleDurationChange}
+                      onBlur={handleDurationBlur}
+                      className="h-10 text-center w-full md:w-24 bg-secondary" 
+                      placeholder="Jours"
+                  />
                 </div>
               </div>
               <FormDescription>
@@ -587,6 +590,8 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     </Card>
   );
 }
+    
+
     
 
     
