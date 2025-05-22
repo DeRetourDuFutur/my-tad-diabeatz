@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star, CalendarDays, Save, Upload, Info } from "lucide-react";
+import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star, CalendarDays, Save, Upload, Info, ListFilter, PlusCircle } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import {
   Accordion,
@@ -45,7 +45,15 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogClose,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { format, addDays, differenceInDays, isValid, parseISO } from "date-fns";
@@ -106,7 +114,7 @@ const defaultResearchSummary = `**Privilégiez la variété et la fraîcheur (en
 **N’hésitez pas à consulter un(e) diététicien(ne) pour un accompagnement personnalisé (en gras et rouge)**`;
 
 const RichTextDisplay: React.FC<{ text: string }> = ({ text }) => {
-  const lines = text.split('\n');
+  const lines = text.split('\n').filter(line => line.trim() !== ''); // Filter out empty lines for rendering
   const elements: JSX.Element[] = [];
   let currentListItems: string[] = [];
 
@@ -130,12 +138,12 @@ const RichTextDisplay: React.FC<{ text: string }> = ({ text }) => {
     if (titleMatch) {
       flushList();
       let titleContent = titleMatch[1];
-      let titleClasses = "font-semibold my-2 text-foreground"; 
+      let titleClasses = "font-semibold my-3 text-foreground"; 
       if (titleContent.includes("(en gras et bleu)")) {
-        titleClasses = "font-semibold my-2 text-primary";
+        titleClasses = "font-semibold my-3 text-primary";
         titleContent = titleContent.replace("(en gras et bleu)", "").trim();
       } else if (titleContent.includes("(en gras et rouge)")) {
-        titleClasses = "font-semibold my-2 text-destructive";
+        titleClasses = "font-semibold my-3 text-destructive";
         titleContent = titleContent.replace("(en gras et rouge)", "").trim();
       } else if (titleContent.includes("(en gras)")) {
          titleContent = titleContent.replace("(en gras)", "").trim();
@@ -143,15 +151,9 @@ const RichTextDisplay: React.FC<{ text: string }> = ({ text }) => {
       elements.push(<p key={`title-${index}`} className={titleClasses}>{titleContent}</p>);
     } else if (listItemMatch) {
       currentListItems.push(listItemMatch[1]);
-    } else if (line.trim() === "" && currentListItems.length > 0) {
-      // Preserve empty lines between sections if they are not list items
-      // flushList();
-      // elements.push(<div key={`br-${index}`} className="h-2" />); // Represents a small space
-    } else if (line.trim() !== "") {
+    } else if (line.trim() !== "") { // Handle plain text lines not part of lists
       flushList();
       elements.push(<p key={`p-${index}`} className="mb-1">{line}</p>);
-    } else { 
-      flushList(); 
     }
   });
 
@@ -169,6 +171,34 @@ type EditableNutritionalInfo = {
   fiber?: string;
   sodium?: string;
   notes?: string;
+};
+
+type NewFoodData = {
+  name: string;
+  categoryName: string;
+  ig: string;
+  calories?: string;
+  carbs?: string;
+  protein?: string;
+  fat?: string;
+  sugars?: string;
+  fiber?: string;
+  sodium?: string;
+  notes?: string;
+};
+
+const initialNewFoodData: NewFoodData = {
+  name: "",
+  categoryName: "",
+  ig: "",
+  calories: "",
+  carbs: "",
+  protein: "",
+  fat: "",
+  sugars: "",
+  fiber: "",
+  sodium: "",
+  notes: "",
 };
 
 
@@ -199,6 +229,10 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   const [selectedFoodItemForNutritionalInfo, setSelectedFoodItemForNutritionalInfo] = useState<FoodItem | null>(null);
   const [editableNutritionalInfo, setEditableNutritionalInfo] = useState<EditableNutritionalInfo>({});
 
+  const [isAddFoodDialogOpen, setIsAddFoodDialogOpen] = useState(false);
+  const [newFoodData, setNewFoodData] = useState<NewFoodData>(initialNewFoodData);
+  const [addFoodFormError, setAddFoodFormError] = useState<string | null>(null);
+
 
  useEffect(() => {
     if (!startDate && !endDate) { 
@@ -206,6 +240,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       tomorrow.setHours(0, 0, 0, 0);
       setStartDate(tomorrow);
       setEndDate(new Date(tomorrow)); 
+      setDurationInDays("1");
     }
     setIsClient(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -237,7 +272,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
             sodium: storedItem?.sodium ?? initialItem.sodium,
             notes: storedItem?.notes ?? initialItem.notes,
           };
-        }),
+        }).sort((a, b) => a.name.localeCompare(b.name)), // Ensure items within categories are sorted
       };
     });
     setProcessedFoodCategories(hydratedCategories);
@@ -263,7 +298,8 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
              setDurationInDays("1");
         }
     }
-  }, [startDate, endDate, durationInDays]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startDate, endDate]);
 
   useEffect(() => {
     if (!startDate || !isValid(startDate)) return;
@@ -275,7 +311,8 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         setEndDate(newEndDate);
       }
     }
-  }, [durationInDays, startDate, endDate]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [durationInDays, startDate]);
 
 
   const handleDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -431,7 +468,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                 item.id === selectedFoodItemForNutritionalInfo.id
                     ? {
                         ...item,
-                        ...editableNutritionalInfo, // Merge edited values
+                        ...editableNutritionalInfo, 
                       }
                     : item
             ),
@@ -464,7 +501,24 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         planName: savedFormSettings.planName || "",
         diabeticResearchSummary: savedFormSettings.diabeticResearchSummary,
       });
-      setFoodCategoriesInStorage(savedFormSettings.foodPreferences); 
+      
+      // Ensure stored food preferences are hydrated correctly
+      const hydratedFoodPrefs = savedFormSettings.foodPreferences.map(storedCat => {
+        const initialCatDef = initialFoodCategories.find(ic => ic.categoryName === storedCat.categoryName);
+        const initialItems = initialCatDef ? initialCatDef.items : [];
+        return {
+          ...initialCatDef,
+          ...storedCat,
+          items: initialItems.map(initItem => {
+            const storedItem = storedCat.items.find(si => si.id === initItem.id);
+            return {
+              ...initItem,
+              ...(storedItem || {}),
+            };
+          }).sort((a, b) => a.name.localeCompare(b.name)),
+        };
+      });
+      setFoodCategoriesInStorage(hydratedFoodPrefs);
       
       let newStartDate = addDays(new Date(), 1); 
       newStartDate.setHours(0,0,0,0);
@@ -503,6 +557,62 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [savedFormSettings, form.reset, setFoodCategoriesInStorage]);
 
+  const handleAddNewFoodChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setNewFoodData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleAddNewFoodCategoryChange = (value: string) => {
+    setNewFoodData(prev => ({ ...prev, categoryName: value }));
+  };
+
+  const handleAddNewFood = () => {
+    setAddFoodFormError(null);
+    if (!newFoodData.name.trim() || !newFoodData.categoryName) {
+      setAddFoodFormError("Le nom de l'aliment et la catégorie sont requis.");
+      return;
+    }
+
+    const newFoodItem: FoodItem = {
+      id: `custom-${Date.now()}`, // Simple unique ID
+      ...newFoodData,
+      ig: newFoodData.ig || "(IG: N/A)",
+      isFavorite: false,
+      isDisliked: false,
+      isAllergenic: false,
+    };
+
+    setFoodCategoriesInStorage(prevCategories => {
+      const updatedCategories = prevCategories.map(category => {
+        if (category.categoryName === newFoodData.categoryName) {
+          // Check if item with same name already exists in this category
+          if (category.items.some(item => item.name.toLowerCase() === newFoodData.name.trim().toLowerCase())) {
+            setAddFoodFormError(`L'aliment "${newFoodData.name.trim()}" existe déjà dans la catégorie "${newFoodData.categoryName}".`);
+            return category; // Return category unchanged
+          }
+          return {
+            ...category,
+            items: [...category.items, newFoodItem].sort((a, b) => a.name.localeCompare(b.name)),
+          };
+        }
+        return category;
+      });
+       // If category wasn't found and a new item was meant to be added, check if error was set
+      if(addFoodFormError && !updatedCategories.some(cat => cat.categoryName === newFoodData.categoryName && cat.items.some(item => item.id === newFoodItem.id))) {
+        // Error was set, means item already existed, so don't proceed with toast/reset
+        return prevCategories;
+      }
+
+
+      toast({
+        title: "Aliment ajouté!",
+        description: `${newFoodItem.name} a été ajouté à la catégorie ${newFoodData.categoryName}.`,
+      });
+      setIsAddFoodDialogOpen(false);
+      setNewFoodData(initialNewFoodData); // Reset form
+      return updatedCategories;
+    });
+  };
 
   return (
     <Card className="shadow-lg">
@@ -560,7 +670,9 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                             if (date) {
                                 const today = new Date();
                                 today.setHours(0,0,0,0);
+                                // Allow selecting today as start date
                                 if (date < today) { 
+                                   // Optionally add toast here if past date selection is not allowed
                                 } else {
                                   date.setHours(0,0,0,0);
                                   setStartDate(date);
@@ -573,7 +685,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                           }}
                           disabled={(date) => {
                               const minSelectableDate = new Date();
-                              minSelectableDate.setDate(minSelectableDate.getDate() -1); 
+                               minSelectableDate.setDate(minSelectableDate.getDate() -1);
                               minSelectableDate.setHours(0,0,0,0);
                               return date < minSelectableDate;
                             } 
@@ -642,84 +754,106 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
               </FormDescription>
             </FormItem>
 
-
-            <div className="space-y-4">
-              <Label className="text-lg font-semibold">Préférences alimentaires</Label>
-              <p className="text-sm text-muted-foreground whitespace-pre-line">
-                Cochez vos aliments favoris, à éviter ou allergènes.
-                Les aliments favoris seront privilégiés pour vos plans de repas.
-              </p>
-              <div className="max-h-[400px] overflow-y-auto p-1 rounded-md border">
-                <Accordion type="multiple" className="w-full">
-                  {processedFoodCategories.map(category => (
-                    <AccordionItem value={category.categoryName} key={category.categoryName} className="border-b-0 last:border-b-0">
-                      <AccordionTrigger className="py-3 px-2 text-md font-semibold text-primary hover:no-underline hover:bg-muted/50 rounded-md">
-                        {category.categoryName}
-                      </AccordionTrigger>
-                      <AccordionContent className="pt-1 pb-2 px-2">
-                        <ul className="space-y-2 pl-2">
-                          {category.items.map(item => (
-                            <li key={item.id} className="py-1.5 border-b border-border/50 last:border-b-0">
-                              <div className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-x-2">
-                                <div>
-                                  <span className="text-sm">{item.name} <span className="text-xs text-muted-foreground">{item.ig}</span></span>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <div className="flex-grow">
+                  <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                    <ListFilter className="h-5 w-5 text-primary" />
+                    Préférences alimentaires
+                  </CardTitle>
+                </div>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => { 
+                    setNewFoodData(initialNewFoodData); 
+                    setAddFoodFormError(null);
+                    setIsAddFoodDialogOpen(true);
+                  }}
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Ajouter un aliment
+                </Button>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <p className="text-sm text-muted-foreground whitespace-pre-line mb-3">
+                  Cochez vos aliments favoris, à éviter ou allergènes.
+                  <br/>
+                  Les aliments favoris seront privilégiés pour vos plans de repas.
+                </p>
+                <div className="max-h-[400px] overflow-y-auto p-1 rounded-md border">
+                  <Accordion type="multiple" className="w-full">
+                    {processedFoodCategories.map(category => (
+                      <AccordionItem value={category.categoryName} key={category.categoryName} className="border-b-0 last:border-b-0">
+                        <AccordionTrigger className="py-3 px-2 text-md font-semibold text-primary hover:no-underline hover:bg-muted/50 rounded-md">
+                          {category.categoryName}
+                        </AccordionTrigger>
+                        <AccordionContent className="pt-1 pb-2 px-2">
+                          <ul className="space-y-2 pl-2">
+                            {category.items.map(item => (
+                              <li key={item.id} className="py-1.5 border-b border-border/50 last:border-b-0">
+                                <div className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-x-2">
+                                  <div>
+                                    <span className="text-sm">{item.name} <span className="text-xs text-muted-foreground">{item.ig}</span></span>
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="p-1 h-auto justify-self-end"
+                                    onClick={() => handleOpenNutritionalInfoDialog(item)}
+                                    title="Valeurs nutritionnelles"
+                                  >
+                                    <Info className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <div className="flex items-center space-x-1 justify-self-end">
+                                    <Checkbox
+                                      id={`${item.id}-favorite`}
+                                      checked={item.isFavorite}
+                                      onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isFavorite", !!checked)}
+                                      aria-label={`Marquer ${item.name} comme favori`}
+                                      disabled={item.isDisliked || item.isAllergenic}
+                                    />
+                                    <Label htmlFor={`${item.id}-favorite`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${ (item.isDisliked || item.isAllergenic) ? 'opacity-50 cursor-not-allowed' : ''}`} title="Favori">
+                                      <Star className="h-3.5 w-3.5" />
+                                    </Label>
+                                  </div>
+                                  <div className="flex items-center space-x-1 justify-self-end">
+                                    <Checkbox
+                                      id={`${item.id}-disliked`}
+                                      checked={item.isDisliked}
+                                      onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isDisliked", !!checked)}
+                                      aria-label={`Marquer ${item.name} comme non aimé`}
+                                      disabled={item.isFavorite}
+                                    />
+                                    <Label htmlFor={`${item.id}-disliked`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${item.isFavorite ? 'opacity-50 cursor-not-allowed' : ''}`} title="Je n'aime pas">
+                                      <ThumbsDown className="h-3.5 w-3.5" />
+                                    </Label>
+                                  </div>
+                                  <div className="flex items-center space-x-1 justify-self-end">
+                                    <Checkbox
+                                      id={`${item.id}-allergenic`}
+                                      checked={item.isAllergenic}
+                                      onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isAllergenic", !!checked)}
+                                      aria-label={`Marquer ${item.name} comme allergène`}
+                                      disabled={item.isFavorite}
+                                    />
+                                    <Label htmlFor={`${item.id}-allergenic`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${item.isFavorite ? 'opacity-50 cursor-not-allowed' : ''}`} title="Allergie/Intolérance">
+                                      <AlertTriangle className="h-3.5 w-3.5" />
+                                    </Label>
+                                  </div>
                                 </div>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  className="p-1 h-auto justify-self-end"
-                                  onClick={() => handleOpenNutritionalInfoDialog(item)}
-                                  title="Valeurs nutritionnelles"
-                                >
-                                  <Info className="h-3.5 w-3.5" />
-                                </Button>
-                                 <div className="flex items-center space-x-1 justify-self-end">
-                                  <Checkbox
-                                    id={`${item.id}-favorite`}
-                                    checked={item.isFavorite}
-                                    onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isFavorite", !!checked)}
-                                    aria-label={`Marquer ${item.name} comme favori`}
-                                    disabled={item.isDisliked || item.isAllergenic}
-                                  />
-                                  <Label htmlFor={`${item.id}-favorite`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${ (item.isDisliked || item.isAllergenic) ? 'opacity-50 cursor-not-allowed' : ''}`} title="Favori">
-                                    <Star className="h-3.5 w-3.5" />
-                                  </Label>
-                                </div>
-                                <div className="flex items-center space-x-1 justify-self-end">
-                                  <Checkbox
-                                    id={`${item.id}-disliked`}
-                                    checked={item.isDisliked}
-                                    onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isDisliked", !!checked)}
-                                    aria-label={`Marquer ${item.name} comme non aimé`}
-                                    disabled={item.isFavorite}
-                                  />
-                                  <Label htmlFor={`${item.id}-disliked`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${item.isFavorite ? 'opacity-50 cursor-not-allowed' : ''}`} title="Je n'aime pas">
-                                    <ThumbsDown className="h-3.5 w-3.5" />
-                                  </Label>
-                                </div>
-                                <div className="flex items-center space-x-1 justify-self-end">
-                                  <Checkbox
-                                    id={`${item.id}-allergenic`}
-                                    checked={item.isAllergenic}
-                                    onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isAllergenic", !!checked)}
-                                    aria-label={`Marquer ${item.name} comme allergène`}
-                                    disabled={item.isFavorite}
-                                  />
-                                  <Label htmlFor={`${item.id}-allergenic`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${item.isFavorite ? 'opacity-50 cursor-not-allowed' : ''}`} title="Allergie/Intolérance">
-                                    <AlertTriangle className="h-3.5 w-3.5" />
-                                  </Label>
-                                </div>
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
-              </div>
-            </div>
+                              </li>
+                            ))}
+                          </ul>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                </div>
+              </CardContent>
+            </Card>
 
             <Accordion type="single" collapsible className="w-full">
               <AccordionItem value="dietary-advice-section">
@@ -828,7 +962,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
             </DialogHeader>
             <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
               {(Object.keys(editableNutritionalInfo) as Array<keyof EditableNutritionalInfo>).map((key) => {
-                // Simple mapping for labels, can be expanded
                 const labelMap: Record<keyof EditableNutritionalInfo, string> = {
                     calories: "Calories (kcal/portion ou 100g)",
                     carbs: "Glucides (g)",
@@ -877,9 +1010,119 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
           </DialogContent>
         </Dialog>
 
+        <Dialog open={isAddFoodDialogOpen} onOpenChange={setIsAddFoodDialogOpen}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Ajouter un nouvel aliment</DialogTitle>
+              <DialogDescription>
+                Remplissez les informations ci-dessous pour ajouter un aliment à vos préférences.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-3">
+              {addFoodFormError && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Erreur</AlertTitle>
+                  <AlertDescription>{addFoodFormError}</AlertDescription>
+                </Alert>
+              )}
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="new-food-name" className="text-right col-span-1">
+                  Nom*
+                </Label>
+                <Input
+                  id="new-food-name"
+                  name="name"
+                  value={newFoodData.name}
+                  onChange={handleAddNewFoodChange}
+                  className="col-span-3"
+                  placeholder="Ex: Tomate cerise"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="new-food-category" className="text-right col-span-1">
+                  Catégorie*
+                </Label>
+                <Select
+                  value={newFoodData.categoryName}
+                  onValueChange={handleAddNewFoodCategoryChange}
+                >
+                  <SelectTrigger id="new-food-category" className="col-span-3">
+                    <SelectValue placeholder="Choisir une catégorie" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {initialFoodCategories.map(cat => (
+                      <SelectItem key={cat.categoryName} value={cat.categoryName}>
+                        {cat.categoryName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+               <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="new-food-ig" className="text-right col-span-1">
+                  IG
+                </Label>
+                <Input
+                  id="new-food-ig"
+                  name="ig"
+                  value={newFoodData.ig}
+                  onChange={handleAddNewFoodChange}
+                  className="col-span-3"
+                  placeholder="Ex: (IG: ~15)"
+                />
+              </div>
+              {(Object.keys(initialNewFoodData) as Array<keyof NewFoodData>)
+                .filter(key => !["name", "categoryName", "ig"].includes(key))
+                .map(key => {
+                  const labelMap: Record<string, string> = {
+                    calories: "Calories (kcal)",
+                    carbs: "Glucides (g)",
+                    protein: "Protéines (g)",
+                    fat: "Lipides (g)",
+                    sugars: "dont Sucres (g)",
+                    fiber: "Fibres (g)",
+                    sodium: "Sel/Sodium (mg ou g)",
+                    notes: "Notes / Portion",
+                  };
+                  const currentLabel = labelMap[key] || key.charAt(0).toUpperCase() + key.slice(1);
+                  return (
+                    <div key={key} className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor={`new-food-${key}`} className="text-right col-span-1 text-sm">
+                        {currentLabel}
+                      </Label>
+                      {key === 'notes' ? (
+                        <Textarea
+                          id={`new-food-${key}`}
+                          name={key}
+                          value={newFoodData[key as keyof NewFoodData] || ""}
+                          onChange={handleAddNewFoodChange}
+                          className="col-span-3"
+                          rows={2}
+                        />
+                      ) : (
+                        <Input
+                          id={`new-food-${key}`}
+                          name={key}
+                          value={newFoodData[key as keyof NewFoodData] || ""}
+                          onChange={handleAddNewFoodChange}
+                          className="col-span-3"
+                        />
+                      )}
+                    </div>
+                  );
+              })}
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="outline">Annuler</Button>
+              </DialogClose>
+              <Button type="button" onClick={handleAddNewFood}>Ajouter l'aliment</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
       </CardContent>
     </Card>
   );
 }
-
-    
