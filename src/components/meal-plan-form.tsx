@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star, CalendarDays, Save, Upload } from "lucide-react";
+import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star, CalendarDays, Save, Upload, Info } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import {
   Accordion,
@@ -150,15 +150,25 @@ const RichTextDisplay: React.FC<{ text: string }> = ({ text }) => {
     } else if (line.trim() !== "") {
       flushList();
       elements.push(<p key={`p-${index}`} className="mb-1">{line}</p>);
-    } else { // Handle consecutive empty lines or empty lines after a title
-      flushList(); // Ensure any pending list is flushed
-      // Potentially add a space if needed, or let CSS margins handle it
+    } else { 
+      flushList(); 
     }
   });
 
-  flushList(); // Flush any remaining list items at the end
+  flushList(); 
 
   return <div className="text-sm prose prose-sm dark:prose-invert max-w-none">{elements}</div>;
+};
+
+type EditableNutritionalInfo = {
+  calories?: string;
+  carbs?: string;
+  protein?: string;
+  fat?: string;
+  sugars?: string;
+  fiber?: string;
+  sodium?: string;
+  notes?: string;
 };
 
 
@@ -184,6 +194,10 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   const [isEndDatePickerOpen, setIsEndDatePickerOpen] = useState(false);
   const [isEditTipsDialogOpen, setIsEditTipsDialogOpen] = useState(false);
   const [editingTips, setEditingTips] = useState<string>("");
+
+  const [isNutritionalInfoDialogOpen, setIsNutritionalInfoDialogOpen] = useState(false);
+  const [selectedFoodItemForNutritionalInfo, setSelectedFoodItemForNutritionalInfo] = useState<FoodItem | null>(null);
+  const [editableNutritionalInfo, setEditableNutritionalInfo] = useState<EditableNutritionalInfo>({});
 
 
  useEffect(() => {
@@ -238,19 +252,18 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     },
   });
  
-   useEffect(() => {
+  useEffect(() => {
     if (startDate && endDate && isValid(startDate) && isValid(endDate) && endDate >= startDate) {
       const diff = differenceInDays(endDate, startDate) + 1;
       if (durationInDays !== diff.toString()) {
         setDurationInDays(diff.toString());
       }
-    } else if (startDate && !endDate) { // If only start date is set, assume 1 day duration for input field
+    } else if (startDate && !endDate) { 
         if (durationInDays !== "1") {
              setDurationInDays("1");
         }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps  
-  }, [startDate, endDate]); 
+  }, [startDate, endDate, durationInDays]);
 
   useEffect(() => {
     if (!startDate || !isValid(startDate)) return;
@@ -262,8 +275,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         setEndDate(newEndDate);
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [durationInDays, startDate]); 
+  }, [durationInDays, startDate, endDate]);
 
 
   const handleDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -389,26 +401,46 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     }
   }
 
-  const renderNutritionalInfo = (item: FoodItem) => {
-    const infos = [
-      item.calories,
-      item.carbs && `Glucides: ${item.carbs}`,
-      item.sugars && `dont Sucres: ${item.sugars}`,
-      item.protein && `Protéines: ${item.protein}`,
-      item.fat && `Lipides: ${item.fat}`,
-      item.fiber && `Fibres: ${item.fiber}`,
-      item.sodium && `Sel/Sodium: ${item.sodium}`,
-    ].filter(Boolean); 
-
-    if (infos.length === 0 && !item.notes) return null;
-
-    return (
-      <div className="mt-1 pl-2 text-xs text-muted-foreground space-y-0.5">
-        {infos.map((info, index) => <div key={index}>{info}</div>)}
-        {item.notes && <div className="italic">{item.notes}</div>}
-      </div>
-    );
+  const handleOpenNutritionalInfoDialog = (item: FoodItem) => {
+    setSelectedFoodItemForNutritionalInfo(item);
+    setEditableNutritionalInfo({
+        calories: item.calories || "",
+        carbs: item.carbs || "",
+        protein: item.protein || "",
+        fat: item.fat || "",
+        sugars: item.sugars || "",
+        fiber: item.fiber || "",
+        sodium: item.sodium || "",
+        notes: item.notes || "",
+    });
+    setIsNutritionalInfoDialogOpen(true);
   };
+
+  const handleNutritionalInfoInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setEditableNutritionalInfo(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSaveNutritionalInfo = () => {
+    if (!selectedFoodItemForNutritionalInfo) return;
+
+    setFoodCategoriesInStorage(prevCategories =>
+        prevCategories.map(category => ({
+            ...category,
+            items: category.items.map(item =>
+                item.id === selectedFoodItemForNutritionalInfo.id
+                    ? {
+                        ...item,
+                        ...editableNutritionalInfo, // Merge edited values
+                      }
+                    : item
+            ),
+        }))
+    );
+    setIsNutritionalInfoDialogOpen(false);
+    toast({ title: "Informations nutritionnelles mises à jour!", description: `Pour ${selectedFoodItemForNutritionalInfo.name}.` });
+  };
+
 
   const handleSaveSettings = () => {
     const currentFormValues = form.getValues();
@@ -628,11 +660,20 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                         <ul className="space-y-2 pl-2">
                           {category.items.map(item => (
                             <li key={item.id} className="py-1.5 border-b border-border/50 last:border-b-0">
-                              <div className="grid grid-cols-[1fr_auto_auto_auto] items-start gap-x-2">
+                              <div className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-x-2">
                                 <div>
                                   <span className="text-sm">{item.name} <span className="text-xs text-muted-foreground">{item.ig}</span></span>
-                                  {renderNutritionalInfo(item)}
                                 </div>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="p-1 h-auto justify-self-end"
+                                  onClick={() => handleOpenNutritionalInfoDialog(item)}
+                                  title="Valeurs nutritionnelles"
+                                >
+                                  <Info className="h-3.5 w-3.5" />
+                                </Button>
                                  <div className="flex items-center space-x-1 justify-self-end">
                                   <Checkbox
                                     id={`${item.id}-favorite`}
@@ -776,8 +817,69 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <Dialog open={isNutritionalInfoDialogOpen} onOpenChange={setIsNutritionalInfoDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Valeurs nutritionnelles pour {selectedFoodItemForNutritionalInfo?.name}</DialogTitle>
+              <DialogDescription>
+                Modifiez les informations nutritionnelles ci-dessous. Ces valeurs sont indicatives.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+              {(Object.keys(editableNutritionalInfo) as Array<keyof EditableNutritionalInfo>).map((key) => {
+                // Simple mapping for labels, can be expanded
+                const labelMap: Record<keyof EditableNutritionalInfo, string> = {
+                    calories: "Calories (kcal/portion ou 100g)",
+                    carbs: "Glucides (g)",
+                    protein: "Protéines (g)",
+                    fat: "Lipides (g)",
+                    sugars: "dont Sucres (g)",
+                    fiber: "Fibres (g)",
+                    sodium: "Sel/Sodium (mg ou g)",
+                    notes: "Notes / Portion de référence",
+                };
+                const currentLabel = labelMap[key] || key.charAt(0).toUpperCase() + key.slice(1);
+
+                return (
+                  <div key={key} className="grid grid-cols-[1fr_2fr] items-center gap-x-2">
+                    <Label htmlFor={`nutritional-${key}`} className="text-right text-xs whitespace-nowrap">
+                      {currentLabel} :
+                    </Label>
+                    {key === 'notes' ? (
+                       <Textarea
+                        id={`nutritional-${key}`}
+                        name={key}
+                        value={editableNutritionalInfo[key] || ""}
+                        onChange={handleNutritionalInfoInputChange}
+                        className="col-span-1 text-sm"
+                        rows={3}
+                      />
+                    ) : (
+                      <Input
+                        id={`nutritional-${key}`}
+                        name={key}
+                        value={editableNutritionalInfo[key] || ""}
+                        onChange={handleNutritionalInfoInputChange}
+                        className="col-span-1 text-sm"
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsNutritionalInfoDialogOpen(false)}>Annuler</Button>
+              <Button onClick={handleSaveNutritionalInfo}>
+                Enregistrer
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
       </CardContent>
     </Card>
   );
 }
 
+    
