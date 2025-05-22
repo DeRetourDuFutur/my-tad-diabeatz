@@ -15,13 +15,13 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription as FormDescriptionComponent, // Renamed to avoid conflict
+  FormDescription as FormDescriptionComponent,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star, CalendarDays, Save, Upload, ListFilter, PlusCircle, BookOpenText, Apple, Carrot, Nut, Wheat, Bean, Beef, Milk, Shell as OilIcon, Blend, BarChart2 } from "lucide-react";
+import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star, CalendarDays, Save, Upload, ListFilter, PlusCircle, BookOpenText, Apple, Carrot, Nut, Wheat, Bean, Beef, Milk, Shell as OilIcon, Blend, BarChart2, Info } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import {
   Accordion,
@@ -59,7 +59,7 @@ import { cn } from "@/lib/utils";
 import { format, addDays, differenceInDays, isValid, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import type { FormSettings } from "@/lib/types";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertTitle, AlertDescription as AlertDescriptionComponentUI } from "@/components/ui/alert";
 
 
 const formSchema = z.object({
@@ -248,13 +248,14 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
 
 
   useEffect(() => {
+    // Initialize dates on client mount to avoid hydration issues
     const tomorrow = addDays(new Date(), 1);
     tomorrow.setHours(0, 0, 0, 0);
-    if (!startDate) {
-      setStartDate(tomorrow);
+    if (!startDate) { // Only set if not already set (e.g., by loaded settings)
+        setStartDate(tomorrow);
     }
-    if (!endDate) {
-      setEndDate(new Date(tomorrow)); 
+    if (!endDate) { // Only set if not already set
+        setEndDate(new Date(tomorrow)); // Duration 1 day by default
     }
     setIsClient(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -284,6 +285,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         };
       });
 
+      // Add items from storage that might not be in initialFoodCategories (custom added foods)
       storedCategory.items.forEach(storedItem => {
         if (!mergedItems.some(mi => mi.id === storedItem.id)) {
           mergedItems.push(storedItem);
@@ -291,9 +293,9 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       });
 
       return {
-        ...(initialCategoryDefinition || {}), 
+        ...(initialCategoryDefinition || {}), // provide base structure if category itself was custom
         ...storedCategory, 
-        categoryName: storedCategory.categoryName, 
+        categoryName: storedCategory.categoryName, // ensure categoryName from storage is used
         items: mergedItems.sort((a, b) => a.name.localeCompare(b.name)),
       };
     });
@@ -309,18 +311,19 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     },
   });
  
-  useEffect(() => {
+   useEffect(() => {
     if (startDate && endDate && isValid(startDate) && isValid(endDate) && endDate >= startDate) {
       const diff = differenceInDays(endDate, startDate) + 1;
       if (durationInDays !== diff.toString()) {
         setDurationInDays(diff.toString());
       }
     } else if (startDate && !endDate) { 
+        // This case should ideally not happen if endDate is always initialized with startDate
         if (durationInDays !== "1") {
              setDurationInDays("1");
         }
     }
-  }, [startDate, endDate, durationInDays]);
+  }, [startDate, endDate, durationInDays]); // Removed setDurationInDays from dependency array
 
   useEffect(() => {
     if (!startDate || !isValid(startDate) || !isClient) return;
@@ -333,29 +336,27 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [durationInDays, startDate, isClient]);
+  }, [durationInDays, startDate, isClient]); // Removed setEndDate from dependency array
 
 
   const handleDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    if (value === "" || (/^\d{1,3}$/.test(value) && parseInt(value, 10) <= 365 && parseInt(value, 10) > 0 )) { 
+    // Allow empty string or numbers up to 3 digits (max 365)
+    if (value === "" || (/^\d{1,3}$/.test(value) && parseInt(value, 10) <= 365 && parseInt(value,10) >=0 )) { 
       setDurationInDays(value);
     } else if (/^\d+$/.test(value) && parseInt(value, 10) > 365) {
-      setDurationInDays("365"); 
-    } else if (value === "0" || (value !== "" && parseInt(value,10) <=0 ) ) {
-      // Allow temporary 0 or empty, handle on blur
-      setDurationInDays(value);
+      setDurationInDays("365"); // Cap at 365
     }
   };
   
   const handleDurationBlur = () => {
     const numDays = parseInt(durationInDays, 10);
     if (isNaN(numDays) || numDays <= 0) {
-      setDurationInDays("1"); 
+      setDurationInDays("1"); // Default to 1 if invalid or zero/negative
     } else if (numDays > 365) {
-      setDurationInDays("365"); 
+      setDurationInDays("365"); // Cap at 365
     } else {
-      setDurationInDays(numDays.toString()); 
+      setDurationInDays(numDays.toString()); // Normalize (e.g., "01" to "1")
     }
   };
 
@@ -371,9 +372,10 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                   ? {
                       ...item,
                       [type]: checked,
+                      // If favorite is checked, uncheck disliked and allergenic
                       ...(type === "isFavorite" && checked && { isDisliked: false, isAllergenic: false }),
-                      ...(type === "isDisliked" && checked && { isFavorite: false }), 
-                      ...(type === "isAllergenic" && checked && { isFavorite: false }), 
+                      // If disliked or allergenic is checked, uncheck favorite
+                      ...((type === "isDisliked" || type === "isAllergenic") && checked && { isFavorite: false }),
                     }
                   : item
               ),
@@ -533,9 +535,18 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
             return {
                 ...initItem,
                 ...(storedItem || {}),
+                calories: storedItem?.calories ?? initItem.calories,
+                carbs: storedItem?.carbs ?? initItem.carbs,
+                protein: storedItem?.protein ?? initItem.protein,
+                fat: storedItem?.fat ?? initItem.fat,
+                sugars: storedItem?.sugars ?? initItem.sugars,
+                fiber: storedItem?.fiber ?? initItem.fiber,
+                sodium: storedItem?.sodium ?? initItem.sodium,
+                notes: storedItem?.notes ?? initItem.notes,
             };
         });
 
+        // Ensure custom-added items from storage are preserved
         storedCat.items.forEach(storedItem => {
             if (!mergedItems.some(mi => mi.id === storedItem.id)) {
                 mergedItems.push(storedItem);
@@ -543,8 +554,9 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         });
         
         return {
-          ...(initialCatDef || {}), 
+          ...(initialCatDef || {}), // provide base structure if category itself was custom
           ...storedCat,
+          categoryName: storedCat.categoryName, // ensure categoryName from storage is used
           items: mergedItems.sort((a, b) => a.name.localeCompare(b.name)),
         };
       });
@@ -573,6 +585,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       }
       setEndDate(newEndDate);
       
+      // This will trigger the useEffect to update durationInDays
       if (newStartDate && newEndDate && isValid(newStartDate) && isValid(newEndDate) && newEndDate >= newStartDate) {
         const diff = differenceInDays(newEndDate, newStartDate) + 1;
         setDurationInDays(diff.toString());
@@ -627,12 +640,13 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     }
     
     const newFoodItem: FoodItem = {
-      id: `custom-${Date.now()}`,
+      id: `custom-${Date.now()}`, // crypto.randomUUID() would be more robust if available
       ...newFoodData,
-      ig: newFoodData.ig || "(IG: N/A)",
+      ig: newFoodData.ig || "(IG: N/A)", // Default IG if not provided
       isFavorite: false,
       isDisliked: false,
       isAllergenic: false,
+      // Nutritional fields will be whatever is in newFoodData (or undefined if empty strings)
     };
 
     setFoodCategoriesInStorage(prevCategories => {
@@ -646,6 +660,8 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         newCategories[targetCategoryIndex] = updatedCategory;
         return newCategories;
       }
+      // If category doesn't exist (should not happen if Select is used for categoryName)
+      // but as a fallback, create it.
       return [...prevCategories, { categoryName: newFoodData.categoryName, items: [newFoodItem] }];
     });
 
@@ -689,7 +705,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
               <FormItem>
                 <FormLabel>Calendrier du plan</FormLabel>
                 <div className="flex flex-col md:flex-row gap-4 md:gap-3 items-end md:items-stretch"> {/* Changed to items-stretch */}
-                  <div className="flex-grow flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                  <div className="flex-grow flex flex-col sm:flex-row gap-3 w-full md:w-auto"> {/* Container for date pickers */}
                     <div className="flex-1 min-w-[140px] sm:min-w-[170px]">
                       <Label htmlFor="start-date-picker-trigger" className="text-sm font-medium mb-1 block">Date de début</Label>
                       <Popover open={isStartDatePickerOpen} onOpenChange={setIsStartDatePickerOpen}>
@@ -721,14 +737,14 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                                     date.setHours(0,0,0,0);
                                     setStartDate(date);
                                     if (endDate && date > endDate) {
-                                      setEndDate(new Date(date)); 
+                                      setEndDate(new Date(date)); // Adjust end date if start date is after it
                                     }
                                   }
                               }
                               setIsStartDatePickerOpen(false);
                             }}
                             disabled={(date) => {
-                                const yesterday = addDays(new Date(), -1); 
+                                const yesterday = addDays(new Date(), -1); // Yesterday to disable selecting past dates
                                 yesterday.setHours(0,0,0,0);
                                 return date < yesterday;
                               } 
@@ -749,7 +765,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                               "w-full justify-start text-left font-normal h-10",
                               !endDate && "text-muted-foreground"
                             )}
-                            disabled={!startDate || !isValid(startDate)} 
+                            disabled={!startDate || !isValid(startDate)} // Disable if no start date
                           >
                             <CalendarDays className="mr-2 h-4 w-4" />
                             {endDate && isValid(endDate) ? format(endDate, "PPP", { locale: fr }) : <span>Choisir une date</span>}
@@ -762,14 +778,14 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                             onSelect={(date) => {
                               if (date && startDate && isValid(startDate)) {
                                   date.setHours(0,0,0,0);
-                                  if (date >= startDate) { 
+                                  if (date >= startDate) { // End date must be after or same as start date
                                       setEndDate(date);
                                   }
                               }
                               setIsEndDatePickerOpen(false);
                             }}
                             disabled={(date) => {
-                              const minDate = startDate && isValid(startDate) ? new Date(startDate) : addDays(new Date(), -1);
+                              const minDate = startDate && isValid(startDate) ? new Date(startDate) : addDays(new Date(), -1); // Minimum date is start date or yesterday
                               minDate.setHours(0,0,0,0);
                               return date < minDate;
                             }}
@@ -783,11 +799,11 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                     <Label htmlFor="duration-input" className="text-sm font-medium mb-1 block">Durée en jours</Label>
                     <Input
                         id="duration-input"
-                        type="text" 
+                        type="text" // Changed to text to allow more flexible input handling
                         value={durationInDays}
                         onChange={handleDurationChange}
                         onBlur={handleDurationBlur}
-                        className="h-10 text-center w-full md:w-24 bg-secondary" 
+                        className="h-10 text-center w-full md:w-24 bg-secondary" // Added bg-secondary as per previous request
                         placeholder="Jours"
                     />
                   </div>
@@ -834,8 +850,8 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                   const CategoryIcon = categoryIcons[category.categoryName] || ListFilter;
                   return (
                     <AccordionItem value={category.categoryName} key={category.categoryName} className="border-b-0 last:border-b-0">
-                      <AccordionTrigger className="py-3 px-2 text-md font-semibold hover:no-underline hover:bg-muted/50 rounded-md">
-                         <div className="flex items-center gap-2">
+                       <AccordionTrigger className="py-3 px-2 text-md font-semibold hover:no-underline hover:bg-muted/50 rounded-md">
+                         <div className="flex items-center gap-2"> {/* Group icon and title for left alignment */}
                            <CategoryIcon className="h-4 w-4 text-primary" />
                            <span className="text-primary">{category.categoryName}</span>
                          </div>
@@ -844,10 +860,18 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                         <ul className="space-y-1 pl-2">
                           {category.items.map(item => (
                             <li key={item.id} className="py-1 border-b border-border/50 last:border-b-0">
-                              <div className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-x-2"> {/* Changed items-start to items-center */}
+                              <div className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-x-2">
                                 <div>
-                                  <span className="text-sm font-medium">{item.name}</span>
-                                  <span className="text-xs text-muted-foreground ml-1">{item.ig}</span>
+                                  <span className={cn(
+                                    "text-sm font-medium",
+                                    item.isDisliked && "line-through",
+                                    item.isAllergenic && "text-destructive"
+                                  )}>{item.name}</span>
+                                  <span className={cn(
+                                    "text-xs text-muted-foreground ml-1",
+                                    item.isDisliked && "line-through",
+                                    item.isAllergenic && "text-destructive"
+                                  )}>{item.ig}</span>
                                 </div>
                                 <Button
                                   type="button"
@@ -1086,7 +1110,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                 <Alert variant="destructive">
                   <AlertTriangle className="h-4 w-4" />
                   <AlertTitle>Erreur</AlertTitle>
-                  <AlertDescription>{addFoodFormError}</AlertDescription>
+                  <AlertDescriptionComponentUI>{addFoodFormError}</AlertDescriptionComponentUI>
                 </Alert>
               )}
               <div className="grid grid-cols-4 items-center gap-4">
@@ -1187,5 +1211,3 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     </Form>
   );
 }
-
-    
