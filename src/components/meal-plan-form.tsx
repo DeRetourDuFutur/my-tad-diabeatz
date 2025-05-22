@@ -399,8 +399,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
             <div className="space-y-4">
               <Label className="text-lg font-semibold">Préférences alimentaires</Label>
               <p className="text-sm text-muted-foreground">
-                Cochez les cases pour marquer les aliments comme favoris, non aimés ou allergènes.
-                Seuls les aliments non marqués comme "non aimé" ou "allergène" seront considérés. Les favoris seront privilégiés.
+                Cochez les les aliments favoris, à éviter ou allergènes. Les aliments favoris seront privilégiés pour vos plans de repas.
               </p>
               <div className="max-h-[400px] overflow-y-auto p-1 rounded-md border">
                 <Accordion type="multiple" className="w-full">
@@ -517,5 +516,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   );
 }
 
+
+    
 
     
