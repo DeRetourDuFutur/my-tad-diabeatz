@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -15,13 +15,13 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription as FormDescriptionComponent,
+  FormDescription as FormDescriptionComponentUI, // Renamed to avoid conflict
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star, CalendarDays, Save, Upload, ListFilter, PlusCircle, BookOpenText, Info, BarChart2, Apple, Carrot, Nut, Wheat, Bean, Beef, Milk, Shell as OilIcon, Blend } from "lucide-react";
+import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star, CalendarDays, Save, Upload, ListFilter, PlusCircle, BookOpenText, BarChart2, Apple, Carrot, Nut, Wheat, Bean, Beef, Milk, Shell as OilIcon, Blend } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import {
   Accordion,
@@ -41,7 +41,7 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription as DialogDescriptionComponentUI,
+  DialogDescription as DialogDescriptionComponent, // Renamed to avoid conflict
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -61,6 +61,9 @@ import { fr } from "date-fns/locale";
 import type { FormSettings } from "@/lib/types";
 import { Alert, AlertTitle, AlertDescription as AlertDescriptionShadcn } from "@/components/ui/alert";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+
+import { db } from '@/lib/firebase';
+import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 
 
 const formSchema = z.object({
@@ -235,22 +238,18 @@ const categoryIcons: Record<string, React.ElementType> = {
 
 export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [isDataLoading, setIsDataLoading] = useState(true); // For Firestore loading
   const { toast } = useToast();
 
-  const [foodCategoriesFromStorage, setFoodCategoriesInStorage] = useLocalStorage<FoodCategory[]>(
-    "diabeatz-food-preferences",
-    initialFoodCategories
-  );
-  const [processedFoodCategories, setProcessedFoodCategories] = useState<FoodCategory[]>(initialFoodCategories);
+  const [foodPreferences, setFoodPreferences] = useState<FoodCategory[]>(initialFoodCategories);
   
   const [selectionMode, setSelectionMode] = useState<'dates' | 'duration'>('dates');
-  
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
-  const [displayDurationFromDates, setDisplayDurationFromDates] = useState<string>("1 jour");
-  
   const [durationInDays, setDurationInDays] = useState<string>("1"); 
   const [durationModeStartDate, setDurationModeStartDate] = useState<Date | undefined>(undefined);
+  
+  const [displayDurationFromDates, setDisplayDurationFromDates] = useState<string>("1 jour");
   const [displayEndDateFromDuration, setDisplayEndDateFromDuration] = useState<Date | undefined>(undefined);
   
   const [savedFormSettings, setSavedFormSettings] = useLocalStorage<FormSettings | null>("diabeatz-form-settings", null);
@@ -265,6 +264,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
 
   const [isNutritionalInfoDialogOpen, setIsNutritionalInfoDialogOpen] = useState(false);
   const [selectedFoodItemForNutritionalInfo, setSelectedFoodItemForNutritionalInfo] = useState<FoodItem | null>(null);
+  const [selectedFoodCategoryName, setSelectedFoodCategoryName] = useState<string | null>(null);
   const [editableNutritionalInfo, setEditableNutritionalInfo] = useState<EditableNutritionalInfo>({});
 
   const [isAddFoodDialogOpen, setIsAddFoodDialogOpen] = useState(false);
@@ -279,6 +279,77 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     },
   });
 
+  // Fetch food preferences from Firestore on mount
+  useEffect(() => {
+    const fetchPreferences = async () => {
+      setIsDataLoading(true);
+      const prefDocRef = doc(db, "userSettings", "globalFoodPreferences");
+      try {
+        const docSnap = await getDoc(prefDocRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data.preferences && Array.isArray(data.preferences)) {
+             // Hydrate with initialFoodCategories to ensure all items and fields are present
+            const fetchedPrefs = data.preferences as FoodCategory[];
+            const hydratedPrefs = initialFoodCategories.map(initialCat => {
+              const fetchedCat = fetchedPrefs.find(fc => fc.categoryName === initialCat.categoryName);
+              if (fetchedCat) {
+                const mergedItems = initialCat.items.map(initItem => {
+                  const fetchedItem = fetchedCat.items.find(fi => fi.id === initItem.id || fi.name === initItem.name); // Match by id or name for robustness
+                  return { ...initItem, ...(fetchedItem || {}) };
+                });
+                 // Add any custom items from Firestore not in initialFoodCategories
+                fetchedCat.items.forEach(fetchedItem => {
+                  if (!mergedItems.some(mi => mi.id === fetchedItem.id || mi.name === fetchedItem.name)) {
+                    mergedItems.push(fetchedItem);
+                  }
+                });
+                return { ...initialCat, ...fetchedCat, items: mergedItems.sort((a,b) => a.name.localeCompare(b.name))};
+              }
+              return initialCat;
+            });
+            // Ensure all initial categories are present if not in Firestore
+            initialFoodCategories.forEach(initialCat => {
+              if(!hydratedPrefs.some(hp => hp.categoryName === initialCat.categoryName)){
+                hydratedPrefs.push(initialCat);
+              }
+            });
+            setFoodPreferences(hydratedPrefs.sort((a,b) => a.categoryName.localeCompare(b.categoryName)));
+
+          } else {
+            setFoodPreferences(initialFoodCategories); // Use defaults if structure is wrong
+          }
+        } else {
+          // No document, use initial and save them to Firestore
+          await setDoc(prefDocRef, { preferences: initialFoodCategories, lastUpdated: Timestamp.now() });
+          setFoodPreferences(initialFoodCategories);
+        }
+      } catch (error) {
+        console.error("Error fetching food preferences:", error);
+        toast({ title: "Erreur de chargement des préférences", description: "Impossible de charger les préférences alimentaires. Utilisation des valeurs par défaut.", variant: "destructive" });
+        setFoodPreferences(initialFoodCategories);
+      }
+      setIsDataLoading(false);
+    };
+
+    if (isClient) { // Ensure this runs only on client
+      fetchPreferences();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isClient]); // toast is stable
+
+  const savePreferencesToFirestore = async (updatedPreferences: FoodCategory[]) => {
+    const prefDocRef = doc(db, "userSettings", "globalFoodPreferences");
+    try {
+      await setDoc(prefDocRef, { preferences: updatedPreferences, lastUpdated: Timestamp.now() });
+      // toast({ title: "Préférences sauvegardées!", description: "Vos préférences alimentaires ont été mises à jour." });
+    } catch (error) {
+      console.error("Error saving food preferences:", error);
+      toast({ title: "Erreur de sauvegarde", description: "Impossible de sauvegarder les préférences alimentaires.", variant: "destructive" });
+    }
+  };
+
+
   useEffect(() => {
     setIsClient(true);
   }, []);
@@ -286,57 +357,17 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   useEffect(() => {
     if (isClient) {
       const tomorrow = startOfDay(addDays(new Date(), 1));
+      setStartDate(tomorrow);
+      setEndDate(new Date(tomorrow)); // Duration 1 day
+      setDurationInDays("1");
+      setDurationModeStartDate(tomorrow);
+
       if (savedFormSettings) {
-        handleLoadSettings();
-      } else {
-        setStartDate(tomorrow);
-        setEndDate(new Date(tomorrow)); 
-        setDurationModeStartDate(tomorrow);
-        setDurationInDays("1");
+        handleLoadSettings(); // This will override dates if they were saved
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClient, savedFormSettings]); // handleLoadSettings might not be stable, savedFormSettings ensures it runs when settings are loaded
-
-
-  useEffect(() => {
-    const hydratedCategories = foodCategoriesFromStorage.map(storedCategory => {
-      const initialCategoryDefinition = initialFoodCategories.find(
-        initCat => initCat.categoryName === storedCategory.categoryName
-      );
-      const initialItems = initialCategoryDefinition ? initialCategoryDefinition.items : [];
-
-      const mergedItems = initialItems.map(initialItem => {
-        const storedItem = storedCategory.items.find(si => si.id === initialItem.id);
-        return {
-          ...initialItem,
-          ...(storedItem || {}),
-          calories: storedItem?.calories ?? initialItem.calories,
-          carbs: storedItem?.carbs ?? initialItem.carbs,
-          protein: storedItem?.protein ?? initialItem.protein,
-          fat: storedItem?.fat ?? initialItem.fat,
-          sugars: storedItem?.sugars ?? initialItem.sugars,
-          fiber: storedItem?.fiber ?? initialItem.fiber,
-          sodium: storedItem?.sodium ?? initialItem.sodium,
-          notes: storedItem?.notes ?? initialItem.notes,
-        };
-      });
-
-      storedCategory.items.forEach(storedItem => {
-        if (!mergedItems.some(mi => mi.id === storedItem.id)) {
-          mergedItems.push(storedItem); 
-        }
-      });
-      
-      return {
-        ...(initialCategoryDefinition || {}), 
-        ...storedCategory, 
-        categoryName: storedCategory.categoryName, 
-        items: mergedItems.sort((a, b) => a.name.localeCompare(b.name)),
-      };
-    });
-    setProcessedFoodCategories(hydratedCategories);
-  }, [foodCategoriesFromStorage]);
+  }, [isClient]); // handleLoadSettings is not stable here, but it's called conditionally
 
 
   useEffect(() => {
@@ -386,27 +417,26 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     }
   };
 
-
   const handleFoodPreferenceChange = (categoryId: string, itemId: string, type: "isFavorite" | "isDisliked" | "isAllergenic", checked: boolean) => {
-    setFoodCategoriesInStorage(prevCategories =>
-      prevCategories.map(category =>
-        category.categoryName === categoryId
-          ? {
-              ...category,
-              items: category.items.map(item =>
-                item.id === itemId
-                  ? {
-                      ...item,
-                      [type]: checked,
-                      ...(type === "isFavorite" && checked && { isDisliked: false, isAllergenic: false }),
-                      ...((type === "isDisliked" || type === "isAllergenic") && checked && { isFavorite: false }),
-                    }
-                  : item
-              ),
-            }
-          : category
-      )
+    const updatedPreferences = foodPreferences.map(category =>
+      category.categoryName === categoryId
+        ? {
+            ...category,
+            items: category.items.map(item =>
+              item.id === itemId
+                ? {
+                    ...item,
+                    [type]: checked,
+                    ...(type === "isFavorite" && checked && { isDisliked: false, isAllergenic: false }),
+                    ...((type === "isDisliked" || type === "isAllergenic") && checked && { isFavorite: false }),
+                  }
+                : item
+            ),
+          }
+        : category
     );
+    setFoodPreferences(updatedPreferences);
+    savePreferencesToFirestore(updatedPreferences);
   };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -453,7 +483,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     const likedFoodsList: string[] = [];
     const foodsToAvoidList: string[] = [];
 
-    processedFoodCategories.forEach(category => {
+    foodPreferences.forEach(category => {
       category.items.forEach(item => {
         let foodEntry = `${item.name} ${item.ig}`;
         if (item.isDisliked || item.isAllergenic) {
@@ -515,8 +545,9 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     setIsEditTipsDialogOpen(true);
   };
 
-  const handleOpenNutritionalInfoDialog = (item: FoodItem) => {
+  const handleOpenNutritionalInfoDialog = (item: FoodItem, categoryName: string) => {
     setSelectedFoodItemForNutritionalInfo(item);
+    setSelectedFoodCategoryName(categoryName);
     setEditableNutritionalInfo({
         calories: item.calories || "",
         carbs: item.carbs || "",
@@ -536,10 +567,11 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   };
 
   const handleSaveNutritionalInfo = () => {
-    if (!selectedFoodItemForNutritionalInfo) return;
+    if (!selectedFoodItemForNutritionalInfo || !selectedFoodCategoryName) return;
 
-    setFoodCategoriesInStorage(prevCategories =>
-        prevCategories.map(category => ({
+    const updatedPreferences = foodPreferences.map(category =>
+        category.categoryName === selectedFoodCategoryName ?
+        {
             ...category,
             items: category.items.map(item =>
                 item.id === selectedFoodItemForNutritionalInfo.id
@@ -549,8 +581,10 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                       }
                     : item
             ),
-        }))
+        } : category
     );
+    setFoodPreferences(updatedPreferences);
+    savePreferencesToFirestore(updatedPreferences);
     setIsNutritionalInfoDialogOpen(false);
     toast({ title: "Informations nutritionnelles mises à jour!", description: `Pour ${selectedFoodItemForNutritionalInfo.name}.` });
   };
@@ -561,7 +595,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     const settingsToSave: FormSettings = {
       planName: currentFormValues.planName,
       diabeticResearchSummary: currentFormValues.diabeticResearchSummary,
-      foodPreferences: foodCategoriesFromStorage, 
       selectionMode: selectionMode,
       startDate: startDate ? startDate.toISOString() : undefined,
       endDate: endDate ? endDate.toISOString() : undefined,
@@ -571,7 +604,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     setSavedFormSettings(settingsToSave);
     toast({
       title: "Paramètres sauvegardés!",
-      description: "Votre configuration de formulaire a été enregistrée.",
+      description: "Votre configuration de formulaire a été enregistrée localement.",
     });
   };
 
@@ -581,51 +614,14 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         planName: savedFormSettings.planName || "",
         diabeticResearchSummary: savedFormSettings.diabeticResearchSummary || defaultResearchSummary,
       });
-
-      const hydratedFoodPrefs = initialFoodCategories.map(initialCat => {
-        const storedCat = savedFormSettings.foodPreferences.find(sc => sc.categoryName === initialCat.categoryName);
-        if (storedCat) {
-            const mergedItems = initialCat.items.map(initItem => {
-                const storedItem = storedCat.items.find(si => si.id === initItem.id);
-                return {
-                    ...initItem,
-                    ...(storedItem || {}), 
-                    calories: storedItem?.calories ?? initItem.calories,
-                    carbs: storedItem?.carbs ?? initItem.carbs,
-                    protein: storedItem?.protein ?? initItem.protein,
-                    fat: storedItem?.fat ?? initItem.fat,
-                    sugars: storedItem?.sugars ?? initItem.sugars,
-                    fiber: storedItem?.fiber ?? initItem.fiber,
-                    sodium: storedItem?.sodium ?? initItem.sodium,
-                    notes: storedItem?.notes ?? initItem.notes,
-                };
-            });
-            storedCat.items.forEach(storedItem => {
-                if (!mergedItems.some(mi => mi.id === storedItem.id)) {
-                    mergedItems.push(storedItem);
-                }
-            });
-            return { ...initialCat, ...storedCat, items: mergedItems.sort((a,b) => a.name.localeCompare(b.name)) };
-        }
-        return initialCat; 
-      });
-      savedFormSettings.foodPreferences.forEach(storedCat => {
-        if(!hydratedFoodPrefs.some(hp => hp.categoryName === storedCat.categoryName)) {
-            hydratedFoodPrefs.push(storedCat); 
-        }
-      });
-      setFoodCategoriesInStorage(hydratedFoodPrefs);
-
-
+      
       setSelectionMode(savedFormSettings.selectionMode || 'dates');
       const tomorrow = startOfDay(addDays(new Date(), 1));
 
       let newStartDate = tomorrow;
       if (savedFormSettings.startDate) {
         const parsed = parseISO(savedFormSettings.startDate);
-        if (isValid(parsed)) {
-          newStartDate = startOfDay(parsed);
-        }
+        if (isValid(parsed)) newStartDate = startOfDay(parsed);
       }
       setStartDate(newStartDate);
 
@@ -634,9 +630,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         const parsedEnd = parseISO(savedFormSettings.endDate);
         if (isValid(parsedEnd)) {
             const startOfDayEnd = startOfDay(parsedEnd);
-            if (!isBefore(startOfDayEnd, newStartDate)) {
-                 newEndDate = startOfDayEnd;
-            }
+            if (!isBefore(startOfDayEnd, newStartDate)) newEndDate = startOfDayEnd;
         }
       }
       setEndDate(newEndDate);
@@ -645,25 +639,23 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       let newDurationModeStartDate = tomorrow; 
       if (savedFormSettings.durationModeStartDate) {
         const parsedDurationStart = parseISO(savedFormSettings.durationModeStartDate);
-        if (isValid(parsedDurationStart)) {
-          newDurationModeStartDate = startOfDay(parsedDurationStart);
-        }
+        if (isValid(parsedDurationStart)) newDurationModeStartDate = startOfDay(parsedDurationStart);
       }
       setDurationModeStartDate(newDurationModeStartDate);
 
       toast({
         title: "Paramètres chargés!",
-        description: "Votre configuration de formulaire a été restaurée.",
+        description: "Votre configuration de formulaire locale a été restaurée.",
       });
     } else {
       toast({
         title: "Aucun paramètre trouvé",
-        description: "Aucun paramètre de formulaire n'a été trouvé pour le chargement.",
+        description: "Aucun paramètre de formulaire local n'a été trouvé.",
         variant: "destructive",
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [savedFormSettings, form, setFoodCategoriesInStorage]); 
+  }, [savedFormSettings, form]); // setFoodPreferences removed as it's now handled by Firestore fetch
 
 
   const handleAddNewFoodChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -683,7 +675,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     }
 
     let foodAlreadyExists = false;
-    foodCategoriesFromStorage.forEach(category => {
+    foodPreferences.forEach(category => {
       if (category.categoryName === newFoodData.categoryName) {
         if (category.items.some(item => item.name.toLowerCase() === newFoodData.name.trim().toLowerCase())) {
           setAddFoodFormError(`L'aliment "${newFoodData.name.trim()}" existe déjà dans la catégorie "${newFoodData.categoryName}".`);
@@ -692,9 +684,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       }
     });
 
-    if(foodAlreadyExists) {
-      return;
-    }
+    if(foodAlreadyExists) return;
 
     const newFoodItem: FoodItem = {
       id: `custom-${Date.now()}`,
@@ -713,20 +703,17 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       isAllergenic: false,
     };
 
-    setFoodCategoriesInStorage(prevCategories => {
-      const targetCategoryIndex = prevCategories.findIndex(cat => cat.categoryName === newFoodData.categoryName);
-      if (targetCategoryIndex !== -1) {
-        const updatedCategory = {
-          ...prevCategories[targetCategoryIndex],
-          items: [...prevCategories[targetCategoryIndex].items, newFoodItem].sort((a,b) => a.name.localeCompare(b.name)),
+    const updatedPreferences = foodPreferences.map(cat => {
+      if (cat.categoryName === newFoodData.categoryName) {
+        return {
+          ...cat,
+          items: [...cat.items, newFoodItem].sort((a,b) => a.name.localeCompare(b.name)),
         };
-        const newCategories = [...prevCategories];
-        newCategories[targetCategoryIndex] = updatedCategory;
-        return newCategories;
       }
-      // If category doesn't exist, create it (though this case might not happen if select is populated from existing categories)
-      return [...prevCategories, { categoryName: newFoodData.categoryName, items: [newFoodItem] }];
+      return cat;
     });
+    setFoodPreferences(updatedPreferences);
+    savePreferencesToFirestore(updatedPreferences);
 
     toast({
       title: "Aliment ajouté!",
@@ -737,15 +724,15 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   };
 
 
-  if (!isClient) {
+  if (!isClient || isDataLoading) {
     return (
       <div className="space-y-6">
-        <Card className="shadow-lg"><CardHeader><CardTitle className="text-lg font-semibold">Chargement...</CardTitle></CardHeader><CardContent><Loader2 className="animate-spin" /></CardContent></Card>
-        <Card className="shadow-lg"><CardHeader><CardTitle className="text-lg font-semibold">Chargement...</CardTitle></CardHeader><CardContent><Loader2 className="animate-spin" /></CardContent></Card>
+        <Card className="shadow-lg"><CardHeader><CardTitle className="text-lg font-semibold">Chargement...</CardTitle></CardHeader><CardContent className="flex justify-center items-center h-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></CardContent></Card>
+        <Card className="shadow-lg"><CardHeader><CardTitle className="text-lg font-semibold">Chargement...</CardTitle></CardHeader><CardContent className="flex justify-center items-center h-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></CardContent></Card>
+         <Card className="shadow-lg"><CardHeader><CardTitle className="text-lg font-semibold">Chargement...</CardTitle></CardHeader><CardContent className="flex justify-center items-center h-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></CardContent></Card>
       </div>
     );
   }
-
 
   return (
     <Form {...form}>
@@ -781,9 +768,9 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                       
                       <FormItem>
                         <FormLabel className="text-base font-medium mb-2 block">Calendrier / Durée</FormLabel>
-                         <FormDescriptionComponent className="mb-3">
+                         <FormDescriptionComponentUI className="mb-3">
                            Choisissez la date de début et de fin du plan ou indiquez le nombre de jour(s) souhaité(s).
-                        </FormDescriptionComponent>
+                        </FormDescriptionComponentUI>
                         <RadioGroup
                           value={selectionMode}
                           onValueChange={(value: 'dates' | 'duration') => setSelectionMode(value)}
@@ -821,15 +808,9 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                                     onSelect={(date) => {
                                       if (date) {
                                         const newStartDate = startOfDay(date);
-                                        const today = startOfDay(new Date());
-                                        if (isBefore(newStartDate, today)) { 
-                                          setStartDate(today);
-                                          if (endDate && isBefore(endDate, today)) setEndDate(new Date(today));
-                                        } else {
-                                          setStartDate(newStartDate);
-                                          if (endDate && isBefore(endDate, newStartDate)) {
-                                            setEndDate(new Date(newStartDate));
-                                          }
+                                        setStartDate(newStartDate);
+                                        if (endDate && isBefore(endDate, newStartDate)) {
+                                          setEndDate(new Date(newStartDate));
                                         }
                                       }
                                       setIsStartDatePickerOpen(false);
@@ -904,12 +885,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                                     onSelect={(date) => {
                                       if (date) {
                                         const newDurationStartDate = startOfDay(date);
-                                        const today = startOfDay(new Date());
-                                        if (isBefore(newDurationStartDate, today)) {
-                                          setDurationModeStartDate(today);
-                                        } else {
-                                          setDurationModeStartDate(newDurationStartDate);
-                                        }
+                                        setDurationModeStartDate(newDurationStartDate);
                                       }
                                       setIsDurationModeStartDatePickerOpen(false);
                                     }}
@@ -974,13 +950,13 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
               </div>
               <AccordionContent className="pt-0">
                   <CardContent>
-                      <FormDescriptionComponent className="mb-2">
+                      <FormDescriptionComponentUI className="mb-2">
                         Cochez vos aliments favoris, à éviter ou allergènes.<br/>
                         Les aliments favoris seront privilégiés pour vos plans de repas.
-                      </FormDescriptionComponent>
+                      </FormDescriptionComponentUI>
                       <div className="max-h-[400px] overflow-y-auto p-1 rounded-md border mt-2">
                       <Accordion type="multiple" className="w-full">
-                          {processedFoodCategories.map(category => {
+                          {foodPreferences.map(category => {
                           const CategoryIcon = categoryIcons[category.categoryName] || ListFilter;
                           return (
                               <AccordionItem value={category.categoryName} key={category.categoryName} className="border-b-0 last:border-b-0">
@@ -1012,7 +988,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                                           variant="ghost"
                                           size="sm"
                                           className="p-1 h-auto justify-self-end"
-                                          onClick={() => handleOpenNutritionalInfoDialog(item)}
+                                          onClick={() => handleOpenNutritionalInfoDialog(item, category.categoryName)}
                                           title="Valeurs nutritionnelles"
                                           >
                                           <BarChart2 className="h-3.5 w-3.5" />
@@ -1086,7 +1062,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
             </Button>
         </div>
 
-        <Button type="submit" disabled={isLoading} className="w-full">
+        <Button type="submit" disabled={isLoading || isDataLoading} className="w-full">
         {isLoading ? (
             <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1143,10 +1119,10 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
               <DialogTitle>Modifier les Conseils Alimentaires</DialogTitle>
-              <DialogDescriptionComponentUI>
+              <DialogDescriptionComponent>
                 Modifiez le texte des conseils ci-dessous. Utilisez `**texte**` pour le gras.
                 Les annotations comme (en gras et bleu) seront interprétées pour le style.
-              </DialogDescriptionComponentUI>
+              </DialogDescriptionComponent>
             </DialogHeader>
             <div className="py-4">
               <Textarea
@@ -1174,9 +1150,9 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>Valeurs nutritionnelles pour {selectedFoodItemForNutritionalInfo?.name}</DialogTitle>
-              <DialogDescriptionComponentUI>
+              <DialogDescriptionComponent>
                 Modifiez les informations nutritionnelles ci-dessous. Ces valeurs sont indicatives.
-              </DialogDescriptionComponentUI>
+              </DialogDescriptionComponent>
             </DialogHeader>
             <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
               {(Object.keys(editableNutritionalInfo) as Array<keyof EditableNutritionalInfo>).map((key) => {
@@ -1232,9 +1208,9 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>Ajouter un nouvel aliment</DialogTitle>
-              <DialogDescriptionComponentUI>
+              <DialogDescriptionComponent>
                 Remplissez les informations ci-dessous pour ajouter un aliment à vos préférences.
-              </DialogDescriptionComponentUI>
+              </DialogDescriptionComponent>
             </DialogHeader>
             <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-3">
               {addFoodFormError && (
@@ -1342,4 +1318,3 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     </Form>
   );
 }
-

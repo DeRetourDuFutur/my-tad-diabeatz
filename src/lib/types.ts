@@ -1,5 +1,6 @@
 
 import type { FoodCategory } from '@/lib/food-data';
+import type { Timestamp } from 'firebase/firestore';
 
 // This represents a single dish or component of a meal
 export type MealComponent = {
@@ -37,15 +38,15 @@ export interface GenerateMealPlanOutput {
 }
 
 export interface StoredMealPlan extends GenerateMealPlanOutput {
-  id: string;
+  id: string; // Document ID from Firestore
   name: string;
-  createdAt: string; // ISO date string
+  createdAt: Timestamp | string; // Firestore Timestamp or ISO string for new plans
 }
 
 export interface FormSettings {
   planName?: string;
   diabeticResearchSummary: string;
-  foodPreferences: FoodCategory[];
+  // foodPreferences are now stored in Firestore directly
   selectionMode?: 'dates' | 'duration';
   startDate?: string; // ISO string for localStorage (for "Par Dates" mode)
   endDate?: string; // ISO string for localStorage (for "Par Dates" mode)
