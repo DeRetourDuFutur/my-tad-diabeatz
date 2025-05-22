@@ -101,7 +101,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
           return {
             ...initialItem, 
             ...(storedItem || {}), 
-            // Ensure all nutritional fields exist, falling back to defaults if not in storedItem
             calories: storedItem?.calories ?? initialItem.calories,
             carbs: storedItem?.carbs ?? initialItem.carbs,
             protein: storedItem?.protein ?? initialItem.protein,
@@ -134,7 +133,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         setDurationInDays(diff.toString());
       }
     }
-  }, [startDate, endDate, durationInDays]);
+  }, [startDate, endDate]); // Corrected: Removed durationInDays from dependencies
 
   // Update endDate when durationInDays (from input) or startDate changes
   useEffect(() => {
@@ -147,20 +146,19 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
         }
       }
     }
-  }, [durationInDays, startDate, endDate]);
+  }, [durationInDays, startDate]); // Corrected: Removed endDate from dependencies
 
 
   const handleDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    // Allow empty string, or numbers between 1 and 365
     if (value === "" || /^\d+$/.test(value)) { 
       const numValue = parseInt(value, 10);
-      if (value === "" || (numValue >= 1 && numValue <= 365) ) { // Max 365 days, min 1 day
+      if (value === "" || (numValue >= 1 && numValue <= 365) ) {
          setDurationInDays(value);
       } else if (numValue > 365) {
-         setDurationInDays("365"); // Cap at 365
-      } else { // handles "0", negative, or other non-empty invalid numbers
-         setDurationInDays(value); // Allow typing, blur will sanitize
+         setDurationInDays("365");
+      } else { 
+         setDurationInDays(value);
       }
     }
   };
@@ -168,11 +166,11 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
   const handleDurationBlur = () => {
     const numDays = parseInt(durationInDays, 10);
     if (isNaN(numDays) || numDays <= 0) {
-      setDurationInDays("1"); // Default to 1 if invalid or empty on blur
+      setDurationInDays("1"); 
     } else if (numDays > 365) {
-      setDurationInDays("365"); // Cap at 365
+      setDurationInDays("365"); 
     } else {
-      setDurationInDays(numDays.toString()); // Normalize, e.g., "05" to "5"
+      setDurationInDays(numDays.toString()); 
     }
   };
 
@@ -337,7 +335,6 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
       } else {
         setEndDate(addDays(new Date(), 1)); 
       }
-      // The useEffect for [startDate, endDate] will update durationInDays
       toast({
         title: "Paramètres chargés!",
         description: "Votre configuration de formulaire a été restaurée.",
@@ -409,7 +406,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                                 const today = new Date();
                                 today.setHours(0,0,0,0);
                                 if (date < today) {
-                                  setStartDate(addDays(new Date(),1)); // Set to tomorrow if past date selected
+                                  setStartDate(addDays(new Date(),1)); 
                                 } else {
                                   setStartDate(date);
                                 }
@@ -418,7 +415,7 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
                           }}
                           disabled={(date) => {
                               const minSelectableDate = new Date();
-                              minSelectableDate.setDate(minSelectableDate.getDate()); // Allow today for start date if needed, or use +1 for tomorrow
+                              minSelectableDate.setDate(minSelectableDate.getDate()); 
                               minSelectableDate.setHours(0,0,0,0);
                               return date < minSelectableDate;
                             } 
@@ -482,9 +479,8 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
 
             <div className="space-y-4">
               <Label className="text-lg font-semibold">Préférences alimentaires</Label>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground whitespace-pre-line">
                 Cochez vos aliments favoris, à éviter ou allergènes.
-                <br/>
                 Les aliments favoris seront privilégiés pour vos plans de repas.
               </p>
               <div className="max-h-[400px] overflow-y-auto p-1 rounded-md border">
@@ -612,4 +608,5 @@ export function MealPlanForm({ onMealPlanGenerated }: MealPlanFormProps) {
     
 
     
+
 
