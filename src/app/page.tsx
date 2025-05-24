@@ -7,8 +7,8 @@ import { AppHeader } from "@/components/app-header";
 import { MealPlanForm } from "@/components/meal-plan-form";
 import { MealPlanDisplay } from "@/components/meal-plan-display";
 import { SavedMealPlans } from "@/components/saved-meal-plans";
-import { MedicationManagementCard } from "@/components/MedicationManagementCard"; // Correction du nom
-import { AddEditMedicationDialog } from "@/components/AddEditMedicationDialog"; // Correction du nom
+import { MedicationManagementCard } from "@/components/MedicationManagementCard";
+import { AddEditMedicationDialog } from "@/components/AddEditMedicationDialog";
 import { SavePlanDialog } from "@/components/save-plan-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -19,7 +19,7 @@ import { collection, addDoc, getDocs, doc, deleteDoc, setDoc, query, orderBy, Ti
 import useLocalStorage from "@/hooks/use-local-storage";
 
 const initialSavedPlans: StoredMealPlan[] = [];
-const initialMedicationsArray: Medication[] = []; // Renommé pour clarté, car initialMedications est utilisé comme valeur
+const initialMedications: Medication[] = [];
 
 export default function HomePage() {
   const [currentMealPlan, setCurrentMealPlan] = useState<GenerateMealPlanOutput | null>(null);
@@ -34,7 +34,7 @@ export default function HomePage() {
   const [aiError, setAiError] = useState<string | null>(null);
   const [hasMounted, setHasMounted] = useState(false);
 
-  const [medications, setMedications] = useLocalStorage<Medication[]>('diabeatz-medications', initialMedicationsArray);
+  const [medications, setMedications] = useLocalStorage<Medication[]>('diabeatz-medications', initialMedications);
   const [isAddEditMedicationDialogOpen, setIsAddEditMedicationDialogOpen] = useState(false);
   const [editingMedication, setEditingMedication] = useState<Medication | null>(null);
 
@@ -168,21 +168,20 @@ export default function HomePage() {
   };
 
  const handleSaveMedication = (medicationData: Omit<Medication, 'id'> | Medication) => {
-    if ('id' in medicationData && medicationData.id) { // Editing existing medication
+    if ('id' in medicationData && medicationData.id) { 
       setMedications(prevMeds => 
         prevMeds.map(med => med.id === medicationData.id ? { ...med, ...medicationData } : med)
-        .sort((a, b) => a.name.localeCompare(b.name)) // Sort after editing
+        .sort((a, b) => a.name.localeCompare(b.name))
       );
       toast({ title: "Médicament Modifié!", description: `${medicationData.name} a été mis à jour.` });
-    } else { // Adding new medication
+    } else { 
       const newMedication: Medication = {
         id: `med-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         ...medicationData,
-        // Ensure default values for new fields if not provided
-        color: medicationData.color || "#cccccc", // Default color if undefined
+        color: medicationData.color || "#cccccc", 
         form: medicationData.form || 'other',
       };
-      setMedications(prevMeds => [...prevMeds, newMedication].sort((a, b) => a.name.localeCompare(b.name))); // Sort after adding
+      setMedications(prevMeds => [...prevMeds, newMedication].sort((a, b) => a.name.localeCompare(b.name)));
       toast({ title: "Médicament Ajouté!", description: `${newMedication.name} a été ajouté à votre liste.` });
     }
     setIsAddEditMedicationDialogOpen(false);
@@ -204,9 +203,12 @@ export default function HomePage() {
     <div className="flex flex-col min-h-screen">
       <AppHeader />
       <main className="flex-grow container mx-auto p-4 md:p-6 lg:p-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1 space-y-6">
-            <MealPlanForm onMealPlanGenerated={handleMealPlanGenerated} onGenerationError={handleGenerationError} />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
+          <div className="lg:col-span-1 space-y-4 lg:space-y-6">
+            <MealPlanForm 
+              onMealPlanGenerated={handleMealPlanGenerated} 
+              onGenerationError={handleGenerationError} 
+            />
             {isLoadingPlans && !hasMounted ? (
               <div className="flex justify-center items-center h-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
             ) : (
