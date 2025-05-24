@@ -1,11 +1,11 @@
 
 "use client";
 
-import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useEffect, useState } from "react";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import type { Medication } from "@/lib/types";
+import type { Medication, MedicationReminder, ReminderFrequency } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,6 +19,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription as FormDescriptionUI,
   FormField,
   FormItem,
   FormLabel,
@@ -26,25 +27,59 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CirclePicker, CompactPicker } from 'react-color'; // Using react-color for a simple color picker
+import { cn } from "@/lib/utils";
 
-const medicationSchema = z.object({
+
+const medicationFormSchema = z.object({
   name: z.string().min(1, { message: "Le nom est requis." }),
   description: z.string().min(1, { message: "La description/rôle est requise." }),
   strength: z.string().optional(),
-  form: z.string().optional(),
+  form: z.enum(['tablet', 'capsule', 'liquid', 'injection', 'inhaler', 'drops', 'cream', 'other']).optional(),
+  color: z.string().optional(),
   stock: z.coerce.number().min(0, { message: "Le stock ne peut pas être négatif." }).default(0),
-  lowStockThreshold: z.coerce.number().min(0, { message: "Le seuil ne peut être négatif." }).optional(),
+  lowStockThreshold: z.coerce.number().min(0, { message: "Le seuil ne peut être négatif." }).optional().or(z.literal('')),
   instructions: z.string().min(1, { message: "Les instructions de prise sont requises." }),
+  reminderFrequency: z.enum(['daily', 'everyXdays', 'specificDays', 'asNeeded']).optional(),
+  reminderIntervalDays: z.coerce.number().min(1).optional().or(z.literal('')),
+  reminderSpecificDays: z.array(z.enum(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])).optional(),
+  reminderTimes: z.string().optional(), // Comma-separated times e.g., "08:00,20:00"
 });
 
-type MedicationFormData = z.infer<typeof medicationSchema>;
+type MedicationFormData = z.infer<typeof medicationFormSchema>;
+
+const defaultReminderValues = {
+  reminderFrequency: undefined,
+  reminderIntervalDays: undefined,
+  reminderSpecificDays: [],
+  reminderTimes: "",
+};
 
 type AddEditMedicationDialogProps = {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onSave: (data: MedicationFormData | (MedicationFormData & { id: string })) => void;
+  onSave: (data: Omit<Medication, 'id'> | Medication) => void;
   medicationToEdit?: Medication | null;
 };
+
+const daysOfWeekOptions: { id: MedicationReminder['specificDays'] extends (infer U)[] ? U : never; label: string }[] = [
+    { id: 'Mon', label: 'Lun' },
+    { id: 'Tue', label: 'Mar' },
+    { id: 'Wed', label: 'Mer' },
+    { id: 'Thu', label: 'Jeu' },
+    { id: 'Fri', label: 'Ven' },
+    { id: 'Sat', label: 'Sam' },
+    { id: 'Sun', label: 'Dim' },
+];
 
 export function AddEditMedicationDialog({
   isOpen,
@@ -53,17 +88,21 @@ export function AddEditMedicationDialog({
   medicationToEdit,
 }: AddEditMedicationDialogProps) {
   const form = useForm<MedicationFormData>({
-    resolver: zodResolver(medicationSchema),
+    resolver: zodResolver(medicationFormSchema),
     defaultValues: {
       name: "",
       description: "",
       strength: "",
-      form: "",
+      form: undefined,
+      color: "#cccccc", // Default color
       stock: 0,
-      lowStockThreshold: undefined, // Default to undefined if optional
+      lowStockThreshold: undefined,
       instructions: "",
+      ...defaultReminderValues,
     },
   });
+
+  const watchedFrequency = form.watch("reminderFrequency");
 
   useEffect(() => {
     if (isOpen) {
@@ -72,38 +111,65 @@ export function AddEditMedicationDialog({
           name: medicationToEdit.name,
           description: medicationToEdit.description,
           strength: medicationToEdit.strength || "",
-          form: medicationToEdit.form || "",
+          form: medicationToEdit.form || undefined,
+          color: medicationToEdit.color || "#cccccc",
           stock: medicationToEdit.stock,
-          lowStockThreshold: medicationToEdit.lowStockThreshold === undefined ? undefined : medicationToEdit.lowStockThreshold,
+          lowStockThreshold: medicationToEdit.lowStockThreshold === undefined ? '' : medicationToEdit.lowStockThreshold,
           instructions: medicationToEdit.instructions,
+          reminderFrequency: medicationToEdit.reminder?.frequency || undefined,
+          reminderIntervalDays: medicationToEdit.reminder?.intervalDays || undefined,
+          reminderSpecificDays: medicationToEdit.reminder?.specificDays || [],
+          reminderTimes: medicationToEdit.reminder?.times.join(", ") || "",
         });
       } else {
         form.reset({
           name: "",
           description: "",
           strength: "",
-          form: "",
+          form: undefined,
+          color: "#cccccc",
           stock: 0,
-          lowStockThreshold: undefined,
+          lowStockThreshold: '',
           instructions: "",
+          ...defaultReminderValues,
         });
       }
     }
   }, [medicationToEdit, form, isOpen]);
 
   const handleSubmit = (data: MedicationFormData) => {
+    const reminder: MedicationReminder | undefined = data.reminderFrequency
+      ? {
+          frequency: data.reminderFrequency,
+          intervalDays: data.reminderFrequency === 'everyXdays' && data.reminderIntervalDays ? Number(data.reminderIntervalDays) : undefined,
+          specificDays: data.reminderFrequency === 'specificDays' ? data.reminderSpecificDays : undefined,
+          times: data.reminderTimes?.split(',').map(t => t.trim()).filter(t => t) || [],
+        }
+      : undefined;
+
+    const medicationData = {
+      name: data.name,
+      description: data.description,
+      strength: data.strength,
+      form: data.form,
+      color: data.color,
+      stock: Number(data.stock),
+      lowStockThreshold: data.lowStockThreshold ? Number(data.lowStockThreshold) : undefined,
+      instructions: data.instructions,
+      reminder: reminder,
+    };
+
     if (medicationToEdit && medicationToEdit.id) {
-      onSave({ ...data, id: medicationToEdit.id });
+      onSave({ ...medicationData, id: medicationToEdit.id });
     } else {
-      onSave(data);
+      onSave(medicationData);
     }
-    // onOpenChange(false); // Closing is handled by the parent
   };
 
   const handleCloseDialog = () => {
-    form.reset({ 
-        name: "", description: "", strength: "", form: "", 
-        stock: 0, lowStockThreshold: undefined, instructions: "" 
+    form.reset({
+        name: "", description: "", strength: "", form: undefined, color: "#cccccc",
+        stock: 0, lowStockThreshold: '', instructions: "", ...defaultReminderValues
     });
     onOpenChange(false);
   }
@@ -116,7 +182,7 @@ export function AddEditMedicationDialog({
         onOpenChange(open);
       }
     }}>
-      <DialogContent className="sm:max-w-[480px]">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
             {medicationToEdit ? "Modifier le médicament" : "Ajouter un médicament"}
@@ -128,7 +194,7 @@ export function AddEditMedicationDialog({
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-2 max-h-[70vh] overflow-y-auto pr-2">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-2 max-h-[70vh] overflow-y-auto pr-3">
             <FormField
               control={form.control}
               name="name"
@@ -155,18 +221,61 @@ export function AddEditMedicationDialog({
                 </FormItem>
               )}
             />
-            <FormField
+             <FormField
               control={form.control}
               name="form"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Forme</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ex: Comprimé, Gélule, Sirop" {...field} />
-                  </FormControl>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choisir une forme" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="tablet">Comprimé</SelectItem>
+                      <SelectItem value="capsule">Gélule</SelectItem>
+                      <SelectItem value="liquid">Liquide/Sirop</SelectItem>
+                      <SelectItem value="injection">Injection</SelectItem>
+                      <SelectItem value="inhaler">Inhalateur</SelectItem>
+                      <SelectItem value="drops">Gouttes</SelectItem>
+                      <SelectItem value="cream">Crème/Pommade</SelectItem>
+                      <SelectItem value="other">Autre</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
+            />
+             <FormField
+                control={form.control}
+                name="color"
+                render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                        <FormLabel>Couleur indicative</FormLabel>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <FormControl>
+                                    <Button
+                                        variant="outline"
+                                        className={cn(
+                                            "w-[240px] justify-start text-left font-normal",
+                                            !field.value && "text-muted-foreground"
+                                        )}
+                                    >
+                                        <div className="w-4 h-4 rounded-full mr-2 border" style={{ backgroundColor: field.value }} />
+                                        {field.value ? field.value : "Choisir une couleur"}
+                                    </Button>
+                                </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0 border-0 shadow-none bg-transparent">
+                                 <CompactPicker color={field.value} onChangeComplete={(color) => field.onChange(color.hex)} />
+                            </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                    </FormItem>
+                )}
             />
             <FormField
               control={form.control}
@@ -201,10 +310,10 @@ export function AddEditMedicationDialog({
                 <FormItem>
                   <FormLabel>Stock actuel (unités)</FormLabel>
                   <FormControl>
-                    <Input 
-                      type="number" 
-                      placeholder="Ex: 30" 
-                      {...field} 
+                    <Input
+                      type="number"
+                      placeholder="Ex: 30"
+                      {...field}
                       value={field.value === undefined ? '' : field.value}
                       onChange={e => field.onChange(e.target.value === '' ? undefined : parseInt(e.target.value, 10))}
                     />
@@ -220,18 +329,138 @@ export function AddEditMedicationDialog({
                 <FormItem>
                   <FormLabel>Seuil de stock bas (optionnel)</FormLabel>
                   <FormControl>
-                  <Input 
-                    type="number" 
-                    placeholder="Ex: 10" 
+                  <Input
+                    type="number"
+                    placeholder="Ex: 10"
                     {...field}
-                    value={field.value === undefined ? '' : field.value} // Handle undefined for empty input
-                    onChange={e => field.onChange(e.target.value === '' ? undefined : parseInt(e.target.value, 10))} 
+                    value={field.value === undefined ? '' : String(field.value)}
+                    onChange={e => field.onChange(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
+            <div className="space-y-3 p-3 border rounded-md">
+                <h4 className="text-sm font-medium text-foreground">Configuration des Rappels</h4>
+                <FormField
+                    control={form.control}
+                    name="reminderFrequency"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Fréquence des rappels</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Choisir une fréquence" />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    <SelectItem value="daily">Quotidien</SelectItem>
+                                    <SelectItem value="everyXdays">Tous les X jours</SelectItem>
+                                    <SelectItem value="specificDays">Jours spécifiques de la semaine</SelectItem>
+                                    <SelectItem value="asNeeded">Si besoin (pas de rappel programmé)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
+                {watchedFrequency === 'everyXdays' && (
+                    <FormField
+                        control={form.control}
+                        name="reminderIntervalDays"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Intervalle (jours)</FormLabel>
+                                <FormControl>
+                                    <Input type="number" placeholder="Ex: 2 (pour tous les 2 jours)" {...field}
+                                    value={field.value === undefined ? '' : String(field.value)}
+                                    onChange={e => field.onChange(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
+                                     />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                )}
+
+                {watchedFrequency === 'specificDays' && (
+                     <FormField
+                        control={form.control}
+                        name="reminderSpecificDays"
+                        render={() => (
+                            <FormItem>
+                                <div className="mb-2">
+                                    <FormLabel className="text-base">Jours spécifiques</FormLabel>
+                                    <FormDescriptionUI>
+                                       Sélectionnez les jours de la semaine pour le rappel.
+                                    </FormDescriptionUI>
+                                </div>
+                                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                                {daysOfWeekOptions.map((day) => (
+                                    <FormField
+                                        key={day.id}
+                                        control={form.control}
+                                        name="reminderSpecificDays"
+                                        render={({ field }) => {
+                                        return (
+                                            <FormItem
+                                            key={day.id}
+                                            className="flex flex-row items-center space-x-2 space-y-0 bg-muted/50 p-2 rounded-md"
+                                            >
+                                            <FormControl>
+                                                <Checkbox
+                                                checked={field.value?.includes(day.id)}
+                                                onCheckedChange={(checked) => {
+                                                    return checked
+                                                    ? field.onChange([...(field.value || []), day.id])
+                                                    : field.onChange(
+                                                        field.value?.filter(
+                                                        (value) => value !== day.id
+                                                        )
+                                                    )
+                                                }}
+                                                />
+                                            </FormControl>
+                                            <FormLabel className="text-sm font-normal cursor-pointer">
+                                                {day.label}
+                                            </FormLabel>
+                                            </FormItem>
+                                        )
+                                        }}
+                                    />
+                                    ))}
+                                </div>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                )}
+
+                {watchedFrequency && watchedFrequency !== 'asNeeded' && (
+                     <FormField
+                        control={form.control}
+                        name="reminderTimes"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Heures de prise</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="Ex: 08:00, 12:30, 20:00" {...field} />
+                                </FormControl>
+                                <FormDescriptionUI>
+                                    Séparez plusieurs heures par une virgule.
+                                </FormDescriptionUI>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                )}
+            </div>
+
+
             <DialogFooter className="pt-4">
               <DialogClose asChild>
                 <Button type="button" variant="outline" onClick={handleCloseDialog}>
@@ -239,7 +468,7 @@ export function AddEditMedicationDialog({
                 </Button>
               </DialogClose>
               <Button type="submit">
-                {medicationToEdit ? "Sauvegarder" : "Ajouter"}
+                {medicationToEdit ? "Sauvegarder les modifications" : "Ajouter le médicament"}
               </Button>
             </DialogFooter>
           </form>

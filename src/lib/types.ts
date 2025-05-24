@@ -53,14 +53,27 @@ export interface FormSettings {
   durationModeStartDate?: string; // ISO string for localStorage (start date for "Par Durée" mode)
 }
 
+export type ReminderFrequency = 'daily' | 'everyXdays' | 'specificDays' | 'asNeeded';
+
+export interface MedicationReminder {
+  frequency: ReminderFrequency;
+  intervalDays?: number; // For 'everyXdays'
+  specificDays?: ('Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun')[]; // For 'specificDays'
+  times: string[]; // Array of times, e.g., ["08:00", "20:00"]
+}
+
 export interface Medication {
   id: string;
   name: string;
   description: string; // Rôle du médicament
   strength?: string; // ex: "500mg", "10mg/ml"
-  form?: string; // ex: "Comprimé", "Gélule", "Sirop"
+  form?: 'tablet' | 'capsule' | 'liquid' | 'injection' | 'inhaler' | 'drops' | 'cream' | 'other'; // Forme du médicament
+  color?: string; // Couleur indicative du médicament (ex: "blue", "#FF5733")
   stock: number; // Quantité restante
   lowStockThreshold?: number; // Seuil pour alerte de stock bas
   instructions: string; // Posologie et instructions de prise
+  reminder?: MedicationReminder;
+  // lastTaken?: string; // ISO string - pour une future fonctionnalité de suivi
+  // nextDueDate?: string; // ISO string - pour une future fonctionnalité de rappel
 }
 
