@@ -46,10 +46,18 @@ export interface StoredMealPlan extends GenerateMealPlanOutput {
 export interface FormSettings {
   planName?: string;
   diabeticResearchSummary: string;
-  // foodPreferences are now stored in Firestore directly
   selectionMode?: 'dates' | 'duration';
   startDate?: string; // ISO string for localStorage (for "Par Dates" mode)
   endDate?: string; // ISO string for localStorage (for "Par Dates" mode)
   durationInDays?: string; // For "Par Durée" mode
   durationModeStartDate?: string; // ISO string for localStorage (start date for "Par Durée" mode)
+}
+
+export interface Medication {
+  id: string;
+  name: string;
+  description: string; // Rôle du médicament
+  stock: number; // Quantité restante
+  dosage: string; // Posologie
+  // On pourrait ajouter: unité (comprimés, ml, etc.), date de péremption, notes...
 }
