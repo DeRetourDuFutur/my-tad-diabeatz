@@ -14,13 +14,14 @@ import {
   FormField,
   FormItem,
   FormLabel,
-  FormDescription as FormDescriptionComponentUI,
+  FormDescription as FormDescriptionComponentUI, // Renommé pour éviter conflit
+  FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star, CalendarDays, Save, Upload, ListFilter, PlusCircle, BookOpenText, BarChart2, Info, Settings2, Apple, Carrot, Nut, Wheat, Bean, Beef, Milk, Shell as OilIcon, Blend } from "lucide-react";
+import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star, CalendarDays, Save, Upload, ListFilter, PlusCircle, BookOpenText, BarChart2, Info, Settings2, Apple, Carrot, Nut, Wheat, Bean, Beef, Milk, CookingPot as OilIcon, Blend } from "lucide-react"; // OilIcon remplacé par CookingPot
 import { useState, useEffect, useCallback } from "react";
 import {
   Accordion,
@@ -169,7 +170,7 @@ const RichTextDisplay: React.FC<{ text: string }> = ({ text }) => {
       if (!inList && currentSectionTitle) {
         inList = true;
       } else if (!inList) {
-        flushList();
+        flushList(); 
         inList = true;
       }
       currentListItems.push(listItemMatch[1]);
@@ -238,23 +239,28 @@ const categoryIcons: Record<string, React.ElementType> = {
 
 export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPlanFormProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [isDataLoading, setIsDataLoading] = useState(true);
+  const [isDataLoading, setIsDataLoading] = useState(true); // State for loading food preferences from Firestore
   const { toast } = useToast();
   
-  const [foodCategoriesFromStorage, setFoodCategoriesInStorage] = useLocalStorage<FoodCategory[]>("diabeatz-food-preferences", initialFoodCategories);
+  const [foodCategoriesFromStorage, setFoodCategoriesInStorage] = useState<FoodCategory[]>(initialFoodCategories);
   const [processedFoodCategories, setProcessedFoodCategories] = useState<FoodCategory[]>(initialFoodCategories);
+  
+  const [isClient, setIsClient] = useState(false);
 
+  // States for date/duration selection
   const [selectionMode, setSelectionMode] = useState<'dates' | 'duration'>('dates');
+  
+  // States for "Par Dates" mode
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [displayDurationFromDates, setDisplayDurationFromDates] = useState<string>("1 jour");
+
+  // States for "Par Durée" mode
   const [durationInDays, setDurationInDays] = useState<string>("1"); 
   const [durationModeStartDate, setDurationModeStartDate] = useState<Date | undefined>(undefined);
-  
-  const [displayDurationFromDates, setDisplayDurationFromDates] = useState<string>("1 jour");
   const [displayEndDateFromDuration, setDisplayEndDateFromDuration] = useState<Date | undefined>(undefined);
-  
+
   const [savedFormSettings, setSavedFormSettings] = useLocalStorage<FormSettings | null>("diabeatz-form-settings", null);
-  const [isClient, setIsClient] = useState(false);
   
   const [isStartDatePickerOpen, setIsStartDatePickerOpen] = useState(false);
   const [isEndDatePickerOpen, setIsEndDatePickerOpen] = useState(false);
@@ -280,24 +286,69 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
     },
   });
   
- useEffect(() => {
+  // Load saved settings on initial client mount
+  const handleLoadSettings = useCallback(() => {
+    if (savedFormSettings) {
+      form.reset({
+        planName: savedFormSettings.planName || "",
+        diabeticResearchSummary: savedFormSettings.diabeticResearchSummary || defaultResearchSummary,
+      });
+      
+      setSelectionMode(savedFormSettings.selectionMode || 'dates');
+
+      if (savedFormSettings.startDate) {
+        const parsed = parseISO(savedFormSettings.startDate);
+        if (isValid(parsed)) setStartDate(startOfDay(parsed));
+      }
+      if (savedFormSettings.endDate) {
+        const parsedEnd = parseISO(savedFormSettings.endDate);
+         if (isValid(parsedEnd)) {
+            const startOfDayEnd = startOfDay(parsedEnd);
+            const currentStartDate = savedFormSettings.startDate ? startOfDay(parseISO(savedFormSettings.startDate)) : null;
+            if (currentStartDate && !isBefore(startOfDayEnd, currentStartDate)) setEndDate(startOfDayEnd);
+            else if (!currentStartDate) setEndDate(startOfDayEnd);
+         }
+      }
+      
+      setDurationInDays(savedFormSettings.durationInDays || "1");
+
+      if (savedFormSettings.durationModeStartDate) {
+        const parsedDurationStart = parseISO(savedFormSettings.durationModeStartDate);
+        if (isValid(parsedDurationStart)) setDurationModeStartDate(startOfDay(parsedDurationStart));
+      }
+      
+      toast({
+        title: "Paramètres chargés!",
+        description: "Votre configuration de formulaire locale a été restaurée.",
+      });
+    } else {
+      toast({
+        title: "Aucun paramètre trouvé",
+        description: "Aucun paramètre de formulaire local n'a été trouvé.",
+        variant: "destructive",
+      });
+    }
+  }, [savedFormSettings, form, toast, setFoodCategoriesInStorage, setStartDate, setEndDate, setDurationInDays, setSelectionMode, setDurationModeStartDate]);
+  // setFoodCategoriesInStorage was in deps, but it's from useLocalStorage and should be stable. 
+  // It's safer to remove if not directly used inside useCallback.
+
+  // Initialize component state and load settings on client mount
+  useEffect(() => {
     setIsClient(true);
     if (savedFormSettings) {
-      handleLoadSettings();
+        handleLoadSettings();
     } else {
-      // Set default dates only if no saved settings (to avoid hydration issues)
-      const tomorrow = startOfDay(addDays(new Date(), 1));
-      setStartDate(tomorrow);
-      setEndDate(tomorrow); // Initial duration 1 day
-      setDurationModeStartDate(tomorrow);
-      setDurationInDays("1");
+        const tomorrow = startOfDay(addDays(new Date(), 1));
+        setStartDate(tomorrow);
+        setEndDate(tomorrow); // Default to 1 day duration
+        setDurationInDays("1");
+        setDurationModeStartDate(tomorrow);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClient]); 
-
+  }, [isClient, savedFormSettings, handleLoadSettings]); // handleLoadSettings is memoized
 
   const fetchPreferences = useCallback(async () => {
-    if (!isClient) return;
+    if (!isClient) return; // Ensure this runs only on client
     setIsDataLoading(true);
     const prefDocRef = doc(db, "userSettings", "globalFoodPreferences");
     try {
@@ -307,42 +358,62 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
         if (data.preferences && Array.isArray(data.preferences)) {
           setFoodCategoriesInStorage(data.preferences as FoodCategory[]);
         } else {
+          // If data exists but not in expected format, use initial and save
           setFoodCategoriesInStorage(initialFoodCategories);
+          await setDoc(prefDocRef, { preferences: initialFoodCategories, lastUpdated: Timestamp.now() });
         }
       } else {
+        // If no document, create it with initial categories
         await setDoc(prefDocRef, { preferences: initialFoodCategories, lastUpdated: Timestamp.now() });
         setFoodCategoriesInStorage(initialFoodCategories);
       }
     } catch (error) {
       console.error("Error fetching food preferences:", error);
-      toast({ title: "Erreur de chargement des préférences", description: "Impossible de charger les préférences alimentaires.", variant: "destructive" });
-      setFoodCategoriesInStorage(initialFoodCategories);
+      toast({ title: "Erreur de chargement des préférences", description: "Impossible de charger les préférences alimentaires depuis Firestore.", variant: "destructive" });
+      setFoodCategoriesInStorage(initialFoodCategories); // Fallback to local initial data
     }
     setIsDataLoading(false);
-  }, [isClient, toast, setFoodCategoriesInStorage]);
+  }, [isClient, toast, setFoodCategoriesInStorage]); // setFoodCategoriesInStorage is from useState, stable
 
   useEffect(() => {
     fetchPreferences();
-  }, [fetchPreferences]);
+  }, [fetchPreferences]); // fetchPreferences is memoized
+
 
  useEffect(() => {
+    // Hydrate food categories from storage or Firestore, ensuring all fields are present
     const hydratedCategories = initialFoodCategories.map(initialCat => {
-      const storedCat = foodCategoriesFromStorage.find(sc => sc.categoryName === initialCat.categoryName);
-      if (storedCat) {
+      const storedOrFetchedCat = foodCategoriesFromStorage.find(sc => sc.categoryName === initialCat.categoryName);
+      if (storedOrFetchedCat) {
         const mergedItems = initialCat.items.map(initItem => {
-          const storedItem = storedCat.items.find(si => si.id === initItem.id || si.name === initItem.name);
-          return { ...initItem, ...(storedItem || {}) };
+          const storedOrFetchedItem = storedOrFetchedCat.items.find(si => si.id === initItem.id || si.name === initItem.name);
+          // Ensure all nutritional fields from initItem are present if missing in storedItem
+          const completeItem = {
+            ...initItem, // Start with defaults from initialFoodCategories
+            ...(storedOrFetchedItem || {}) // Override with stored/fetched data if available
+          };
+          return completeItem;
         });
-         storedCat.items.forEach(storedItem => {
-            if (!mergedItems.some(mi => mi.id === storedItem.id || mi.name === storedItem.name)) {
-                mergedItems.push(storedItem);
+        // Add items from storage/firestore that were not in initialFoodCategories (custom added)
+         storedOrFetchedCat.items.forEach(sfi => {
+            if (!mergedItems.some(mi => mi.id === sfi.id || mi.name === sfi.name)) {
+                mergedItems.push({ // Ensure custom items also have all fields
+                    ...initialFoodCategories[0]?.items[0], // Get a template for all fields
+                    ...sfi,
+                    id: sfi.id || `custom-${Date.now()}`, // Ensure ID
+                    isFavorite: sfi.isFavorite || false,
+                    isDisliked: sfi.isDisliked || false,
+                    isAllergenic: sfi.isAllergenic || false,
+
+                });
             }
         });
-        return { ...initialCat, ...storedCat, items: mergedItems.sort((a, b) => a.name.localeCompare(b.name)) };
+        return { ...initialCat, ...storedOrFetchedCat, items: mergedItems.sort((a, b) => a.name.localeCompare(b.name)) };
       }
-      return initialCat;
+      return initialCat; // Fallback to initial category if not found in storage
     });
     
+    // Ensure all initial categories are present if they were somehow missing from storage
     initialFoodCategories.forEach(initialCat => {
         if(!hydratedCategories.some(hp => hp.categoryName === initialCat.categoryName)){
             hydratedCategories.push(initialCat);
@@ -354,50 +425,58 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
 
 
   const savePreferencesToFirestore = async (updatedPreferences: FoodCategory[]) => {
+    if (!isClient) return;
     const prefDocRef = doc(db, "userSettings", "globalFoodPreferences");
     try {
       await setDoc(prefDocRef, { preferences: updatedPreferences, lastUpdated: Timestamp.now() });
-      setFoodCategoriesInStorage(updatedPreferences);
+      setFoodCategoriesInStorage(updatedPreferences); // Update local state after successful save
+       toast({ title: "Préférences sauvegardées!", description: "Vos préférences alimentaires ont été mises à jour dans Firestore." });
     } catch (error) {
-      console.error("Error saving food preferences:", error);
-      toast({ title: "Erreur de sauvegarde", description: "Impossible de sauvegarder les préférences alimentaires.", variant: "destructive" });
+      console.error("Error saving food preferences to Firestore:", error);
+      toast({ title: "Erreur de sauvegarde", description: "Impossible de sauvegarder les préférences alimentaires dans Firestore.", variant: "destructive" });
     }
   };
 
 
+  // Effect for "Par Dates" mode: Updates the displayed duration when dates change.
   useEffect(() => {
-    if (selectionMode === 'dates' && startDate && endDate && isValid(startDate) && isValid(endDate) && !isBefore(endDate, startDate)) {
-      const diff = differenceInDays(endDate, startDate) + 1;
-      setDisplayDurationFromDates(`${diff} jour${diff > 1 ? 's' : ''}`);
-    } else if (selectionMode === 'dates') {
-      setDisplayDurationFromDates("Durée invalide");
-    }
-  }, [startDate, endDate, selectionMode]);
-
-
-  useEffect(() => {
-    if (selectionMode === 'duration' && durationModeStartDate && isValid(durationModeStartDate)) {
-      const numDays = parseInt(durationInDays, 10);
-      if (!isNaN(numDays) && numDays >= 1 && numDays <= 365) {
-         const newEndDate = addDays(durationModeStartDate, numDays - 1);
-         if (!isEqual(newEndDate, displayEndDateFromDuration || new Date(0))) { 
-            setDisplayEndDateFromDuration(newEndDate);
-         }
+    if (isClient && selectionMode === 'dates') {
+      if (startDate && endDate && isValid(startDate) && isValid(endDate) && !isBefore(endDate, startDate)) {
+        const diff = differenceInDays(endDate, startDate) + 1;
+        setDisplayDurationFromDates(`${diff} jour${diff > 1 ? 's' : ''}`);
       } else {
-        if (displayEndDateFromDuration !== undefined) { 
-            setDisplayEndDateFromDuration(undefined); 
-        }
+        setDisplayDurationFromDates("Durée invalide");
       }
     }
-  }, [durationInDays, durationModeStartDate, selectionMode, displayEndDateFromDuration]);
+  }, [startDate, endDate, selectionMode, isClient]);
+
+  // Effect for "Par Durée" mode: Updates the displayed end date when duration or start date for this mode changes.
+  useEffect(() => {
+    if (isClient && selectionMode === 'duration') {
+      if (durationModeStartDate && isValid(durationModeStartDate)) {
+        const numDays = parseInt(durationInDays, 10);
+        if (!isNaN(numDays) && numDays >= 1 && numDays <= 365) {
+          const newEndDate = addDays(durationModeStartDate, numDays - 1);
+          setDisplayEndDateFromDuration(newEndDate);
+        } else {
+          setDisplayEndDateFromDuration(undefined);
+        }
+      } else {
+         setDisplayEndDateFromDuration(undefined);
+      }
+    }
+  }, [durationInDays, durationModeStartDate, selectionMode, isClient]);
 
 
   const handleDurationInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-     if (value === "" || (/^\d{1,3}$/.test(value) && parseInt(value,10) >= 0 && parseInt(value, 10) <= 365 )) {
-      setDurationInDays(value);
-    } else if (/^\d+$/.test(value) && parseInt(value, 10) > 365) {
-      setDurationInDays("365"); // Cap at 365
+     if (value === "" || /^\d{1,3}$/.test(value)) {
+      const num = parseInt(value,10);
+      if (value === "" || (num >= 0 && num <= 365) ) { // Allow empty for typing
+         setDurationInDays(value);
+      } else if (num > 365) {
+        setDurationInDays("365");
+      }
     }
   };
 
@@ -430,7 +509,7 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
           }
         : category
     );
-    savePreferencesToFirestore(updatedPreferences);
+    savePreferencesToFirestore(updatedPreferences); // Save to Firestore
   };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -468,7 +547,7 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
     }
     
     const today = startOfDay(new Date());
-    if (isBefore(finalStartDateForAI, today)) {
+    if (isBefore(startOfDay(finalStartDateForAI), today)) {
         toast({ title: "Date de début passée", description: "La date de début du plan ne peut pas être dans le passé.", variant: "destructive"});
         setIsLoading(false);
         return;
@@ -505,21 +584,21 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
     }
 
     const availableFoodsForAI = likedFoodsList.join("\n");
-    const foodsToAvoidForAI = foodsToAvoidList.join("\n");
+    const foodsToAvoidForAI = foodsToAvoidList.length > 0 ? foodsToAvoidList : undefined;
 
     try {
       const mealPlanInput: GenerateMealPlanInput = {
         planName: values.planName,
         availableFoods: availableFoodsForAI,
-        foodsToAvoid: foodsToAvoidForAI.length > 0 ? foodsToAvoidForAI : undefined,
+        foodsToAvoid: foodsToAvoidForAI?.join("\n"),
         diabeticResearchSummary: values.diabeticResearchSummary,
         planDuration: planDurationForAI,
       };
       const result = await generateMealPlan(mealPlanInput);
       onMealPlanGenerated(result, values.planName);
       toast({
-        title: "Plan Repas Généré!",
-        description: "Votre nouveau plan repas est prêt.",
+        title: "Plan Alimentaire Généré!",
+        description: "Votre nouveau plan alimentaire est prêt.",
       });
     } catch (error: any) {
       console.error("Error generating meal plan:", error);
@@ -578,7 +657,7 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
             ),
         } : category
     );
-    savePreferencesToFirestore(updatedPrefs);
+    savePreferencesToFirestore(updatedPrefs); // Save to Firestore
     setIsNutritionalInfoDialogOpen(false);
     toast({ title: "Informations nutritionnelles mises à jour!", description: `Pour ${selectedFoodItemForNutritionalInfo.name}.` });
   };
@@ -600,57 +679,6 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
       description: "Votre configuration de formulaire a été enregistrée localement.",
     });
   };
-
-  const handleLoadSettings = useCallback(() => {
-    if (savedFormSettings) {
-      form.reset({
-        planName: savedFormSettings.planName || "",
-        diabeticResearchSummary: savedFormSettings.diabeticResearchSummary || defaultResearchSummary,
-      });
-      
-      setSelectionMode(savedFormSettings.selectionMode || 'dates');
-      const tomorrow = startOfDay(addDays(new Date(), 1));
-
-      let newStartDate = startDate;
-      if (savedFormSettings.startDate) {
-        const parsed = parseISO(savedFormSettings.startDate);
-        if (isValid(parsed)) newStartDate = startOfDay(parsed);
-      }
-      setStartDate(newStartDate || tomorrow);
-
-      let newEndDate = endDate; 
-      if (savedFormSettings.endDate) {
-        const parsedEnd = parseISO(savedFormSettings.endDate);
-        if (isValid(parsedEnd)) {
-            const startOfDayEnd = startOfDay(parsedEnd);
-            if (newStartDate && !isBefore(startOfDayEnd, newStartDate)) newEndDate = startOfDayEnd;
-            else if (!newStartDate) newEndDate = startOfDayEnd; 
-        }
-      }
-      setEndDate(newEndDate || newStartDate || tomorrow);
-      
-      setDurationInDays(savedFormSettings.durationInDays || "1");
-      let newDurationModeStartDate = durationModeStartDate;
-      if (savedFormSettings.durationModeStartDate) {
-        const parsedDurationStart = parseISO(savedFormSettings.durationModeStartDate);
-        if (isValid(parsedDurationStart)) newDurationModeStartDate = startOfDay(parsedDurationStart);
-      }
-      setDurationModeStartDate(newDurationModeStartDate || tomorrow);
-      
-      toast({
-        title: "Paramètres chargés!",
-        description: "Votre configuration de formulaire locale a été restaurée.",
-      });
-    } else {
-      toast({
-        title: "Aucun paramètre trouvé",
-        description: "Aucun paramètre de formulaire local n'a été trouvé.",
-        variant: "destructive",
-      });
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [savedFormSettings, form, setFoodCategoriesInStorage, isClient]); 
-
 
   const handleAddNewFoodChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -681,7 +709,7 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
     if(foodAlreadyExists) return;
 
     const newFoodItem: FoodItem = {
-      id: `custom-${Date.now()}`,
+      id: `custom-${Date.now()}-${Math.random().toString(36).substring(2,9)}`, // Slightly more unique ID
       name: newFoodData.name.trim(),
       ig: newFoodData.ig || "(IG: N/A)",
       calories: newFoodData.calories || "",
@@ -706,7 +734,7 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
       }
       return cat;
     });
-    savePreferencesToFirestore(updatedPreferences);
+    savePreferencesToFirestore(updatedPreferences); // Save to Firestore
 
     toast({
       title: "Aliment ajouté!",
@@ -716,12 +744,10 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
     setNewFoodData(initialNewFoodData);
   };
 
-
   if (!isClient || isDataLoading) {
     return (
       <div className="space-y-6">
-        <Card className="shadow-lg"><CardHeader><CardTitle className="text-lg font-semibold">Chargement...</CardTitle></CardHeader><CardContent className="flex justify-center items-center h-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></CardContent></Card>
-        <Card className="shadow-lg"><CardHeader><CardTitle className="text-lg font-semibold">Chargement...</CardTitle></CardHeader><CardContent className="flex justify-center items-center h-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></CardContent></Card>
+        <Card className="shadow-lg"><CardHeader><CardTitle className="text-lg font-semibold">Chargement de la configuration...</CardTitle></CardHeader><CardContent className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin text-primary" /></CardContent></Card>
       </div>
     );
   }
@@ -730,7 +756,6 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <Accordion type="multiple" defaultValue={["config-base-item", "prefs-aliments-item"]} className="w-full space-y-6">
-         
           <AccordionItem value="config-base-item" className="border-b-0">
              <Card className="shadow-lg">
                 <AccordionTrigger className="w-full text-left p-0 hover:no-underline group">
@@ -779,8 +804,8 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                         </RadioGroup>
 
                         {selectionMode === 'dates' && (
-                          <div className="space-y-3 sm:space-y-0 sm:flex sm:flex-row sm:gap-3 sm:items-end">
-                            <div className="w-full sm:flex-1">
+                          <div className="space-y-3 md:space-y-0 md:flex md:flex-row md:gap-3 md:items-end">
+                            <div className="w-full md:flex-1">
                               <Label htmlFor="start-date-picker" className="text-sm font-medium mb-1 block">Date de début</Label>
                               <Popover open={isStartDatePickerOpen} onOpenChange={setIsStartDatePickerOpen}>
                                 <PopoverTrigger asChild>
@@ -802,18 +827,18 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                                         const newStartDate = startOfDay(date);
                                         setStartDate(newStartDate);
                                         if (endDate && isBefore(endDate, newStartDate)) {
-                                          setEndDate(new Date(newStartDate));
+                                          setEndDate(new Date(newStartDate)); // Set end date to start date if it becomes invalid
                                         }
                                       }
                                       setIsStartDatePickerOpen(false);
                                     }}
-                                    disabled={(date) => isBefore(startOfDay(date), startOfDay(addDays(new Date(),1)))}
+                                    disabled={(date) => isBefore(startOfDay(date), startOfDay(new Date()))} // Can't select past dates
                                     initialFocus
                                   />
                                 </PopoverContent>
                               </Popover>
                             </div>
-                            <div className="w-full sm:flex-1">
+                            <div className="w-full md:flex-1">
                               <Label htmlFor="end-date-picker" className="text-sm font-medium mb-1 block">Date de fin</Label>
                               <Popover open={isEndDatePickerOpen} onOpenChange={setIsEndDatePickerOpen}>
                                 <PopoverTrigger asChild>
@@ -834,14 +859,14 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                                     onSelect={(date) => {
                                       if (date && startDate && isValid(startDate)) {
                                         const newEndDate = startOfDay(date);
-                                        if (!isBefore(newEndDate, startDate)) {
+                                        if (!isBefore(newEndDate, startDate)) { // End date must be after or same as start date
                                             setEndDate(newEndDate);
                                         }
                                       }
                                       setIsEndDatePickerOpen(false);
                                     }}
                                     disabled={(date) => {
-                                      const minDate = startDate && isValid(startDate) ? new Date(startDate) : startOfDay(addDays(new Date(),1)); 
+                                      const minDate = startDate && isValid(startDate) ? new Date(startDate) : startOfDay(new Date()); 
                                       return isBefore(startOfDay(date), minDate);
                                     }}
                                     initialFocus
@@ -849,15 +874,15 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                                 </PopoverContent>
                               </Popover>
                             </div>
-                            <div className="w-full sm:w-auto sm:min-w-[80px] text-sm text-primary h-10 flex items-center justify-center sm:justify-start pt-1">
+                            <div className="w-full md:w-auto md:min-w-[100px] text-sm text-primary h-10 flex items-center justify-start md:justify-center pt-1 md:pt-0">
                               {displayDurationFromDates !== "Durée invalide" && displayDurationFromDates}
                             </div>
                           </div>
                         )}
 
                         {selectionMode === 'duration' && (
-                           <div className="space-y-3 sm:space-y-0 sm:flex sm:flex-row sm:gap-3 sm:items-end">
-                            <div className="w-full sm:flex-1">
+                           <div className="space-y-3 md:space-y-0 md:flex md:flex-row md:gap-3 md:items-end">
+                             <div className="w-full md:flex-1">
                                <Label htmlFor="duration-mode-start-date-picker" className="text-sm font-medium mb-1 block">Date de début</Label>
                                <Popover open={isDurationModeStartDatePickerOpen} onOpenChange={setIsDurationModeStartDatePickerOpen}>
                                 <PopoverTrigger asChild>
@@ -881,13 +906,13 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                                       }
                                       setIsDurationModeStartDatePickerOpen(false);
                                     }}
-                                     disabled={(date) => isBefore(startOfDay(date), startOfDay(addDays(new Date(),1)))}
+                                     disabled={(date) => isBefore(startOfDay(date), startOfDay(new Date()))} // Can't select past dates
                                     initialFocus
                                   />
                                 </PopoverContent>
                               </Popover>
                             </div>
-                            <div className="w-full sm:w-24">
+                            <div className="w-full md:w-24">
                               <Label htmlFor="duration-input-field" className="text-sm font-medium mb-1 block">Jour(s)</Label>
                               <Input
                                 id="duration-input-field"
@@ -899,7 +924,7 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                                 placeholder="Jours"
                               />
                             </div>
-                            <div className="w-full sm:flex-1 text-sm text-primary h-10 flex items-center justify-center sm:justify-start pt-1">
+                            <div className="w-full md:flex-1 text-sm text-primary h-10 flex items-center justify-start md:justify-start pt-1 md:pt-0">
                                 {displayEndDateFromDuration && isValid(displayEndDateFromDuration) && (
                                     <div>
                                         <span className="font-medium text-muted-foreground">Fin du plan : </span>
@@ -925,7 +950,7 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                       <CardTitle className="text-lg font-semibold">Préférences alimentaires</CardTitle>
                     </div>
                   </AccordionTrigger>
-                  <Button
+                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
@@ -953,7 +978,7 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                           return (
                               <AccordionItem value={category.categoryName} key={category.categoryName} className="border-b-0 last:border-b-0">
                               <AccordionTrigger className="py-3 px-2 hover:no-underline hover:bg-muted/50 rounded-md flex-1">
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2"> {/* Group icon and title */}
                                   <CategoryIcon className="h-4 w-4 text-secondary-foreground" />
                                   <span className="text-md font-semibold text-primary">{category.categoryName}</span>
                                 </div>
@@ -1048,6 +1073,7 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                 onClick={handleLoadSettings}
                 className="w-full flex-1"
                 disabled={!isClient || (!savedFormSettings && (typeof window !== 'undefined' && !localStorage.getItem("diabeatz-form-settings")))}
+
             >
                 <Upload className="mr-2 h-4 w-4" />
                 Charger les paramètres
@@ -1071,7 +1097,7 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
         <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="conseils-aliments-item" className="border-b-0">
                 <Card className="shadow-lg">
-                   <AccordionTrigger className="w-full text-left p-0 hover:no-underline group">
+                  <AccordionTrigger className="w-full text-left p-0 hover:no-underline group">
                       <CardHeader className="flex flex-row items-center justify-between w-full p-4">
                         <div className="flex items-center gap-2">
                           <BookOpenText className="h-5 w-5 text-secondary-foreground" />
@@ -1083,23 +1109,15 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                     </AccordionTrigger>
                     <AccordionContent className="pt-0">
                         <CardContent>
-                             <FormField
-                                control={form.control}
-                                name="diabeticResearchSummary"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <RichTextDisplay text={field.value} />
-                                        <Button
-                                            type="button"
-                                            variant="link"
-                                            onClick={handleOpenEditTipsDialog}
-                                            className="text-sm p-0 h-auto mt-2"
-                                        >
-                                            Modifier les conseils
-                                        </Button>
-                                    </FormItem>
-                                )}
-                            />
+                            <RichTextDisplay text={form.watch('diabeticResearchSummary')} />
+                            <Button
+                                type="button"
+                                variant="link"
+                                onClick={handleOpenEditTipsDialog}
+                                className="text-sm p-0 h-auto mt-2"
+                            >
+                                Modifier les conseils
+                            </Button>
                         </CardContent>
                     </AccordionContent>
                 </Card>
@@ -1281,6 +1299,7 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                         <Textarea
                           id={`new-food-${key}`}
                           name={key}
+                          // @ts-ignore
                           value={newFoodData[key as keyof NewFoodData] || ""}
                           onChange={handleAddNewFoodChange}
                           className="col-span-3"
@@ -1290,6 +1309,7 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                         <Input
                           id={`new-food-${key}`}
                           name={key}
+                          // @ts-ignore
                           value={newFoodData[key as keyof NewFoodData] || ""}
                           onChange={handleAddNewFoodChange}
                           className="col-span-3"
