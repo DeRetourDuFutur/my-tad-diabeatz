@@ -57,7 +57,10 @@ export interface Medication {
   id: string;
   name: string;
   description: string; // Rôle du médicament
+  strength?: string; // ex: "500mg", "10mg/ml"
+  form?: string; // ex: "Comprimé", "Gélule", "Sirop"
   stock: number; // Quantité restante
-  dosage: string; // Posologie
-  // On pourrait ajouter: unité (comprimés, ml, etc.), date de péremption, notes...
+  lowStockThreshold?: number; // Seuil pour alerte de stock bas
+  instructions: string; // Posologie et instructions de prise
 }
+

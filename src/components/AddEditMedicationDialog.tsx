@@ -30,8 +30,11 @@ import { Textarea } from "@/components/ui/textarea";
 const medicationSchema = z.object({
   name: z.string().min(1, { message: "Le nom est requis." }),
   description: z.string().min(1, { message: "La description/rôle est requise." }),
+  strength: z.string().optional(),
+  form: z.string().optional(),
   stock: z.coerce.number().min(0, { message: "Le stock ne peut pas être négatif." }).default(0),
-  dosage: z.string().min(1, { message: "La posologie est requise." }),
+  lowStockThreshold: z.coerce.number().min(0, { message: "Le seuil ne peut être négatif." }).optional(),
+  instructions: z.string().min(1, { message: "Les instructions de prise sont requises." }),
 });
 
 type MedicationFormData = z.infer<typeof medicationSchema>;
@@ -54,26 +57,35 @@ export function AddEditMedicationDialog({
     defaultValues: {
       name: "",
       description: "",
+      strength: "",
+      form: "",
       stock: 0,
-      dosage: "",
+      lowStockThreshold: undefined, // Default to undefined if optional
+      instructions: "",
     },
   });
 
   useEffect(() => {
-    if (isOpen) { // Reset form only when dialog opens
+    if (isOpen) {
       if (medicationToEdit) {
         form.reset({
           name: medicationToEdit.name,
           description: medicationToEdit.description,
+          strength: medicationToEdit.strength || "",
+          form: medicationToEdit.form || "",
           stock: medicationToEdit.stock,
-          dosage: medicationToEdit.dosage,
+          lowStockThreshold: medicationToEdit.lowStockThreshold === undefined ? undefined : medicationToEdit.lowStockThreshold,
+          instructions: medicationToEdit.instructions,
         });
       } else {
-        form.reset({ // Reset to default for "add new"
+        form.reset({
           name: "",
           description: "",
+          strength: "",
+          form: "",
           stock: 0,
-          dosage: "",
+          lowStockThreshold: undefined,
+          instructions: "",
         });
       }
     }
@@ -85,15 +97,24 @@ export function AddEditMedicationDialog({
     } else {
       onSave(data);
     }
-    // onOpenChange(false); // Closing is handled by the parent after save for better UX
+    // onOpenChange(false); // Closing is handled by the parent
   };
+
+  const handleCloseDialog = () => {
+    form.reset({ 
+        name: "", description: "", strength: "", form: "", 
+        stock: 0, lowStockThreshold: undefined, instructions: "" 
+    });
+    onOpenChange(false);
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
-      if (!open) { // If dialog is closing, reset form state if needed
-        form.reset({ name: "", description: "", stock: 0, dosage: "" });
+      if (!open) {
+        handleCloseDialog();
+      } else {
+        onOpenChange(open);
       }
-      onOpenChange(open);
     }}>
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
@@ -107,7 +128,7 @@ export function AddEditMedicationDialog({
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-2">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 py-2 max-h-[70vh] overflow-y-auto pr-2">
             <FormField
               control={form.control}
               name="name"
@@ -115,7 +136,33 @@ export function AddEditMedicationDialog({
                 <FormItem>
                   <FormLabel>Nom du médicament</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ex: Metformine 500mg" {...field} />
+                    <Input placeholder="Ex: Metformine" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="strength"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Force / Dosage</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ex: 500mg, 10 UI/mL" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="form"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Forme</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ex: Comprimé, Gélule, Sirop" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -136,13 +183,12 @@ export function AddEditMedicationDialog({
             />
             <FormField
               control={form.control}
-              name="stock"
+              name="instructions"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Stock actuel (unités)</FormLabel>
+                  <FormLabel>Instructions de prise</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="Ex: 30" {...field} 
-                      onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)} />
+                    <Textarea placeholder="Ex: 1 comprimé matin et soir au milieu du repas" {...field} rows={3} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -150,12 +196,37 @@ export function AddEditMedicationDialog({
             />
             <FormField
               control={form.control}
-              name="dosage"
+              name="stock"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Posologie</FormLabel>
+                  <FormLabel>Stock actuel (unités)</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ex: 1 comprimé matin et soir" {...field} />
+                    <Input 
+                      type="number" 
+                      placeholder="Ex: 30" 
+                      {...field} 
+                      value={field.value === undefined ? '' : field.value}
+                      onChange={e => field.onChange(e.target.value === '' ? undefined : parseInt(e.target.value, 10))}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="lowStockThreshold"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Seuil de stock bas (optionnel)</FormLabel>
+                  <FormControl>
+                  <Input 
+                    type="number" 
+                    placeholder="Ex: 10" 
+                    {...field}
+                    value={field.value === undefined ? '' : field.value} // Handle undefined for empty input
+                    onChange={e => field.onChange(e.target.value === '' ? undefined : parseInt(e.target.value, 10))} 
+                   />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -163,10 +234,7 @@ export function AddEditMedicationDialog({
             />
             <DialogFooter className="pt-4">
               <DialogClose asChild>
-                <Button type="button" variant="outline" onClick={() => {
-                  form.reset({ name: "", description: "", stock: 0, dosage: "" });
-                  onOpenChange(false);
-                }}>
+                <Button type="button" variant="outline" onClick={handleCloseDialog}>
                   Annuler
                 </Button>
               </DialogClose>
