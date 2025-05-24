@@ -7,8 +7,8 @@ import { AppHeader } from "@/components/app-header";
 import { MealPlanForm } from "@/components/meal-plan-form";
 import { MealPlanDisplay } from "@/components/meal-plan-display";
 import { SavedMealPlans } from "@/components/saved-meal-plans";
-import { MedicationManagementCard } from "@/components/MedicationManagementCard"; // Nouveau
-import { AddEditMedicationDialog } from "@/components/AddEditMedicationDialog"; // Nouveau
+import { MedicationManagementCard } from "@/components/MedicationManagementCard";
+import { AddEditMedicationDialog } from "@/components/AddEditMedicationDialog";
 import { SavePlanDialog } from "@/components/save-plan-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -16,9 +16,10 @@ import { Terminal, Loader2 } from "lucide-react";
 
 import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, doc, deleteDoc, setDoc, query, orderBy, Timestamp } from 'firebase/firestore';
-import useLocalStorage from "@/hooks/use-local-storage"; // Pour les médicaments
+import useLocalStorage from "@/hooks/use-local-storage";
 
 const initialSavedPlans: StoredMealPlan[] = [];
+const initialMedications: Medication[] = []; // Stable reference for initial medications
 
 export default function HomePage() {
   const [currentMealPlan, setCurrentMealPlan] = useState<GenerateMealPlanOutput | null>(null);
@@ -33,10 +34,9 @@ export default function HomePage() {
   const [aiError, setAiError] = useState<string | null>(null);
   const [hasMounted, setHasMounted] = useState(false);
 
-  // États pour la gestion des médicaments
-  const [medications, setMedications] = useLocalStorage<Medication[]>('diabeatz-medications', []);
-  const [isAddMedicationDialogOpen, setIsAddMedicationDialogOpen] = useState(false);
-  // const [editingMedication, setEditingMedication] = useState<Medication | null>(null); // Pour l'édition future
+  const [medications, setMedications] = useLocalStorage<Medication[]>('diabeatz-medications', initialMedications);
+  const [isAddEditMedicationDialogOpen, setIsAddEditMedicationDialogOpen] = useState(false);
+  const [editingMedication, setEditingMedication] = useState<Medication | null>(null);
 
   useEffect(() => {
     setHasMounted(true);
@@ -76,6 +76,7 @@ export default function HomePage() {
     setCurrentMealPlanId(null); 
     setCurrentMealPlanName(planName || ""); 
     setAiError(null);
+    toast({ title: "Plan Généré!", description: "Votre nouveau plan alimentaire est prêt." });
   };
 
   const handleGenerationError = (errorMsg: string) => {
@@ -161,33 +162,38 @@ export default function HomePage() {
   
   const displayableSavedPlans = hasMounted ? savedPlans : [];
 
-  // Fonctions pour les médicaments
   const handleOpenAddMedicationDialog = () => {
-    // setEditingMedication(null); // Assure qu'on est en mode ajout
-    setIsAddMedicationDialogOpen(true);
+    setEditingMedication(null);
+    setIsAddEditMedicationDialogOpen(true);
   };
 
-  const handleSaveMedication = (medicationData: Omit<Medication, 'id'>) => {
-    const newMedication: Medication = {
-      id: `med-${Date.now()}`, // Simple ID generation
-      ...medicationData,
-    };
-    setMedications(prevMeds => [...prevMeds, newMedication].sort((a, b) => a.name.localeCompare(b.name)));
-    toast({ title: "Médicament Ajouté!", description: `${newMedication.name} a été ajouté à votre liste.` });
-    setIsAddMedicationDialogOpen(false);
+  const handleSaveMedication = (medicationData: Omit<Medication, 'id'> | Medication) => {
+    if ('id' in medicationData && medicationData.id) { // Editing existing medication
+      setMedications(prevMeds => 
+        prevMeds.map(med => med.id === medicationData.id ? { ...med, ...medicationData } : med)
+        .sort((a, b) => a.name.localeCompare(b.name))
+      );
+      toast({ title: "Médicament Modifié!", description: `${medicationData.name} a été mis à jour.` });
+    } else { // Adding new medication
+      const newMedication: Medication = {
+        id: `med-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        ...medicationData,
+      };
+      setMedications(prevMeds => [...prevMeds, newMedication].sort((a, b) => a.name.localeCompare(b.name)));
+      toast({ title: "Médicament Ajouté!", description: `${newMedication.name} a été ajouté à votre liste.` });
+    }
+    setIsAddEditMedicationDialogOpen(false);
+    setEditingMedication(null);
   };
 
-  // Placeholder pour futures fonctions
   const handleEditMedicationItem = (medication: Medication) => {
-    // setEditingMedication(medication);
-    // setIsAddMedicationDialogOpen(true);
-    toast({ title: "Info", description: "La fonction d'édition sera bientôt disponible."});
+    setEditingMedication(medication);
+    setIsAddEditMedicationDialogOpen(true);
   };
 
   const handleDeleteMedicationItem = (medicationId: string) => {
-    // setMedications(prevMeds => prevMeds.filter(med => med.id !== medicationId));
-    // toast({ title: "Médicament Supprimé", variant: "destructive" });
-    toast({ title: "Info", description: "La fonction de suppression sera bientôt disponible."});
+    setMedications(prevMeds => prevMeds.filter(med => med.id !== medicationId));
+    toast({ title: "Médicament Supprimé", variant: "destructive" });
   };
 
 
@@ -238,10 +244,10 @@ export default function HomePage() {
         initialName={currentMealPlanName || (currentMealPlan?.days?.length ? `Mon Plan ${new Date().toLocaleDateString('fr-FR')}`: "")}
       />
       <AddEditMedicationDialog
-        isOpen={isAddMedicationDialogOpen}
-        onOpenChange={setIsAddMedicationDialogOpen}
+        isOpen={isAddEditMedicationDialogOpen}
+        onOpenChange={setIsAddEditMedicationDialogOpen}
         onSave={handleSaveMedication}
-        // medicationToEdit={editingMedication} // Pour l'édition future
+        medicationToEdit={editingMedication}
       />
        <footer className="text-center p-4 text-sm text-muted-foreground border-t">
         © {new Date().getFullYear()} DiabEatz. Tous droits réservés.

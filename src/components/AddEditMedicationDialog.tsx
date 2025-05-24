@@ -30,7 +30,7 @@ import { Textarea } from "@/components/ui/textarea";
 const medicationSchema = z.object({
   name: z.string().min(1, { message: "Le nom est requis." }),
   description: z.string().min(1, { message: "La description/rôle est requise." }),
-  stock: z.coerce.number().min(0, { message: "Le stock ne peut pas être négatif." }),
+  stock: z.coerce.number().min(0, { message: "Le stock ne peut pas être négatif." }).default(0),
   dosage: z.string().min(1, { message: "La posologie est requise." }),
 });
 
@@ -39,7 +39,7 @@ type MedicationFormData = z.infer<typeof medicationSchema>;
 type AddEditMedicationDialogProps = {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onSave: (data: Omit<Medication, 'id'>) => void;
+  onSave: (data: MedicationFormData | (MedicationFormData & { id: string })) => void;
   medicationToEdit?: Medication | null;
 };
 
@@ -60,25 +60,41 @@ export function AddEditMedicationDialog({
   });
 
   useEffect(() => {
-    if (medicationToEdit) {
-      form.reset(medicationToEdit);
-    } else {
-      form.reset({
-        name: "",
-        description: "",
-        stock: 0,
-        dosage: "",
-      });
+    if (isOpen) { // Reset form only when dialog opens
+      if (medicationToEdit) {
+        form.reset({
+          name: medicationToEdit.name,
+          description: medicationToEdit.description,
+          stock: medicationToEdit.stock,
+          dosage: medicationToEdit.dosage,
+        });
+      } else {
+        form.reset({ // Reset to default for "add new"
+          name: "",
+          description: "",
+          stock: 0,
+          dosage: "",
+        });
+      }
     }
-  }, [medicationToEdit, form, isOpen]); // Re-run when isOpen changes to reset form on new "add"
+  }, [medicationToEdit, form, isOpen]);
 
   const handleSubmit = (data: MedicationFormData) => {
-    onSave(data);
-    onOpenChange(false); // Close dialog on save
+    if (medicationToEdit && medicationToEdit.id) {
+      onSave({ ...data, id: medicationToEdit.id });
+    } else {
+      onSave(data);
+    }
+    // onOpenChange(false); // Closing is handled by the parent after save for better UX
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      if (!open) { // If dialog is closing, reset form state if needed
+        form.reset({ name: "", description: "", stock: 0, dosage: "" });
+      }
+      onOpenChange(open);
+    }}>
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
           <DialogTitle>
@@ -125,7 +141,8 @@ export function AddEditMedicationDialog({
                 <FormItem>
                   <FormLabel>Stock actuel (unités)</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="Ex: 30" {...field} />
+                    <Input type="number" placeholder="Ex: 30" {...field} 
+                      onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -146,7 +163,10 @@ export function AddEditMedicationDialog({
             />
             <DialogFooter className="pt-4">
               <DialogClose asChild>
-                <Button type="button" variant="outline">
+                <Button type="button" variant="outline" onClick={() => {
+                  form.reset({ name: "", description: "", stock: 0, dosage: "" });
+                  onOpenChange(false);
+                }}>
                   Annuler
                 </Button>
               </DialogClose>
