@@ -30,7 +30,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import useLocalStorage from "@/hooks/use-local-storage";
-import type { FoodCategory, FoodItem, FormSettings } from "@/lib/types"; 
+import type { FoodCategory, FoodItem, FormSettings, EditableNutritionalInfo, NewFoodData } from "@/lib/types";
 import { initialFoodCategories } from "@/lib/food-data";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -63,7 +63,6 @@ import { Alert, AlertTitle, AlertDescription as AlertDescriptionShadcn } from "@
 
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
-
 
 const formSchema = z.object({
   planName: z.string().optional(),
@@ -184,30 +183,6 @@ const RichTextDisplay: React.FC<{ text: string }> = ({ text }) => {
   return <div className="prose prose-sm dark:prose-invert max-w-none">{elements}</div>;
 };
 
-type EditableNutritionalInfo = {
-  calories?: string;
-  carbs?: string;
-  protein?: string;
-  fat?: string;
-  sugars?: string;
-  fiber?: string;
-  sodium?: string;
-  notes?: string;
-};
-
-type NewFoodData = {
-  name: string;
-  categoryName: string;
-  ig: string;
-  calories?: string;
-  carbs?: string;
-  protein?: string;
-  fat?: string;
-  sugars?: string;
-  fiber?: string;
-  sodium?: string;
-  notes?: string;
-};
 
 const initialNewFoodData: NewFoodData = {
   name: "",
@@ -238,10 +213,10 @@ const categoryIcons: Record<string, React.ElementType> = {
 
 export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPlanFormProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [isDataLoading, setIsDataLoading] = useState(true);
+  const [isDataLoading, setIsDataLoading] = useState(true); // Start as true
   const { toast } = useToast();
   
-  const [foodCategoriesFromStorage, setFoodCategoriesInStorage] = useState<FoodCategory[]>(initialFoodCategories);
+  const [foodCategoriesFromStorage, setFoodCategoriesInStorage] = useLocalStorage<FoodCategory[]>("diabeatz-food-preferences", initialFoodCategories);
   const [processedFoodCategories, setProcessedFoodCategories] = useState<FoodCategory[]>(initialFoodCategories);
   
   const [isClient, setIsClient] = useState(false);
@@ -294,15 +269,22 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
       if (savedFormSettings.startDate) {
         const parsedStart = parseISO(savedFormSettings.startDate);
         if (isValid(parsedStart)) setStartDate(startOfDay(parsedStart));
+      } else {
+        setStartDate(addDays(new Date(),1)); // Default if not in settings
       }
+
       if (savedFormSettings.endDate) {
         const parsedEnd = parseISO(savedFormSettings.endDate);
-        if (isValid(parsedEnd)) {
+         if (isValid(parsedEnd)) {
             const startOfDayEnd = startOfDay(parsedEnd);
-            const currentStartDate = savedFormSettings.startDate ? startOfDay(parseISO(savedFormSettings.startDate)) : null;
-            if (currentStartDate && !isBefore(startOfDayEnd, currentStartDate)) setEndDate(startOfDayEnd);
-            else if (!currentStartDate) setEndDate(startOfDayEnd);
+            const currentStartDate = savedFormSettings.startDate ? startOfDay(parseISO(savedFormSettings.startDate)) : addDays(new Date(),1);
+            if (!isBefore(startOfDayEnd, currentStartDate)) setEndDate(startOfDayEnd);
+            else setEndDate(new Date(currentStartDate)); 
+         } else {
+            setEndDate(addDays(new Date(),1)); // Default
          }
+      } else {
+         setEndDate(addDays(new Date(),1)); // Default
       }
       
       setDurationInDays(savedFormSettings.durationInDays || "1");
@@ -310,34 +292,34 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
       if (savedFormSettings.durationModeStartDate) {
         const parsedDurationStart = parseISO(savedFormSettings.durationModeStartDate);
         if (isValid(parsedDurationStart)) setDurationModeStartDate(startOfDay(parsedDurationStart));
+        else setDurationModeStartDate(addDays(new Date(),1));
+      } else {
+         setDurationModeStartDate(addDays(new Date(),1));
       }
       
       toast({
         title: "Paramètres chargés!",
         description: "Votre configuration de formulaire locale a été restaurée.",
       });
+    } else {
+       // Set initial default values if no settings are loaded
+        const tomorrow = startOfDay(addDays(new Date(), 1));
+        setStartDate(tomorrow);
+        setEndDate(tomorrow);
+        setDurationInDays("1");
+        setDurationModeStartDate(tomorrow);
+        setSelectionMode('dates');
     }
   }, [savedFormSettings, form, toast]);
   
 
   useEffect(() => {
     setIsClient(true);
-  }, []);
-
-  useEffect(() => {
-    if (isClient) {
-      if (savedFormSettings) {
+    if (typeof window !== "undefined") { // Ensure this runs client-side
         handleLoadSettings();
-      } else {
-        // Set initial default values if no settings are loaded
-        const tomorrow = startOfDay(addDays(new Date(), 1));
-        setStartDate(tomorrow);
-        setEndDate(tomorrow); // Default to 1 day duration
-        setDurationModeStartDate(tomorrow);
-        setDurationInDays("1");
-      }
     }
-  }, [isClient, savedFormSettings, handleLoadSettings]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isClient, savedFormSettings]); // handleLoadSettings is memoized
 
 
   const fetchPreferences = useCallback(async () => {
@@ -352,10 +334,10 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
           setFoodCategoriesInStorage(data.preferences as FoodCategory[]);
         } else {
           setFoodCategoriesInStorage(initialFoodCategories);
-          await setDoc(prefDocRef, { preferences: initialFoodCategories, lastUpdated: Timestamp.now() });
+          // await setDoc(prefDocRef, { preferences: initialFoodCategories, lastUpdated: Timestamp.now() });
         }
       } else {
-        await setDoc(prefDocRef, { preferences: initialFoodCategories, lastUpdated: Timestamp.now() });
+        // await setDoc(prefDocRef, { preferences: initialFoodCategories, lastUpdated: Timestamp.now() });
         setFoodCategoriesInStorage(initialFoodCategories);
       }
     } catch (error) {
@@ -377,14 +359,27 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
       if (storedOrFetchedCat) {
         const mergedItems = initialCat.items.map(initItem => {
           const storedOrFetchedItem = storedOrFetchedCat.items.find(si => si.id === initItem.id || si.name === initItem.name);
-          return { ...initItem, ...(storedOrFetchedItem || {}) };
+          return { 
+            ...initItem, 
+            ...(storedOrFetchedItem || {}),
+            // Ensure all nutritional fields are present, defaulting from initial if missing
+            calories: storedOrFetchedItem?.calories ?? initItem.calories,
+            carbs: storedOrFetchedItem?.carbs ?? initItem.carbs,
+            protein: storedOrFetchedItem?.protein ?? initItem.protein,
+            fat: storedOrFetchedItem?.fat ?? initItem.fat,
+            sugars: storedOrFetchedItem?.sugars ?? initItem.sugars,
+            fiber: storedOrFetchedItem?.fiber ?? initItem.fiber,
+            sodium: storedOrFetchedItem?.sodium ?? initItem.sodium,
+            notes: storedOrFetchedItem?.notes ?? initItem.notes,
+          };
         });
          storedOrFetchedCat.items.forEach(sfi => {
             if (!mergedItems.some(mi => mi.id === sfi.id || mi.name === sfi.name)) {
+                 const baseItemTemplate = initialFoodCategories.flatMap(cat => cat.items).find(it => it.id.startsWith('fruit')) || initialFoodCategories[0]?.items[0] || {};
                 mergedItems.push({ 
-                    ...initialFoodCategories[0]?.items[0], 
-                    ...sfi,
-                    id: sfi.id || `custom-${Date.now()}-${Math.random().toString(36).substring(2,9)}`,
+                    ...baseItemTemplate, // spread a generic template
+                    ...sfi, // then spread the specific item from storage
+                    id: sfi.id || `custom-${Date.now()}-${Math.random().toString(36).substring(2,9)}`, // ensure id
                     isFavorite: sfi.isFavorite || false,
                     isDisliked: sfi.isDisliked || false,
                     isAllergenic: sfi.isAllergenic || false,
@@ -406,6 +401,7 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
 
   const savePreferencesToFirestore = async (updatedPreferences: FoodCategory[]) => {
     if (!isClient) return;
+    setIsDataLoading(true);
     const prefDocRef = doc(db, "userSettings", "globalFoodPreferences");
     try {
       await setDoc(prefDocRef, { preferences: updatedPreferences, lastUpdated: Timestamp.now() });
@@ -415,12 +411,13 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
       console.error("Error saving food preferences to Firestore:", error);
       toast({ title: "Erreur de sauvegarde", description: "Impossible de sauvegarder les préférences.", variant: "destructive" });
     }
+    setIsDataLoading(false);
   };
 
 
   useEffect(() => {
-    if (isClient && selectionMode === 'dates' && startDate && endDate && isValid(startDate) && isValid(endDate) && !isBefore(endDate, startDate)) {
-      const diff = differenceInDays(endDate, startDate) + 1;
+    if (isClient && selectionMode === 'dates' && startDate && endDate && isValid(startDate) && isValid(endDate) && !isBefore(startOfDay(endDate), startOfDay(startDate))) {
+      const diff = differenceInDays(startOfDay(endDate), startOfDay(startDate)) + 1;
       setDisplayDurationFromDates(`${diff} jour${diff > 1 ? 's' : ''}`);
     } else if (isClient && selectionMode === 'dates') {
       setDisplayDurationFromDates("Durée invalide");
@@ -431,7 +428,7 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
     if (isClient && selectionMode === 'duration' && durationModeStartDate && isValid(durationModeStartDate)) {
       const numDays = parseInt(durationInDays, 10);
       if (!isNaN(numDays) && numDays >= 1 && numDays <= 365) {
-        const newEndDate = addDays(durationModeStartDate, numDays - 1);
+        const newEndDate = addDays(startOfDay(durationModeStartDate), numDays - 1);
         setDisplayEndDateFromDuration(newEndDate);
       } else {
         setDisplayEndDateFromDuration(undefined);
@@ -494,8 +491,8 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
     let finalStartDateForAI: Date | undefined;
 
     if (selectionMode === 'dates') {
-      if (startDate && endDate && isValid(startDate) && isValid(endDate) && !isBefore(endDate, startDate)) {
-        const diff = differenceInDays(endDate, startDate) + 1;
+      if (startDate && endDate && isValid(startDate) && isValid(endDate) && !isBefore(startOfDay(endDate), startOfDay(startDate))) {
+        const diff = differenceInDays(startOfDay(endDate), startOfDay(startDate)) + 1;
         planDurationForAI = `${diff} jour${diff > 1 ? 's' : ''}`;
         finalStartDateForAI = startDate;
       } else {
@@ -577,7 +574,12 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
       });
     } catch (error: any) {
       console.error("Error generating meal plan:", error);
-      const errorMessage = error.message || "Impossible de générer le plan repas. Veuillez réessayer.";
+      let errorMessage = "Impossible de générer le plan repas. Veuillez réessayer.";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
       toast({
         title: "Erreur de Génération",
         description: errorMessage,
@@ -734,14 +736,14 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
           
           <AccordionItem value="config-base-item" className="border-b-0">
             <Card className="shadow-lg">
-              <AccordionTrigger className="w-full text-left p-0 hover:no-underline group">
-                <CardHeader className="flex flex-row items-center justify-between w-full p-4">
-                  <div className="flex items-center gap-2">
-                    <Wand2 className="h-5 w-5 text-secondary-foreground" />
-                    <CardTitle className="text-lg font-semibold">Planification</CardTitle>
-                  </div>
-                </CardHeader>
-              </AccordionTrigger>
+                <AccordionTrigger className="w-full text-left p-0 hover:no-underline group">
+                    <CardHeader className="flex flex-row items-center justify-between w-full p-4">
+                        <div className="flex items-center gap-2">
+                        <Wand2 className="h-5 w-5 text-secondary-foreground" />
+                        <CardTitle className="text-lg font-semibold">Planification</CardTitle>
+                        </div>
+                    </CardHeader>
+                </AccordionTrigger>
               <AccordionContent className="pt-0">
                 <CardContent>
                   <FormField
@@ -801,7 +803,7 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                                   if (date) {
                                     const newStartDate = startOfDay(date);
                                     setStartDate(newStartDate);
-                                    if (endDate && isBefore(endDate, newStartDate)) {
+                                    if (endDate && isBefore(startOfDay(endDate), newStartDate)) {
                                       setEndDate(new Date(newStartDate)); 
                                     }
                                   }
@@ -834,14 +836,14 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                                 onSelect={(date) => {
                                   if (date && startDate && isValid(startDate)) {
                                     const newEndDate = startOfDay(date);
-                                    if (!isBefore(newEndDate, startDate)) { 
+                                    if (!isBefore(newEndDate, startOfDay(startDate))) { 
                                         setEndDate(newEndDate);
                                     }
                                   }
                                   setIsEndDatePickerOpen(false);
                                 }}
                                 disabled={(date) => {
-                                  const minDate = startDate && isValid(startDate) ? new Date(startDate) : startOfDay(new Date()); 
+                                  const minDate = startDate && isValid(startDate) ? startOfDay(startDate) : startOfDay(new Date()); 
                                   return isBefore(startOfDay(date), minDate);
                                 }}
                                 initialFocus
@@ -849,8 +851,8 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                             </PopoverContent>
                           </Popover>
                         </div>
-                        <div className="h-10 flex items-center justify-start sm:justify-center pt-1 sm:pt-0 text-sm text-primary">
-                          {displayDurationFromDates}
+                        <div className="h-10 flex items-center justify-start sm:justify-center text-sm text-primary pt-1 sm:pt-0">
+                           {displayDurationFromDates}
                         </div>
                       </div>
                     )}
@@ -917,33 +919,32 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
 
           <AccordionItem value="prefs-aliments-item" className="border-b-0">
             <Card className="shadow-lg">
-              <div className="flex flex-row items-center justify-between w-full p-4">
-                <AccordionTrigger className="flex-1 p-0 hover:no-underline group">
-                    <div className="flex items-center gap-2">
-                      <ListFilter className="h-5 w-5 text-secondary-foreground" />
-                      <CardTitle className="text-lg font-semibold">Préférences alimentaires</CardTitle>
-                    </div>
-                </AccordionTrigger>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="ml-4 shrink-0" 
-                  onClick={() => {
-                      setNewFoodData(initialNewFoodData);
-                      setAddFoodFormError(null);
-                      setIsAddFoodDialogOpen(true);
-                  }}
-                  >
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Ajouter un aliment
-                </Button>
-              </div>
+                <div className="flex flex-row items-center justify-between w-full p-4">
+                    <AccordionTrigger className="flex flex-1 items-center gap-2 p-0 hover:no-underline group">
+                         <ListFilter className="h-5 w-5 text-secondary-foreground" />
+                         <CardTitle className="text-lg font-semibold">Préférences alimentaires</CardTitle>
+                    </AccordionTrigger>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="ml-4 shrink-0" 
+                      onClick={() => {
+                          setNewFoodData(initialNewFoodData);
+                          setAddFoodFormError(null);
+                          setIsAddFoodDialogOpen(true);
+                      }}
+                      >
+                      <PlusCircle className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Ajouter un aliment</span>
+                      <span className="sm:hidden">Ajouter</span>
+                    </Button>
+                </div>
               <AccordionContent className="pt-0">
                   <CardContent>
                       <FormDescriptionComponentUI className="mb-2 text-xs">
                         Cochez vos aliments favoris, à éviter ou allergènes.
-                        <br/>
+                        <br />
                         Les aliments favoris seront privilégiés pour vos plans de repas.
                       </FormDescriptionComponentUI>
                       <div className="max-h-[400px] overflow-y-auto p-1 rounded-md border mt-2">
@@ -953,7 +954,7 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                           return (
                               <AccordionItem value={category.categoryName} key={category.categoryName} className="border-b-0 last:border-b-0">
                               <AccordionTrigger className="py-3 px-2 hover:no-underline hover:bg-muted/50 rounded-md">
-                                <div className="flex items-center gap-2 flex-1"> 
+                                <div className="flex flex-1 items-center gap-2"> 
                                   <CategoryIcon className="h-4 w-4 text-secondary-foreground" />
                                   <span className="text-md font-semibold text-primary">{category.categoryName}</span>
                                 </div>
@@ -1047,7 +1048,7 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                 variant="outline"
                 onClick={handleLoadSettings}
                 className="w-full sm:flex-1"
-                disabled={!isClient || !savedFormSettings}
+                disabled={!isClient || !savedFormSettings && (typeof window !== 'undefined' && !localStorage.getItem("diabeatz-form-settings"))}
             >
                 <Upload className="mr-2 h-4 w-4" />
                 Charger les paramètres
@@ -1068,7 +1069,7 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
         )}
         </Button>
         
-        <Accordion type="single" collapsible className="w-full">
+         <Accordion type="single" collapsible className="w-full">
              <AccordionItem value="conseils-aliments-item" className="border-b-0">
                 <Card className="shadow-lg">
                   <AccordionTrigger className="w-full text-left p-0 hover:no-underline group">
@@ -1083,7 +1084,7 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                   </AccordionTrigger>
                   <AccordionContent className="pt-0">
                       <CardContent>
-                          <RichTextDisplay text={form.watch('diabeticResearchSummary')} />
+                           <RichTextDisplay text={form.watch('diabeticResearchSummary')} />
                           <Button
                               type="button"
                               variant="link"
@@ -1273,7 +1274,6 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                         <Textarea
                           id={`new-food-${key}`}
                           name={key}
-                          
                           value={newFoodData[key as keyof NewFoodData] || ""}
                           onChange={handleAddNewFoodChange}
                           className="col-span-3"
@@ -1283,7 +1283,6 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                         <Input
                           id={`new-food-${key}`}
                           name={key}
-                          
                           value={newFoodData[key as keyof NewFoodData] || ""}
                           onChange={handleAddNewFoodChange}
                           className="col-span-3"
@@ -1304,4 +1303,3 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
     </Form>
   );
 }
-
