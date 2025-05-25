@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star, CalendarDays, Save, Upload, ListFilter, PlusCircle, BookOpenText, BarChart2, Apple, Carrot, Nut, Wheat, Bean, Beef, Milk, CookingPot as OilIcon, Blend } from "lucide-react";
+import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star, CalendarDays, Save, Upload, ListFilter, PlusCircle, BookOpenText, BarChart2, Apple, Carrot, Nut, Wheat, Bean, Beef, Milk, CookingPot as OilIcon, Blend, Utensils } from "lucide-react";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Accordion,
@@ -29,7 +29,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import type { FoodCategory, FoodItem, FormSettings, EditableNutritionalInfo, NewFoodData } from "@/lib/types";
+import type { FoodCategory, FoodItem, FormSettings, Medication } from "@/lib/types";
 import { initialFoodCategories as baseInitialFoodCategories } from "@/lib/food-data";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -178,6 +178,9 @@ const RichTextDisplay: React.FC<{ text: string }> = ({ text }) => {
   return <div className="prose prose-sm dark:prose-invert max-w-none">{elements}</div>;
 };
 
+type EditableNutritionalInfo = Omit<FoodItem, 'id' | 'name' | 'ig' | 'isFavorite' | 'isDisliked' | 'isAllergenic'>;
+
+type NewFoodData = Omit<FoodItem, 'id' | 'isFavorite' | 'isDisliked' | 'isAllergenic'> & { categoryName: string };
 
 const initialNewFoodData: NewFoodData = {
   name: "",
@@ -213,15 +216,14 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
   const [isClient, setIsClient] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(true);
 
-  // States for form inputs - to be managed directly
-  const [foodCategories, setFoodCategories] = useState<FoodCategory[]>(baseInitialFoodCategories);
+  const [foodCategories, setFoodCategories] = useState<FoodCategory[]>([]);
+  
   const [selectionMode, setSelectionMode] = useState<'dates' | 'duration'>('dates');
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [durationInDays, setDurationInDays] = useState<string>("1"); 
   const [durationModeStartDate, setDurationModeStartDate] = useState<Date | undefined>(undefined);
   
-  // States for displaying calculated values
   const [displayDurationFromDates, setDisplayDurationFromDates] = useState<string>("1 jour");
   const [displayEndDateFromDuration, setDisplayEndDateFromDuration] = useState<Date | undefined>(undefined);
   
@@ -254,104 +256,81 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
   }, []);
 
   useEffect(() => {
-    if (!isClient) return;
-
-    setIsDataLoading(true);
-
-    // Load Food Preferences
-    try {
-      const storedFoodPrefsString = localStorage.getItem("diabeatz-food-preferences");
-      if (storedFoodPrefsString) {
-        const storedFoodPrefs = JSON.parse(storedFoodPrefsString) as FoodCategory[];
-        // Hydrate stored preferences with baseInitialFoodCategories to ensure all fields are present
-        const hydratedCategories = baseInitialFoodCategories.map(initialCat => {
-          const storedCat = storedFoodPrefs.find(sc => sc.categoryName === initialCat.categoryName);
-          if (storedCat) {
-            const mergedItems = initialCat.items.map(initItem => {
-              const storedItem = storedCat.items.find(si => si.id === initItem.id || si.name === initItem.name);
-              return { ...initItem, ...(storedItem || {}) };
-            });
-            // Add any custom items from storage not in initialCat
-            storedCat.items.forEach(sfi => {
-                if (!mergedItems.some(mi => mi.id === sfi.id || mi.name === sfi.name)) {
-                    mergedItems.push(sfi);
-                }
-            });
-            return { ...initialCat, ...storedCat, items: mergedItems.sort((a, b) => a.name.localeCompare(b.name)) };
-          }
-          return initialCat;
-        });
-         // Add any new categories from baseInitialFoodCategories not in storage
-        baseInitialFoodCategories.forEach(initialCat => {
-            if(!hydratedCategories.some(hc => hc.categoryName === initialCat.categoryName)){
-                hydratedCategories.push(initialCat);
+    if (isClient) {
+      setIsDataLoading(true);
+      // Load Food Preferences
+      try {
+        const storedFoodPrefsString = localStorage.getItem("diabeatz-food-preferences");
+        let loadedFoodCategories: FoodCategory[];
+        if (storedFoodPrefsString) {
+          const storedFoodPrefs = JSON.parse(storedFoodPrefsString) as FoodCategory[];
+          loadedFoodCategories = baseInitialFoodCategories.map(initialCat => {
+            const storedCat = storedFoodPrefs.find(sc => sc.categoryName === initialCat.categoryName);
+            if (storedCat) {
+              const mergedItems = initialCat.items.map(initItem => {
+                const storedItem = storedCat.items.find(si => si.id === initItem.id || si.name === initItem.name); // fallback to name for old data
+                return { ...initItem, ...(storedItem || {}) };
+              });
+              storedCat.items.forEach(sfi => {
+                  if (!mergedItems.some(mi => mi.id === sfi.id || mi.name === sfi.name)) {
+                      mergedItems.push(sfi);
+                  }
+              });
+              return { ...initialCat, ...storedCat, items: mergedItems.sort((a, b) => a.name.localeCompare(b.name)) };
             }
+            return initialCat;
+          });
+          baseInitialFoodCategories.forEach(initialCat => {
+              if(!loadedFoodCategories.some(hc => hc.categoryName === initialCat.categoryName)){
+                  loadedFoodCategories.push(initialCat);
+              }
+          });
+        } else {
+          loadedFoodCategories = baseInitialFoodCategories;
+        }
+        setFoodCategories(loadedFoodCategories.sort((a,b) => a.categoryName.localeCompare(b.name)));
+      } catch (error) {
+        console.error("Error loading food preferences from localStorage:", error);
+        setFoodCategories(baseInitialFoodCategories);
+      }
+
+      // Load Form Settings
+      let loadedSettings: FormSettings | null = null;
+      try {
+        const storedSettingsString = localStorage.getItem("diabeatz-form-settings");
+        if (storedSettingsString) {
+          loadedSettings = JSON.parse(storedSettingsString) as FormSettings;
+        }
+      } catch (error) {
+        console.error("Error loading form settings from localStorage:", error);
+      }
+      
+      if (loadedSettings) {
+        form.reset({
+          planName: loadedSettings.planName || "",
+          diabeticResearchSummary: loadedSettings.diabeticResearchSummary || defaultResearchSummary,
         });
-        setFoodCategories(hydratedCategories.sort((a,b) => a.categoryName.localeCompare(b.name)));
-      } else {
-        setFoodCategories(baseInitialFoodCategories); // Use base if nothing in localStorage
-      }
-    } catch (error) {
-      console.error("Error loading food preferences from localStorage:", error);
-      setFoodCategories(baseInitialFoodCategories); // Fallback to base
-    }
+        setSelectionMode(loadedSettings.selectionMode || 'dates');
+        setDurationInDays(loadedSettings.durationInDays || "1");
 
-    // Load Form Settings
-    let loadedSettings: FormSettings | null = null;
-    try {
-      const storedSettingsString = localStorage.getItem("diabeatz-form-settings");
-      if (storedSettingsString) {
-        loadedSettings = JSON.parse(storedSettingsString) as FormSettings;
-      }
-    } catch (error) {
-      console.error("Error loading form settings from localStorage:", error);
-    }
-    
-    if (loadedSettings) {
-      form.reset({
-        planName: loadedSettings.planName || "",
-        diabeticResearchSummary: loadedSettings.diabeticResearchSummary || defaultResearchSummary,
-      });
-      setSelectionMode(loadedSettings.selectionMode || 'dates');
-      
-      if (loadedSettings.startDate) {
-        const parsedStart = parseISO(loadedSettings.startDate);
-        if (isValid(parsedStart)) setStartDate(startOfDay(parsedStart));
-        else setStartDate(startOfDay(addDays(new Date(),1)));
+        const tomorrow = startOfDay(addDays(new Date(),1));
+        setStartDate(loadedSettings.startDate && isValid(parseISO(loadedSettings.startDate)) ? startOfDay(parseISO(loadedSettings.startDate)) : tomorrow);
+        setEndDate(loadedSettings.endDate && isValid(parseISO(loadedSettings.endDate)) ? startOfDay(parseISO(loadedSettings.endDate)) : tomorrow);
+        setDurationModeStartDate(loadedSettings.durationModeStartDate && isValid(parseISO(loadedSettings.durationModeStartDate)) ? startOfDay(parseISO(loadedSettings.durationModeStartDate)) : tomorrow);
+        
+        // toast({ title: "Paramètres chargés!", description: "Votre configuration a été restaurée." });
       } else {
-        setStartDate(startOfDay(addDays(new Date(),1)));
-      }
-
-      if (loadedSettings.endDate) {
-        const parsedEnd = parseISO(loadedSettings.endDate);
-        if (isValid(parsedEnd)) setEndDate(startOfDay(parsedEnd));
-        else setEndDate(startOfDay(addDays(new Date(),1)));
-      } else {
-         setEndDate(startOfDay(addDays(new Date(),1)));
-      }
-      
-      setDurationInDays(loadedSettings.durationInDays || "1");
-
-      if (loadedSettings.durationModeStartDate) {
-        const parsedDurationStart = parseISO(loadedSettings.durationModeStartDate);
-        if (isValid(parsedDurationStart)) setDurationModeStartDate(startOfDay(parsedDurationStart));
-        else setDurationModeStartDate(startOfDay(addDays(new Date(),1)));
-      } else {
-         setDurationModeStartDate(startOfDay(addDays(new Date(),1)));
-      }
-      toast({ title: "Paramètres chargés!", description: "Votre configuration a été restaurée." });
-    } else {
-        // Set initial default values if no settings are loaded
         const tomorrow = startOfDay(addDays(new Date(), 1));
         setStartDate(tomorrow);
         setEndDate(tomorrow);
-        setDurationInDays("1");
         setDurationModeStartDate(tomorrow);
+        setDurationInDays("1");
         setSelectionMode('dates');
+      }
+      setIsDataLoading(false);
     }
-
-    setIsDataLoading(false);
-  }, [isClient, form, toast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isClient]);
 
 
   // Effect for "Par Dates" mode: calculate displayDurationFromDates
@@ -382,9 +361,9 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
 
   const handleDurationInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-     if (value === "" || /^\d{1,3}$/.test(value)) { // Allow empty string for intermediate input
+     if (value === "" || /^\d{1,3}$/.test(value)) { 
       const num = parseInt(value,10);
-      if (value === "" || (num >= 0 && num <= 365) ) { // Allow 0 temporarily
+      if (value === "" || (num >= 0 && num <= 365) ) { 
          setDurationInDays(value);
       } else if (num > 365) {
         setDurationInDays("365");
@@ -512,10 +491,10 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
       };
       const result = await generateMealPlan(mealPlanInput);
       onMealPlanGenerated(result, values.planName);
-      toast({
-        title: "Plan Alimentaire Généré!",
-        description: "Votre nouveau plan alimentaire est prêt.",
-      });
+      // toast({
+      //   title: "Plan Alimentaire Généré!",
+      //   description: "Votre nouveau plan alimentaire est prêt.",
+      // });
     } catch (error: any) {
       console.error("Error generating meal plan:", error);
       let errorMessage = "Impossible de générer le plan repas. Veuillez réessayer.";
@@ -586,17 +565,17 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
     toast({ title: "Informations nutritionnelles mises à jour!", description: `Pour ${selectedFoodItemForNutritionalInfo.name}.` });
   };
 
-  const handleSaveSettings = () => {
+  const handleSaveSettings = useCallback(() => {
     if (typeof window !== "undefined") {
         const currentFormValues = form.getValues();
         const settingsToSave: FormSettings = {
-        planName: currentFormValues.planName,
-        diabeticResearchSummary: currentFormValues.diabeticResearchSummary,
-        selectionMode: selectionMode,
-        startDate: startDate ? startDate.toISOString() : undefined,
-        endDate: endDate ? endDate.toISOString() : undefined,
-        durationInDays: durationInDays,
-        durationModeStartDate: durationModeStartDate ? durationModeStartDate.toISOString() : undefined,
+          planName: currentFormValues.planName,
+          diabeticResearchSummary: currentFormValues.diabeticResearchSummary,
+          selectionMode: selectionMode,
+          startDate: startDate ? startDate.toISOString() : undefined,
+          endDate: endDate ? endDate.toISOString() : undefined,
+          durationInDays: durationInDays,
+          durationModeStartDate: durationModeStartDate ? durationModeStartDate.toISOString() : undefined,
         };
         localStorage.setItem("diabeatz-form-settings", JSON.stringify(settingsToSave));
         toast({
@@ -604,7 +583,8 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
         description: "Votre configuration de formulaire a été enregistrée localement.",
         });
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, selectionMode, startDate, endDate, durationInDays, durationModeStartDate, toast]);
 
   const handleLoadSettings = useCallback(() => {
     if (typeof window !== "undefined") {
@@ -616,23 +596,28 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                 diabeticResearchSummary: loadedSettings.diabeticResearchSummary || defaultResearchSummary,
             });
             setSelectionMode(loadedSettings.selectionMode || 'dates');
-            if (loadedSettings.startDate) {
-                const parsedStart = parseISO(loadedSettings.startDate);
-                if (isValid(parsedStart)) setStartDate(startOfDay(parsedStart));
+            
+            const tomorrow = startOfDay(addDays(new Date(),1));
+
+            if (loadedSettings.startDate && isValid(parseISO(loadedSettings.startDate))) {
+                 setStartDate(startOfDay(parseISO(loadedSettings.startDate)));
+            } else {
+                 setStartDate(tomorrow);
             }
-            if (loadedSettings.endDate) {
-                const parsedEnd = parseISO(loadedSettings.endDate);
-                if (isValid(parsedEnd)) setEndDate(startOfDay(parsedEnd));
+            if (loadedSettings.endDate && isValid(parseISO(loadedSettings.endDate))) {
+                setEndDate(startOfDay(parseISO(loadedSettings.endDate)));
+            } else {
+                 setEndDate(tomorrow);
             }
+            
             setDurationInDays(loadedSettings.durationInDays || "1");
-            if (loadedSettings.durationModeStartDate) {
-                const parsedDurationStart = parseISO(loadedSettings.durationModeStartDate);
-                if (isValid(parsedDurationStart)) setDurationModeStartDate(startOfDay(parsedDurationStart));
+
+            if (loadedSettings.durationModeStartDate && isValid(parseISO(loadedSettings.durationModeStartDate))) {
+                setDurationModeStartDate(startOfDay(parseISO(loadedSettings.durationModeStartDate)));
+            } else {
+                 setDurationModeStartDate(tomorrow);
             }
-             toast({
-                title: "Paramètres chargés!",
-                description: "Votre configuration de formulaire locale a été restaurée.",
-            });
+            // toast({ title: "Paramètres chargés!", description: "Votre configuration de formulaire locale a été restaurée." });
         } else {
             // toast({ title: "Aucun paramètre sauvegardé", description: "Utilisation des valeurs par défaut.", variant: "default"});
         }
@@ -707,13 +692,14 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
     setNewFoodData(initialNewFoodData);
   };
 
-  if (!isClient || isDataLoading) {
+  if (isDataLoading && !isClient) { // Only show full page loader during SSR or very initial client load
     return (
       <div className="space-y-6">
         <Card className="shadow-lg"><CardHeader><CardTitle className="text-lg font-semibold">Chargement de la configuration...</CardTitle></CardHeader><CardContent className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin text-primary" /></CardContent></Card>
       </div>
     );
   }
+
 
   return (
     <Form {...form}>
@@ -766,7 +752,7 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                       </div>
                     </RadioGroup>
 
-                    {selectionMode === 'dates' && startDate && endDate && (
+                    {selectionMode === 'dates' && (
                       <div className="flex flex-col sm:flex-row gap-3 items-end">
                         <div className="flex-1 min-w-0">
                           <Label htmlFor="start-date-picker" className="text-sm font-medium mb-1 block">Date de début</Label>
@@ -778,7 +764,7 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                                 className={cn("w-full justify-start text-left font-normal h-10", !startDate && "text-muted-foreground")}
                               >
                                 <CalendarDays className="mr-2 h-4 w-4" />
-                                {isValid(startDate) ? format(startDate, "PPP", { locale: fr }) : <span>Choisir une date</span>}
+                                {startDate && isValid(startDate) ? format(startDate, "PPP", { locale: fr }) : <span>Choisir une date</span>}
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="start">
@@ -812,7 +798,7 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                                 disabled={!startDate || !isValid(startDate)}
                               >
                                 <CalendarDays className="mr-2 h-4 w-4" />
-                                {isValid(endDate) ? format(endDate, "PPP", { locale: fr }) : <span>Choisir une date</span>}
+                                {endDate && isValid(endDate) ? format(endDate, "PPP", { locale: fr }) : <span>Choisir une date</span>}
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="start">
@@ -843,7 +829,7 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                       </div>
                     )}
 
-                    {selectionMode === 'duration' && durationModeStartDate && (
+                    {selectionMode === 'duration' && (
                        <div className="flex flex-col sm:flex-row gap-3 items-end">
                          <div className="flex-1 min-w-0">
                            <Label htmlFor="duration-mode-start-date-picker" className="text-sm font-medium mb-1 block">Date de début</Label>
@@ -855,7 +841,7 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                                 className={cn("w-full justify-start text-left font-normal h-10", !durationModeStartDate && "text-muted-foreground")}
                               >
                                 <CalendarDays className="mr-2 h-4 w-4" />
-                                {isValid(durationModeStartDate) ? format(durationModeStartDate, "PPP", { locale: fr }) : <span>Choisir une date</span>}
+                                {durationModeStartDate && isValid(durationModeStartDate) ? format(durationModeStartDate, "PPP", { locale: fr }) : <span>Choisir une date</span>}
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="start">
@@ -887,11 +873,11 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                             placeholder="Jours"
                           />
                         </div>
-                        <div className="flex-1 min-w-0 h-10 flex items-center justify-start text-sm pt-1">
+                        <div className="flex-1 min-w-0 h-10 flex items-center justify-start text-sm pt-1 sm:pt-0">
                             {displayEndDateFromDuration && isValid(displayEndDateFromDuration) && (
-                                <div>
+                                <div className="text-primary">
                                     <span className="font-medium text-muted-foreground">Fin du plan : </span>
-                                    <span className="text-primary">{format(displayEndDateFromDuration, "PPP", { locale: fr })}</span>
+                                    {format(displayEndDateFromDuration, "PPP", { locale: fr })}
                                 </div>
                             )}
                         </div>
@@ -931,8 +917,7 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
               <AccordionContent className="pt-0">
                   <CardContent>
                       <FormDescriptionComponentUI className="mb-2 text-xs">
-                        Cochez vos aliments favoris, à éviter ou allergènes.
-                        <br />
+                        Cochez vos aliments favoris, à éviter ou allergènes.<br/>
                         Les aliments favoris seront privilégiés pour vos plans de repas.
                       </FormDescriptionComponentUI>
                       <div className="max-h-[400px] overflow-y-auto p-1 rounded-md border mt-2">
@@ -951,8 +936,8 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                                   <ul className="space-y-1 pl-2">
                                   {category.items.map(item => (
                                       <li key={item.id} className="py-1 border-b border-border/50 last:border-b-0">
-                                      <div className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-x-1 sm:gap-x-2"> 
-                                          <div>
+                                      <div className="flex flex-col sm:grid sm:grid-cols-[1fr_auto_auto_auto_auto] sm:items-center gap-x-1 sm:gap-x-2"> 
+                                          <div className="mb-1 sm:mb-0">
                                             <span className={cn(
                                                 "text-sm font-medium",
                                                 item.isDisliked && "line-through",
@@ -964,51 +949,53 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                                                 item.isAllergenic && "text-destructive"
                                             )}>{item.ig}</span>
                                           </div>
-                                          <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon" 
-                                            className="p-1 h-7 w-7 justify-self-end"
-                                            onClick={() => handleOpenNutritionalInfoDialog(item, category.categoryName)}
-                                            title="Valeurs nutritionnelles"
-                                          >
-                                            <BarChart2 className="h-3.5 w-3.5" />
-                                          </Button>
-                                          <div className="flex items-center space-x-1 justify-self-end">
-                                            <Checkbox
-                                                id={`${item.id}-favorite`}
-                                                checked={item.isFavorite}
-                                                onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isFavorite", !!checked)}
-                                                aria-label={`Marquer ${item.name} comme favori`}
-                                                disabled={item.isDisliked || item.isAllergenic}
-                                            />
-                                            <Label htmlFor={`${item.id}-favorite`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${ (item.isDisliked || item.isAllergenic) ? 'opacity-50 cursor-not-allowed' : ''}`} title="Favori">
-                                                <Star className="h-3.5 w-3.5" />
-                                            </Label>
-                                          </div>
-                                          <div className="flex items-center space-x-1 justify-self-end">
-                                            <Checkbox
-                                                id={`${item.id}-disliked`}
-                                                checked={item.isDisliked}
-                                                onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isDisliked", !!checked)}
-                                                aria-label={`Marquer ${item.name} comme non aimé`}
-                                                disabled={item.isFavorite}
-                                            />
-                                            <Label htmlFor={`${item.id}-disliked`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${item.isFavorite ? 'opacity-50 cursor-not-allowed' : ''}`} title="Je n'aime pas">
-                                                <ThumbsDown className="h-3.5 w-3.5" />
-                                            </Label>
-                                          </div>
-                                          <div className="flex items-center space-x-1 justify-self-end">
-                                            <Checkbox
-                                                id={`${item.id}-allergenic`}
-                                                checked={item.isAllergenic}
-                                                onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isAllergenic", !!checked)}
-                                                aria-label={`Marquer ${item.name} comme allergène`}
-                                                disabled={item.isFavorite}
-                                            />
-                                            <Label htmlFor={`${item.id}-allergenic`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${item.isFavorite ? 'opacity-50 cursor-not-allowed' : ''}`} title="Allergie/Intolérance">
-                                                <AlertTriangle className="h-3.5 w-3.5" />
-                                            </Label>
+                                          <div className="flex items-center justify-start sm:justify-self-end gap-x-2 sm:gap-x-1 mt-1 sm:mt-0">
+                                              <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon" 
+                                                className="p-1 h-7 w-7"
+                                                onClick={() => handleOpenNutritionalInfoDialog(item, category.categoryName)}
+                                                title="Valeurs nutritionnelles"
+                                              >
+                                                <BarChart2 className="h-3.5 w-3.5" />
+                                              </Button>
+                                              <div className="flex items-center space-x-1">
+                                                <Checkbox
+                                                    id={`${item.id}-favorite`}
+                                                    checked={item.isFavorite}
+                                                    onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isFavorite", !!checked)}
+                                                    aria-label={`Marquer ${item.name} comme favori`}
+                                                    disabled={item.isDisliked || item.isAllergenic}
+                                                />
+                                                <Label htmlFor={`${item.id}-favorite`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${ (item.isDisliked || item.isAllergenic) ? 'opacity-50 cursor-not-allowed' : ''}`} title="Favori">
+                                                    <Star className="h-3.5 w-3.5" />
+                                                </Label>
+                                              </div>
+                                              <div className="flex items-center space-x-1">
+                                                <Checkbox
+                                                    id={`${item.id}-disliked`}
+                                                    checked={item.isDisliked}
+                                                    onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isDisliked", !!checked)}
+                                                    aria-label={`Marquer ${item.name} comme non aimé`}
+                                                    disabled={item.isFavorite}
+                                                />
+                                                <Label htmlFor={`${item.id}-disliked`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${item.isFavorite ? 'opacity-50 cursor-not-allowed' : ''}`} title="Je n'aime pas">
+                                                    <ThumbsDown className="h-3.5 w-3.5" />
+                                                </Label>
+                                              </div>
+                                              <div className="flex items-center space-x-1">
+                                                <Checkbox
+                                                    id={`${item.id}-allergenic`}
+                                                    checked={item.isAllergenic}
+                                                    onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isAllergenic", !!checked)}
+                                                    aria-label={`Marquer ${item.name} comme allergène`}
+                                                    disabled={item.isFavorite}
+                                                />
+                                                <Label htmlFor={`${item.id}-allergenic`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${item.isFavorite ? 'opacity-50 cursor-not-allowed' : ''}`} title="Allergie/Intolérance">
+                                                    <AlertTriangle className="h-3.5 w-3.5" />
+                                                </Label>
+                                              </div>
                                           </div>
                                       </div>
                                       </li>
@@ -1036,7 +1023,7 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                 variant="outline"
                 onClick={handleLoadSettings}
                 className="w-full sm:flex-1"
-                disabled={!isClient || (typeof window !== 'undefined' && !localStorage.getItem("diabeatz-form-settings"))}
+                disabled={!isClient || (isClient && !localStorage.getItem("diabeatz-form-settings"))}
             >
                 <Upload className="mr-2 h-4 w-4" />
                 Charger les paramètres
@@ -1060,16 +1047,16 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
          <Accordion type="single" collapsible className="w-full">
              <AccordionItem value="conseils-aliments-item" className="border-b-0">
                 <Card className="shadow-lg">
-                  <AccordionTrigger className="w-full text-left p-0 hover:no-underline group">
-                     <CardHeader className="flex flex-row items-center justify-between w-full p-4">
-                        <div className="flex items-center gap-2">
-                          <BookOpenText className="h-5 w-5 text-secondary-foreground" />
-                          <CardTitle className="text-lg font-semibold text-foreground">
-                            Conseils alimentaires optimisés pour Diabète de Type 2
-                          </CardTitle>
-                        </div>
-                      </CardHeader>
-                  </AccordionTrigger>
+                    <AccordionTrigger className="w-full text-left p-0 hover:no-underline group">
+                        <CardHeader className="flex flex-row items-center justify-between w-full p-4">
+                            <div className="flex items-center gap-2">
+                                <BookOpenText className="h-5 w-5 text-secondary-foreground" />
+                                <CardTitle className="text-lg font-semibold text-foreground">
+                                Conseils alimentaires optimisés pour Diabète de Type 2
+                                </CardTitle>
+                            </div>
+                        </CardHeader>
+                    </AccordionTrigger>
                   <AccordionContent className="pt-0">
                       <CardContent>
                            <RichTextDisplay text={form.watch('diabeticResearchSummary')} />
@@ -1291,6 +1278,3 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
     </Form>
   );
 }
-
-
-    
