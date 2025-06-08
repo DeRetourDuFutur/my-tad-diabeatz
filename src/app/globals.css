@@ -4,98 +4,99 @@
 
 @layer base {
   :root {
-    --background: 100 22% 95%; /* Very light desaturated green #F0F4EF - Kept as a neutral base */
-    --foreground: 100 10% 20%; /* Darker desaturated green for text - Kept as a neutral base */
+    /* Thème Sombre Néon */
+    --background: 240 10% 4%; /* Noir bleuté très sombre */
+    --foreground: 240 5% 90%; /* Texte blanc cassé / gris clair */
 
-    --card: 100 22% 98%;
-    --card-foreground: 100 10% 20%;
+    --card: 240 10% 8%; /* Fond de carte légèrement plus clair que le bg */
+    --card-foreground: 240 5% 85%; /* Texte de carte */
 
-    --popover: 100 22% 98%;
-    --popover-foreground: 100 10% 20%;
+    --popover: 240 10% 6%; /* Fond de popover */
+    --popover-foreground: 240 5% 85%;
 
-    --primary: 217 70% 50%; /* Deep Blue */
-    --primary-foreground: 217 70% 95%; /* Very light blue/white for text on primary */
+    --primary: 200 100% 50%; /* Bleu néon vif */
+    --primary-foreground: 240 10% 4%; /* Texte sombre sur fond primaire néon */
 
-    --secondary: 107 25% 85%; /* Lighter shade of olive green - Kept as secondary, can be adjusted if needed */
-    --secondary-foreground: 107 20% 25%;
+    --secondary: 150 100% 45%; /* Vert néon secondaire (ou autre couleur néon) */
+    --secondary-foreground: 240 10% 4%;
 
-    --muted: 100 20% 90%;
-    --muted-foreground: 100 10% 45%;
+    --muted: 240 8% 15%; /* Muted plus sombre */
+    --muted-foreground: 240 5% 65%; /* Texte muted */
 
-    --accent: 37 29% 56%; /* Muted gold #B2976B - Kept as accent */
-    --accent-foreground: 37 40% 10%; /* Dark brown for text on accent */
+    --accent: 300 100% 55%; /* Violet/Magenta néon pour accent */
+    --accent-foreground: 240 10% 4%;
 
-    --destructive: 0 70% 65%; /* Soft, desaturated red */
+    --destructive: 0 90% 60%; /* Rouge néon pour destructive */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 107 20% 80%; /* Kept, can be made more neutral if desired */
-    --input: 107 20% 88%; /* Kept, can be made more neutral if desired */
-    --ring: 217 70% 45%; /* Ring color, darker shade of new primary blue */
+    --border: 240 10% 15%; /* Bordure subtile, peut-être avec une touche de néon au survol */
+    --input: 240 10% 12%; /* Fond d'input */
+    --ring: 200 100% 55%; /* Anneau de focus bleu néon */
 
-    --chart-1: 217 70% 50%; /* Match new primary blue */
-    --chart-2: 37 29% 56%; /* Muted Gold */
-    --chart-3: 107 25% 85%; /* Kept as is, former secondary green */
-    --chart-4: 100 22% 80%; /* Kept as is */
-    --chart-5: 37 20% 70%; /* Kept as is */
+    /* Couleurs pour les graphiques, adaptées au thème néon */
+    --chart-1: 200 100% 50%; /* Bleu néon */
+    --chart-2: 150 100% 45%; /* Vert néon */
+    --chart-3: 300 100% 55%; /* Violet/Magenta néon */
+    --chart-4: 50 100% 50%;  /* Jaune/Orange néon */
+    --chart-5: 0 90% 60%;   /* Rouge néon */
     
     --radius: 0.5rem;
 
-    /* Sidebar specific colors - Light Theme */
-    /* Assuming sidebar primary elements should also follow the new blue theme */
-    --sidebar-background: 100 22% 92%; /* Kept as a light neutral base for sidebar */
-    --sidebar-foreground: 100 10% 20%; /* Kept */
-    --sidebar-primary: 217 70% 48%; /* Deep blue for sidebar primary elements */
-    --sidebar-primary-foreground: 217 70% 95%; /* Light text for sidebar primary */
-    --sidebar-accent: 37 29% 50%; /* Muted gold accent in sidebar */
-    --sidebar-accent-foreground: 37 40% 10%;
-    --sidebar-border: 107 20% 75%; /* Kept, can be made more neutral */
-    --sidebar-ring: 217 70% 40%; /* Adjusted sidebar ring for blue theme */
+    /* Couleurs spécifiques Sidebar (si utilisées, ici pour la cohérence) */
+    --sidebar-background: 240 10% 6%;
+    --sidebar-foreground: 240 5% 88%;
+    --sidebar-primary: 200 100% 50%;
+    --sidebar-primary-foreground: 240 10% 4%;
+    --sidebar-accent: 300 100% 55%;
+    --sidebar-accent-foreground: 240 10% 4%;
+    --sidebar-border: 240 10% 12%;
+    --sidebar-ring: 200 100% 55%;
   }
 
+  /* Le mode .dark sera le mode par défaut avec ce thème */
   .dark {
-    --background: 100 10% 10%; /* Kept */
-    --foreground: 100 20% 90%; /* Kept */
+    --background: 240 10% 4%;
+    --foreground: 240 5% 90%;
 
-    --card: 100 10% 15%;
-    --card-foreground: 100 20% 90%;
+    --card: 240 10% 8%;
+    --card-foreground: 240 5% 85%;
 
-    --popover: 100 10% 15%;
-    --popover-foreground: 100 20% 90%;
+    --popover: 240 10% 6%;
+    --popover-foreground: 240 5% 85%;
 
-    --primary: 217 70% 60%; /* Deep Blue for dark mode primary, slightly lighter */
-    --primary-foreground: 217 70% 95%; /* Light text for dark mode primary */
+    --primary: 200 100% 50%;
+    --primary-foreground: 240 10% 4%;
 
-    --secondary: 107 25% 30%; /* Kept */
-    --secondary-foreground: 100 20% 90%;
+    --secondary: 150 100% 45%;
+    --secondary-foreground: 240 10% 4%;
 
-    --muted: 100 10% 20%;
-    --muted-foreground: 100 15% 60%;
+    --muted: 240 8% 15%;
+    --muted-foreground: 240 5% 65%;
 
-    --accent: 37 29% 60%; /* Slightly lighter gold for dark mode accent */
-    --accent-foreground: 37 30% 15%; /* Dark text for dark mode accent */
+    --accent: 300 100% 55%;
+    --accent-foreground: 240 10% 4%;
 
-    --destructive: 0 60% 50%;
+    --destructive: 0 90% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 107 20% 25%; /* Kept, can be made more neutral */
-    --input: 107 20% 20%; /* Kept, can be made more neutral */
-    --ring: 217 70% 55%; /* Ring color for dark mode, shade of new primary blue */
+    --border: 240 10% 15%;
+    --input: 240 10% 12%;
+    --ring: 200 100% 55%;
     
-    --chart-1: 217 70% 60%; /* Match new dark primary blue */
-    --chart-2: 37 29% 60%;
-    --chart-3: 107 25% 40%;
-    --chart-4: 100 15% 30%;
-    --chart-5: 37 20% 50%;
+    --chart-1: 200 100% 50%;
+    --chart-2: 150 100% 45%;
+    --chart-3: 300 100% 55%;
+    --chart-4: 50 100% 50%;
+    --chart-5: 0 90% 60%;
 
-    /* Sidebar specific colors - Dark Theme */
-    --sidebar-background: 100 10% 12%; /* Kept */
-    --sidebar-foreground: 100 20% 85%; /* Kept */
-    --sidebar-primary: 217 70% 58%; /* Deep blue for dark sidebar primary */
-    --sidebar-primary-foreground: 217 70% 95%;
-    --sidebar-accent: 37 29% 55%;
-    --sidebar-accent-foreground: 37 30% 15%;
-    --sidebar-border: 107 20% 20%; /* Kept, can be made more neutral */
-    --sidebar-ring: 217 70% 50%; /* Adjusted dark sidebar ring for blue theme */
+    --sidebar-background: 240 10% 6%;
+    --sidebar-foreground: 240 5% 88%;
+    --sidebar-primary: 200 100% 50%;
+    --sidebar-primary-foreground: 240 10% 4%;
+    --sidebar-accent: 300 100% 55%;
+    --sidebar-accent-foreground: 240 10% 4%;
+    --sidebar-border: 240 10% 12%;
+    --sidebar-ring: 200 100% 55%;
   }
 }
 
@@ -105,6 +106,24 @@
   }
   body {
     @apply bg-background text-foreground;
-    /* Removed explicit font-family to allow Geist from layout.tsx to take precedence */
+  }
+}
+
+@layer components {
+  .card-neon-glow {
+    @apply transition-all duration-300 ease-in-out;
+  }
+  .card-neon-glow:hover, .card-neon-glow:focus-within {
+    @apply shadow-[0_0_15px_2px_theme(colors.primary/50%),0_0_5px_0px_theme(colors.primary/70%)] border-primary/50;
+  }
+
+  .button-neon-glow {
+     @apply transition-all duration-300 ease-in-out;
+  }
+  .button-neon-glow:hover, .button-neon-glow:focus {
+    @apply shadow-[0_0_10px_1px_theme(colors.primary/70%),0_0_3px_0px_theme(colors.primary)] brightness-110;
+  }
+   .button-neon-glow.bg-destructive:hover, .button-neon-glow.bg-destructive:focus {
+    @apply shadow-[0_0_10px_1px_theme(colors.destructive/70%),0_0_3px_0px_theme(colors.destructive)] brightness-110;
   }
 }

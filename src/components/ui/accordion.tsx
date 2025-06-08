@@ -15,7 +15,8 @@ const AccordionItem = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AccordionPrimitive.Item
     ref={ref}
-    className={cn("border-b", className)}
+    // Retrait de border-b ici si les cartes ont déjà des bordures, ou ajuster
+    className={cn("", className)}
     {...props}
   />
 ))
@@ -29,13 +30,14 @@ const AccordionTrigger = React.forwardRef<
     <AccordionPrimitive.Trigger
       ref={ref}
       className={cn(
-        "flex flex-1 items-center justify-between py-4 font-medium transition-all hover:underline [&[data-state=open]>svg]:rotate-180",
+        "flex flex-1 items-center justify-between py-4 font-medium transition-all hover:text-primary/80 [&[data-state=open]>svg]:rotate-180",
+        // Retrait de hover:underline pour un look plus épuré, ou le remplacer par un effet néon
         className
       )}
       {...props}
     >
       {children}
-      <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 mr-3" />
+      <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 text-primary mr-3" />
     </AccordionPrimitive.Trigger>
   </AccordionPrimitive.Header>
 ))

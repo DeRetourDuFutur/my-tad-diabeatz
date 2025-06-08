@@ -9,7 +9,8 @@ const Card = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "rounded-lg border bg-card text-card-foreground shadow-sm",
+      "rounded-lg border bg-card text-card-foreground shadow-sm", // Maintenir shadow-sm comme base
+      "card-neon-glow", // Appliquer la classe pour l'effet de survol/focus
       className
     )}
     {...props}
