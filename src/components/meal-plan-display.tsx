@@ -182,7 +182,7 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
               </TabsTrigger>
             ))}
           </TabsList>
-          <ScrollArea className="h-[calc(100vh-420px)] lg:h-auto lg:max-h-[calc(100vh-360px)] pr-3 -mr-3">
+          <ScrollArea className="h-[calc(100vh-350px)] lg:h-auto lg:max-h-[calc(100vh-280px)] pr-3 -mr-3">
             {mealPlan.days.map((day, dayIndex) => {
               const mealDefinitions: MealDefinition[] = [
                 {
