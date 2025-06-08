@@ -255,20 +255,59 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
     setIsClient(true);
   }, []);
 
+  const handleLoadSettings = useCallback(() => {
+    if (typeof window !== "undefined") {
+        const storedSettingsString = localStorage.getItem("diabeatz-form-settings");
+        if (storedSettingsString) {
+            try {
+                const loadedSettings = JSON.parse(storedSettingsString) as FormSettings;
+                form.reset({
+                    planName: loadedSettings.planName || "",
+                    diabeticResearchSummary: loadedSettings.diabeticResearchSummary || defaultResearchSummary,
+                });
+                setSelectionMode(loadedSettings.selectionMode || 'dates');
+                
+                const tomorrow = startOfDay(addDays(new Date(),1));
+
+                setStartDate(loadedSettings.startDate && isValid(parseISO(loadedSettings.startDate)) ? startOfDay(parseISO(loadedSettings.startDate)) : tomorrow);
+                setEndDate(loadedSettings.endDate && isValid(parseISO(loadedSettings.endDate)) ? startOfDay(parseISO(loadedSettings.endDate)) : tomorrow);
+                setDurationInDays(loadedSettings.durationInDays || "1");
+                setDurationModeStartDate(loadedSettings.durationModeStartDate && isValid(parseISO(loadedSettings.durationModeStartDate)) ? startOfDay(parseISO(loadedSettings.durationModeStartDate)) : tomorrow);
+                
+                // toast({ title: "Paramètres chargés!", description: "Votre configuration de formulaire locale a été restaurée." });
+            } catch (error) {
+                console.error("Error parsing form settings from localStorage:", error);
+                // Fallback to defaults if parsing fails
+                const tomorrow = startOfDay(addDays(new Date(), 1));
+                setStartDate(tomorrow); setEndDate(tomorrow); setDurationModeStartDate(tomorrow);
+                setDurationInDays("1"); setSelectionMode('dates');
+            }
+        } else {
+            // No settings found, apply defaults
+            const tomorrow = startOfDay(addDays(new Date(), 1));
+            setStartDate(tomorrow); setEndDate(tomorrow); setDurationModeStartDate(tomorrow);
+            setDurationInDays("1"); setSelectionMode('dates');
+            form.reset({ planName: "", diabeticResearchSummary: defaultResearchSummary });
+            // toast({ title: "Aucun paramètre sauvegardé", description: "Utilisation des valeurs par défaut.", variant: "default"});
+        }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form]); // Removed toast from dependencies as it can cause re-renders if not memoized
+
   useEffect(() => {
     if (isClient) {
       setIsDataLoading(true);
       // Load Food Preferences
+      let currentFoodCategories: FoodCategory[];
       try {
         const storedFoodPrefsString = localStorage.getItem("diabeatz-food-preferences");
-        let loadedFoodCategories: FoodCategory[];
         if (storedFoodPrefsString) {
           const storedFoodPrefs = JSON.parse(storedFoodPrefsString) as FoodCategory[];
-          loadedFoodCategories = baseInitialFoodCategories.map(initialCat => {
+          currentFoodCategories = baseInitialFoodCategories.map(initialCat => {
             const storedCat = storedFoodPrefs.find(sc => sc.categoryName === initialCat.categoryName);
             if (storedCat) {
               const mergedItems = initialCat.items.map(initItem => {
-                const storedItem = storedCat.items.find(si => si.id === initItem.id || si.name === initItem.name); // fallback to name for old data
+                const storedItem = storedCat.items.find(si => si.id === initItem.id || si.name === initItem.name);
                 return { ...initItem, ...(storedItem || {}) };
               });
               storedCat.items.forEach(sfi => {
@@ -280,83 +319,55 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
             }
             return initialCat;
           });
-          baseInitialFoodCategories.forEach(initialCat => {
-              if(!loadedFoodCategories.some(hc => hc.categoryName === initialCat.categoryName)){
-                  loadedFoodCategories.push(initialCat);
+           baseInitialFoodCategories.forEach(initialCat => {
+              if(!currentFoodCategories.some(hc => hc.categoryName === initialCat.categoryName)){
+                  currentFoodCategories.push(initialCat);
               }
           });
         } else {
-          loadedFoodCategories = baseInitialFoodCategories;
+          currentFoodCategories = baseInitialFoodCategories.map(cat => ({...cat, items: [...cat.items].sort((a,b) => a.name.localeCompare(b.name))}));
         }
-        setFoodCategories(loadedFoodCategories.sort((a,b) => a.categoryName.localeCompare(b.name)));
       } catch (error) {
         console.error("Error loading food preferences from localStorage:", error);
-        setFoodCategories(baseInitialFoodCategories);
+        currentFoodCategories = baseInitialFoodCategories.map(cat => ({...cat, items: [...cat.items].sort((a,b) => a.name.localeCompare(b.name))}));
       }
+      setFoodCategories(currentFoodCategories.sort((a,b) => a.categoryName.localeCompare(b.name)));
 
-      // Load Form Settings
-      let loadedSettings: FormSettings | null = null;
-      try {
-        const storedSettingsString = localStorage.getItem("diabeatz-form-settings");
-        if (storedSettingsString) {
-          loadedSettings = JSON.parse(storedSettingsString) as FormSettings;
-        }
-      } catch (error) {
-        console.error("Error loading form settings from localStorage:", error);
-      }
-      
-      if (loadedSettings) {
-        form.reset({
-          planName: loadedSettings.planName || "",
-          diabeticResearchSummary: loadedSettings.diabeticResearchSummary || defaultResearchSummary,
-        });
-        setSelectionMode(loadedSettings.selectionMode || 'dates');
-        setDurationInDays(loadedSettings.durationInDays || "1");
-
-        const tomorrow = startOfDay(addDays(new Date(),1));
-        setStartDate(loadedSettings.startDate && isValid(parseISO(loadedSettings.startDate)) ? startOfDay(parseISO(loadedSettings.startDate)) : tomorrow);
-        setEndDate(loadedSettings.endDate && isValid(parseISO(loadedSettings.endDate)) ? startOfDay(parseISO(loadedSettings.endDate)) : tomorrow);
-        setDurationModeStartDate(loadedSettings.durationModeStartDate && isValid(parseISO(loadedSettings.durationModeStartDate)) ? startOfDay(parseISO(loadedSettings.durationModeStartDate)) : tomorrow);
-        
-        // toast({ title: "Paramètres chargés!", description: "Votre configuration a été restaurée." });
-      } else {
-        const tomorrow = startOfDay(addDays(new Date(), 1));
-        setStartDate(tomorrow);
-        setEndDate(tomorrow);
-        setDurationModeStartDate(tomorrow);
-        setDurationInDays("1");
-        setSelectionMode('dates');
-      }
+      handleLoadSettings(); // Load form settings
       setIsDataLoading(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClient]);
+  }, [isClient, handleLoadSettings]);
 
 
   // Effect for "Par Dates" mode: calculate displayDurationFromDates
   useEffect(() => {
-    if (isClient && selectionMode === 'dates' && startDate && endDate && isValid(startDate) && isValid(endDate) && !isBefore(startOfDay(endDate), startOfDay(startDate))) {
-      const diff = differenceInDays(startOfDay(endDate), startOfDay(startDate)) + 1;
-      setDisplayDurationFromDates(`${diff} jour${diff > 1 ? 's' : ''}`);
-    } else if (isClient && selectionMode === 'dates') {
-      setDisplayDurationFromDates("Durée invalide");
+    if (isClient && !isDataLoading && selectionMode === 'dates') {
+      if (startDate && endDate && isValid(startDate) && isValid(endDate) && !isBefore(startOfDay(endDate), startOfDay(startDate))) {
+        const diff = differenceInDays(startOfDay(endDate), startOfDay(startDate)) + 1;
+        setDisplayDurationFromDates(`${diff} jour${diff > 1 ? 's' : ''}`);
+      } else {
+        setDisplayDurationFromDates("Durée invalide");
+      }
     }
-  }, [startDate, endDate, selectionMode, isClient]);
+  }, [startDate, endDate, selectionMode, isClient, isDataLoading]);
 
   // Effect for "Par Durée" mode: calculate displayEndDateFromDuration
   useEffect(() => {
-    if (isClient && selectionMode === 'duration' && durationModeStartDate && isValid(durationModeStartDate)) {
-      const numDays = parseInt(durationInDays, 10);
-      if (!isNaN(numDays) && numDays >= 1 && numDays <= 365) {
-        const newEndDate = addDays(startOfDay(durationModeStartDate), numDays - 1);
-        setDisplayEndDateFromDuration(newEndDate);
+    if (isClient && !isDataLoading && selectionMode === 'duration') {
+      if (durationModeStartDate && isValid(durationModeStartDate)) {
+        const numDays = parseInt(durationInDays, 10);
+        if (!isNaN(numDays) && numDays >= 1 && numDays <= 365) {
+          const newEndDate = addDays(startOfDay(durationModeStartDate), numDays - 1);
+          setDisplayEndDateFromDuration(newEndDate);
+        } else {
+          setDisplayEndDateFromDuration(undefined);
+        }
       } else {
-        setDisplayEndDateFromDuration(undefined);
+         setDisplayEndDateFromDuration(undefined);
       }
-    } else if (isClient && selectionMode === 'duration') {
-       setDisplayEndDateFromDuration(undefined);
     }
-  }, [durationInDays, durationModeStartDate, selectionMode, isClient]);
+  }, [durationInDays, durationModeStartDate, selectionMode, isClient, isDataLoading]);
 
 
   const handleDurationInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -585,44 +596,6 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form, selectionMode, startDate, endDate, durationInDays, durationModeStartDate, toast]);
-
-  const handleLoadSettings = useCallback(() => {
-    if (typeof window !== "undefined") {
-        const storedSettingsString = localStorage.getItem("diabeatz-form-settings");
-        if (storedSettingsString) {
-            const loadedSettings = JSON.parse(storedSettingsString) as FormSettings;
-            form.reset({
-                planName: loadedSettings.planName || "",
-                diabeticResearchSummary: loadedSettings.diabeticResearchSummary || defaultResearchSummary,
-            });
-            setSelectionMode(loadedSettings.selectionMode || 'dates');
-            
-            const tomorrow = startOfDay(addDays(new Date(),1));
-
-            if (loadedSettings.startDate && isValid(parseISO(loadedSettings.startDate))) {
-                 setStartDate(startOfDay(parseISO(loadedSettings.startDate)));
-            } else {
-                 setStartDate(tomorrow);
-            }
-            if (loadedSettings.endDate && isValid(parseISO(loadedSettings.endDate))) {
-                setEndDate(startOfDay(parseISO(loadedSettings.endDate)));
-            } else {
-                 setEndDate(tomorrow);
-            }
-            
-            setDurationInDays(loadedSettings.durationInDays || "1");
-
-            if (loadedSettings.durationModeStartDate && isValid(parseISO(loadedSettings.durationModeStartDate))) {
-                setDurationModeStartDate(startOfDay(parseISO(loadedSettings.durationModeStartDate)));
-            } else {
-                 setDurationModeStartDate(tomorrow);
-            }
-            // toast({ title: "Paramètres chargés!", description: "Votre configuration de formulaire locale a été restaurée." });
-        } else {
-            // toast({ title: "Aucun paramètre sauvegardé", description: "Utilisation des valeurs par défaut.", variant: "default"});
-        }
-    }
-  }, [form, toast]);
   
 
   const handleAddNewFoodChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -692,7 +665,7 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
     setNewFoodData(initialNewFoodData);
   };
 
-  if (isDataLoading && !isClient) { // Only show full page loader during SSR or very initial client load
+  if (isDataLoading && isClient) { 
     return (
       <div className="space-y-6">
         <Card className="shadow-lg"><CardHeader><CardTitle className="text-lg font-semibold">Chargement de la configuration...</CardTitle></CardHeader><CardContent className="flex justify-center items-center h-40"><Loader2 className="h-8 w-8 animate-spin text-primary" /></CardContent></Card>
@@ -936,7 +909,7 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                                   <ul className="space-y-1 pl-2">
                                   {category.items.map(item => (
                                       <li key={item.id} className="py-1 border-b border-border/50 last:border-b-0">
-                                      <div className="flex flex-col sm:grid sm:grid-cols-[1fr_auto_auto_auto_auto] sm:items-center gap-x-1 sm:gap-x-2"> 
+                                      <div className="flex flex-col sm:grid sm:grid-cols-[1fr_auto] sm:items-center gap-x-1 sm:gap-x-2"> 
                                           <div className="mb-1 sm:mb-0">
                                             <span className={cn(
                                                 "text-sm font-medium",
@@ -1023,18 +996,18 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                 variant="outline"
                 onClick={handleLoadSettings}
                 className="w-full sm:flex-1"
-                disabled={!isClient || (isClient && !localStorage.getItem("diabeatz-form-settings"))}
+                disabled={!isClient || (isClient && typeof window !== 'undefined' && !localStorage.getItem("diabeatz-form-settings"))}
             >
                 <Upload className="mr-2 h-4 w-4" />
                 Charger les paramètres
             </Button>
         </div>
 
-        <Button type="submit" disabled={isLoading || isDataLoading} className="w-full">
-        {isLoading ? (
+        <Button type="submit" disabled={isLoading || (isDataLoading && isClient)} className="w-full">
+        {isLoading || (isDataLoading && isClient) ? (
             <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Génération en cours...
+            {isLoading ? "Génération en cours..." : "Chargement..."}
             </>
         ) : (
             <>
@@ -1278,3 +1251,4 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
     </Form>
   );
 }
+
