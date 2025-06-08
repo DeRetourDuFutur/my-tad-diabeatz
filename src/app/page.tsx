@@ -25,7 +25,7 @@ export default function HomePage() {
   const [currentMealPlan, setCurrentMealPlan] = useState<GenerateMealPlanOutput | null>(null);
   const [currentMealPlanId, setCurrentMealPlanId] = useState<string | null>(null);
   const [currentMealPlanName, setCurrentMealPlanName] = useState<string>("");
-  
+
   const [savedPlans, setSavedPlans] = useState<StoredMealPlan[]>(initialSavedPlans);
   const [isLoadingPlans, setIsLoadingPlans] = useState(true);
   const { toast } = useToast();
@@ -42,7 +42,7 @@ export default function HomePage() {
     setHasMounted(true);
     fetchSavedPlans();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); 
+  }, []);
 
   const fetchSavedPlans = async () => {
     setIsLoadingPlans(true);
@@ -53,11 +53,11 @@ export default function HomePage() {
       const plans: StoredMealPlan[] = [];
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        
+
         let createdAt = data.createdAt;
         if (typeof createdAt === 'string') {
           createdAt = Timestamp.fromDate(new Date(createdAt));
-        } else if (!(createdAt instanceof Timestamp) && createdAt && typeof createdAt.seconds === 'number' && typeof createdAt.nanoseconds === 'number') { 
+        } else if (!(createdAt instanceof Timestamp) && createdAt && typeof createdAt.seconds === 'number' && typeof createdAt.nanoseconds === 'number') {
           createdAt = new Timestamp(createdAt.seconds, createdAt.nanoseconds);
         }
 
@@ -73,8 +73,8 @@ export default function HomePage() {
 
   const handleMealPlanGenerated = (mealPlan: GenerateMealPlanOutput, planName?: string) => {
     setCurrentMealPlan(mealPlan);
-    setCurrentMealPlanId(null); 
-    setCurrentMealPlanName(planName || ""); 
+    setCurrentMealPlanId(null);
+    setCurrentMealPlanName(planName || "");
     setAiError(null);
     toast({ title: "Plan Généré!", description: "Votre nouveau plan alimentaire est prêt." });
   };
@@ -98,7 +98,7 @@ export default function HomePage() {
 
   const handleSavePlan = async (name: string) => {
     if (!currentMealPlan) return;
-    setIsLoadingPlans(true); 
+    setIsLoadingPlans(true);
 
     const planDataToSave = {
       ...currentMealPlan,
@@ -107,20 +107,20 @@ export default function HomePage() {
     };
 
     try {
-      if (currentMealPlanId) { 
+      if (currentMealPlanId) {
         const planDocRef = doc(db, "mealPlans", currentMealPlanId);
         const existingPlan = savedPlans.find(p => p.id === currentMealPlanId);
         const updatedPlanData = { ...planDataToSave, createdAt: existingPlan?.createdAt || Timestamp.now() };
         await setDoc(planDocRef, updatedPlanData);
         toast({ title: "Plan Mis à Jour!", description: `Le plan repas "${name}" a été mis à jour.` });
-      } else { 
+      } else {
         const plansCollectionRef = collection(db, "mealPlans");
         const docRef = await addDoc(plansCollectionRef, planDataToSave);
         setCurrentMealPlanId(docRef.id);
         toast({ title: "Plan Sauvegardé!", description: `Le plan repas "${name}" a été sauvegardé.` });
       }
       setCurrentMealPlanName(name);
-      await fetchSavedPlans(); 
+      await fetchSavedPlans();
     } catch (error) {
       console.error("Error saving plan:", error);
       toast({ title: "Erreur de Sauvegarde", description: "Impossible de sauvegarder le plan repas.", variant: "destructive" });
@@ -132,8 +132,8 @@ export default function HomePage() {
   const handleLoadPlan = (planId: string) => {
     const planToLoad = savedPlans.find(p => p.id === planId);
     if (planToLoad) {
-      const { id, name, createdAt, ...mealData } = planToLoad; 
-      setCurrentMealPlan(mealData as GenerateMealPlanOutput); 
+      const { id, name, createdAt, ...mealData } = planToLoad;
+      setCurrentMealPlan(mealData as GenerateMealPlanOutput);
       setCurrentMealPlanId(id);
       setCurrentMealPlanName(name);
       setAiError(null);
@@ -152,14 +152,14 @@ export default function HomePage() {
         setCurrentMealPlanId(null);
         setCurrentMealPlanName("");
       }
-      await fetchSavedPlans(); 
+      await fetchSavedPlans();
     } catch (error) {
       console.error("Error deleting plan:", error);
       toast({ title: "Erreur de Suppression", description: "Impossible de supprimer le plan repas.", variant: "destructive" });
     }
     setIsLoadingPlans(false);
   };
-  
+
   const displayableSavedPlans = hasMounted ? savedPlans : [];
 
   const handleOpenAddMedicationDialog = () => {
@@ -168,17 +168,17 @@ export default function HomePage() {
   };
 
  const handleSaveMedication = (medicationData: Omit<Medication, 'id'> | Medication) => {
-    if ('id' in medicationData && medicationData.id) { 
-      setMedications(prevMeds => 
+    if ('id' in medicationData && medicationData.id) {
+      setMedications(prevMeds =>
         prevMeds.map(med => med.id === medicationData.id ? { ...med, ...medicationData } : med)
         .sort((a, b) => a.name.localeCompare(b.name))
       );
       toast({ title: "Médicament Modifié!", description: `${medicationData.name} a été mis à jour.` });
-    } else { 
+    } else {
       const newMedication: Medication = {
         id: `med-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         ...medicationData,
-        color: medicationData.color || "#cccccc", 
+        color: medicationData.color || "#cccccc",
         form: medicationData.form || 'other',
       };
       setMedications(prevMeds => [...prevMeds, newMedication].sort((a, b) => a.name.localeCompare(b.name)));
@@ -203,43 +203,42 @@ export default function HomePage() {
     <div className="flex flex-col min-h-screen">
       <AppHeader />
       <main className="flex-grow container mx-auto p-4 md:p-6 lg:p-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
-          <div className="lg:col-span-1 space-y-4 lg:space-y-6">
-            <MealPlanForm 
-              onMealPlanGenerated={handleMealPlanGenerated} 
-              onGenerationError={handleGenerationError} 
-            />
-            {isLoadingPlans && !hasMounted ? (
-              <div className="flex justify-center items-center h-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
-            ) : (
-              <SavedMealPlans
-                savedPlans={displayableSavedPlans}
-                onLoadPlan={handleLoadPlan}
-                onDeletePlan={handleDeletePlan}
-              />
-            )}
-            <MedicationManagementCard 
-              medications={medications}
-              onAddMedication={handleOpenAddMedicationDialog}
-              onEditMedication={handleEditMedicationItem}
-              onDeleteMedication={handleDeleteMedicationItem}
-            />
-          </div>
+        <div className="flex flex-col gap-4 lg:gap-6"> {/* Unified single column layout */}
+          <MealPlanForm
+            onMealPlanGenerated={handleMealPlanGenerated}
+            onGenerationError={handleGenerationError}
+          />
 
-          <div className="lg:col-span-2">
-            {aiError && (
-              <Alert variant="destructive" className="mb-4">
-                <Terminal className="h-4 w-4" />
-                <AlertTitle>Erreur de Génération AI</AlertTitle>
-                <AlertDescription>{aiError}</AlertDescription>
-              </Alert>
-            )}
-            <MealPlanDisplay
-              mealPlan={currentMealPlan}
-              mealPlanName={currentMealPlanName}
-              onSavePlan={handleOpenSaveDialog}
+          {/* Saved Plans and Medication Management, stacked and full-width */}
+          {isLoadingPlans && !hasMounted ? (
+            <div className="flex justify-center items-center h-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+          ) : (
+            <SavedMealPlans
+              savedPlans={displayableSavedPlans}
+              onLoadPlan={handleLoadPlan}
+              onDeletePlan={handleDeletePlan}
             />
-          </div>
+          )}
+          <MedicationManagementCard
+            medications={medications}
+            onAddMedication={handleOpenAddMedicationDialog}
+            onEditMedication={handleEditMedicationItem}
+            onDeleteMedication={handleDeleteMedicationItem}
+          />
+
+          {/* AI Error and Meal Plan Display */}
+          {aiError && (
+            <Alert variant="destructive" className="mb-4"> {/* mb-4 only if mealPlanDisplay follows directly */}
+              <Terminal className="h-4 w-4" />
+              <AlertTitle>Erreur de Génération AI</AlertTitle>
+              <AlertDescription>{aiError}</AlertDescription>
+            </Alert>
+          )}
+          <MealPlanDisplay
+            mealPlan={currentMealPlan}
+            mealPlanName={currentMealPlanName}
+            onSavePlan={handleOpenSaveDialog}
+          />
         </div>
       </main>
       <SavePlanDialog
@@ -260,4 +259,3 @@ export default function HomePage() {
     </div>
   );
 }
-
