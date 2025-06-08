@@ -1,11 +1,11 @@
 
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import type { GenerateMealPlanOutput, DailyMealPlan, MealComponent, Breakfast, LunchDinner } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChefHat, Save, Utensils, Lightbulb, Clock, ClipboardList, GlassWater, Soup, Beef, Apple, Grape, Cookie } from "lucide-react";
+import { ChefHat, Save, Utensils, Lightbulb, Clock, ClipboardList, GlassWater, Soup, Beef, Apple, Grape, Cookie, NotebookPen } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -97,6 +97,19 @@ const MealComponentCard: React.FC<{ component: MealComponent; typeTitle?: string
   );
 };
 
+const renderMealCourse = (mealCourse: MealComponent | undefined, courseTitle: string) => {
+  if (!mealCourse || !mealCourse.title) return null;
+  return <MealComponentCard component={mealCourse} typeTitle={courseTitle} />;
+};
+
+type MealDefinition = {
+  key: string;
+  label: string;
+  icon: React.ElementType;
+  content: ReactNode | null;
+  isAvailable: boolean;
+};
+
 
 export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlanDisplayProps) {
   useEffect(() => {
@@ -107,6 +120,9 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
       style.innerHTML = `
         .grid-cols-minmax-100px-auto {
           grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        }
+        .grid-cols-minmax-meal-tabs {
+          grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
         }
       `;
       document.head.appendChild(style);
@@ -121,15 +137,16 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
             <AccordionTrigger className="w-full text-left p-0 hover:no-underline">
               <CardHeader className="flex flex-row items-center justify-between w-full p-4">
                 <div className="flex items-center gap-2">
-                  <ChefHat className="h-5 w-5 text-secondary-foreground" />
-                  <CardTitle className="text-lg font-semibold">Vos plans alimentaires</CardTitle>
+                  <NotebookPen className="h-5 w-5 text-secondary-foreground" />
+                  <CardTitle className="text-lg font-semibold">Votre Plan Repas Généré</CardTitle>
                 </div>
               </CardHeader>
             </AccordionTrigger>
             <AccordionContent className="pt-0">
               <CardContent className="flex flex-col items-center justify-center p-8 min-h-[200px] text-center">
+                 <ChefHat className="h-16 w-16 text-primary/50 mb-4" />
                 <CardDescription>
-                  Utilisez le formulaire pour générer un nouveau plan alimentaire personnalisé.
+                  Générez un plan via le formulaire pour l'afficher ici.
                 </CardDescription>
               </CardContent>
             </AccordionContent>
@@ -139,22 +156,18 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
     );
   }
 
-  const renderMealCourse = (mealCourse: MealComponent | undefined, courseTitle: string) => {
-    if (!mealCourse || !mealCourse.title) return null;
-    return <MealComponentCard component={mealCourse} typeTitle={courseTitle} />;
-  };
-
   return (
     <Card className="shadow-xl">
       <CardHeader>
         <div className="flex justify-between items-start">
           <div>
-            <CardTitle className="text-2xl mb-1">
-              {mealPlanName ? `Plan Repas: ${mealPlanName}` : `Plan Repas (${mealPlan.days.length} jour${mealPlan.days.length > 1 ? 's' : ''})`}
+            <CardTitle className="text-2xl mb-1 flex items-center">
+              <NotebookPen className="mr-3 h-7 w-7 text-primary" />
+              {mealPlanName ? `Plan: ${mealPlanName}` : `Plan Repas (${mealPlan.days.length} jour${mealPlan.days.length > 1 ? 's' : ''})`}
             </CardTitle>
-            <CardDescription>Voici votre plan repas personnalisé pour diabétiques de type 2.</CardDescription>
+            <CardDescription>Consultez votre plan repas personnalisé. Naviguez par jour, puis par type de repas.</CardDescription>
           </div>
-          <Button onClick={onSavePlan} size="sm" variant="outline">
+          <Button onClick={onSavePlan} size="sm" variant="outline" className="button-neon-glow">
             <Save className="mr-2 h-4 w-4" />
             {mealPlanName ? "Mettre à jour" : "Sauvegarder"}
           </Button>
@@ -169,13 +182,15 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
               </TabsTrigger>
             ))}
           </TabsList>
-          <ScrollArea className="h-[calc(100vh-380px)] lg:h-auto lg:max-h-[calc(100vh-320px)] pr-3 -mr-3">
-            {mealPlan.days.map((day, dayIndex) => (
-              <TabsContent key={day.dayIdentifier || `day-content-${dayIndex}`} value={day.dayIdentifier || `day-${dayIndex}`}>
-                <div className="space-y-6">
-
-                  {/* Breakfast */}
-                  {day.breakfast && day.breakfast.mainItem && (
+          <ScrollArea className="h-[calc(100vh-420px)] lg:h-auto lg:max-h-[calc(100vh-360px)] pr-3 -mr-3">
+            {mealPlan.days.map((day, dayIndex) => {
+              const mealDefinitions: MealDefinition[] = [
+                {
+                  key: "breakfast",
+                  label: "Petit-déjeuner",
+                  icon: Utensils,
+                  isAvailable: !!(day.breakfast && day.breakfast.mainItem && day.breakfast.mainItem.title),
+                  content: day.breakfast && day.breakfast.mainItem && day.breakfast.mainItem.title && (
                     <Card className="bg-card shadow-md border">
                       <CardHeader className="pb-2">
                         <CardTitle className="flex items-center text-lg font-semibold">
@@ -191,11 +206,15 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
                         <MealComponentCard component={day.breakfast.mainItem} />
                       </CardContent>
                     </Card>
-                  )}
-
-                  {/* Morning Snack */}
-                  {day.morningSnack && day.morningSnack.title && (
-                     <Card className="bg-card shadow-md border">
+                  )
+                },
+                {
+                  key: "morningSnack",
+                  label: "Collation (matin)",
+                  icon: Cookie,
+                  isAvailable: !!(day.morningSnack && day.morningSnack.title),
+                  content: day.morningSnack && day.morningSnack.title && (
+                    <Card className="bg-card shadow-md border">
                       <CardHeader className="pb-2">
                         <CardTitle className="flex items-center text-lg font-semibold">
                           <Cookie className="mr-2.5 h-5 w-5 text-primary" /> Collation du Matin
@@ -205,10 +224,14 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
                         <MealComponentCard component={day.morningSnack} isSnack={true} />
                       </CardContent>
                     </Card>
-                  )}
-
-                  {/* Lunch */}
-                  {day.lunch && day.lunch.mainCourse && (
+                  )
+                },
+                {
+                  key: "lunch",
+                  label: "Déjeuner",
+                  icon: Utensils,
+                   isAvailable: !!(day.lunch && day.lunch.mainCourse && day.lunch.mainCourse.title),
+                  content: day.lunch && day.lunch.mainCourse && day.lunch.mainCourse.title && (
                     <Card className="bg-card shadow-md border">
                       <CardHeader className="pb-2">
                         <CardTitle className="flex items-center text-lg font-semibold">
@@ -227,10 +250,14 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
                         {renderMealCourse(day.lunch.dessert, "Dessert")}
                       </CardContent>
                     </Card>
-                  )}
-
-                  {/* Afternoon Snack */}
-                  {day.afternoonSnack && day.afternoonSnack.title && (
+                  )
+                },
+                {
+                  key: "afternoonSnack",
+                  label: "Collation (a-m)",
+                  icon: Cookie,
+                  isAvailable: !!(day.afternoonSnack && day.afternoonSnack.title),
+                  content: day.afternoonSnack && day.afternoonSnack.title && (
                     <Card className="bg-card shadow-md border">
                      <CardHeader className="pb-2">
                         <CardTitle className="flex items-center text-lg font-semibold">
@@ -241,10 +268,14 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
                         <MealComponentCard component={day.afternoonSnack} isSnack={true} />
                       </CardContent>
                     </Card>
-                  )}
-
-                  {/* Dinner */}
-                  {day.dinner && day.dinner.mainCourse && (
+                  )
+                },
+                {
+                  key: "dinner",
+                  label: "Dîner",
+                  icon: Utensils,
+                  isAvailable: !!(day.dinner && day.dinner.mainCourse && day.dinner.mainCourse.title),
+                  content: day.dinner && day.dinner.mainCourse && day.dinner.mainCourse.title && (
                      <Card className="bg-card shadow-md border">
                       <CardHeader className="pb-2">
                         <CardTitle className="flex items-center text-lg font-semibold">
@@ -263,10 +294,40 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
                         {renderMealCourse(day.dinner.dessert, "Dessert")}
                       </CardContent>
                     </Card>
+                  )
+                }
+              ];
+
+              const availableMealsForDay = mealDefinitions.filter(meal => meal.isAvailable);
+              const defaultMealTab = availableMealsForDay.length > 0 ? availableMealsForDay[0].key : "";
+
+              return (
+                <TabsContent key={day.dayIdentifier || `day-content-${dayIndex}`} value={day.dayIdentifier || `day-${dayIndex}`} className="mt-0">
+                  {availableMealsForDay.length > 0 ? (
+                    <Tabs defaultValue={defaultMealTab} className="w-full pt-2">
+                      <TabsList className="grid w-full grid-cols-minmax-meal-tabs gap-1 mb-4 h-auto flex-wrap justify-start">
+                        {availableMealsForDay.map(mealDef => (
+                          <TabsTrigger key={mealDef.key} value={mealDef.key}  className="flex-1 min-w-[120px] data-[state=active]:shadow-md">
+                            <mealDef.icon className="mr-2 h-4 w-4" />
+                            {mealDef.label}
+                          </TabsTrigger>
+                        ))}
+                      </TabsList>
+                      {availableMealsForDay.map(mealDef => (
+                        <TabsContent key={mealDef.key} value={mealDef.key} className="mt-2">
+                          {mealDef.content}
+                        </TabsContent>
+                      ))}
+                    </Tabs>
+                  ) : (
+                    <div className="text-center py-10 text-muted-foreground">
+                      <ChefHat className="mx-auto h-12 w-12 mb-2"/>
+                      Aucun repas défini pour cette journée.
+                    </div>
                   )}
-                </div>
-              </TabsContent>
-            ))}
+                </TabsContent>
+              );
+            })}
           </ScrollArea>
         </Tabs>
       </CardContent>
