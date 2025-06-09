@@ -677,18 +677,23 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <Accordion type="multiple" defaultValue={["config-base-item", "prefs-aliments-item"]} className="w-full space-y-6">
-          
+        <Accordion
+          type="multiple"
+          defaultValue={["config-base-item", "prefs-aliments-item"]}
+          className="w-full space-y-6"
+        >
           <AccordionItem value="config-base-item" className="border-b-0">
-            <Card className="shadow-lg">
-                <AccordionTrigger className="w-full text-left p-0 hover:no-underline group">
-                    <CardHeader className="flex flex-row items-center justify-between w-full p-4">
-                        <div className="flex items-center gap-2">
-                            <Wand2 className="h-5 w-5 text-secondary-foreground" />
-                            <CardTitle className="text-lg font-semibold">Planification</CardTitle>
-                        </div>
-                    </CardHeader>
-                </AccordionTrigger>
+            <Card className="shadow-lg card-glow-effect card-variant">
+              <AccordionTrigger className="w-full text-left p-0 hover:no-underline group">
+                <CardHeader className="flex flex-row items-center justify-between w-full p-4">
+                  <div className="flex items-center gap-2">
+                    <Wand2 className="h-5 w-5 text-secondary-foreground" />
+                    <CardTitle className="text-lg font-semibold">
+                      Planification
+                    </CardTitle>
+                  </div>
+                </CardHeader>
+              </AccordionTrigger>
               <AccordionContent className="pt-0">
                 <CardContent>
                   <FormField
@@ -698,22 +703,30 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                       <FormItem className="mb-6">
                         <FormLabel>Nom du plan (optionnel)</FormLabel>
                         <FormControl>
-                          <Input placeholder="Ex. : Plan alimentaire personnalisé" {...field} />
+                          <Input
+                            placeholder="Ex. : Plan alimentaire personnalisé"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormItem>
-                    <FormLabel className="text-base font-medium mb-2 block">Calendrier / Durée</FormLabel>
-                     <FormDescriptionComponentUI className="mb-3 text-xs">
-                       Choisissez la date de début et de fin du plan ou indiquez le nombre de jour(s) souhaité(s).
+                    <FormLabel className="text-base font-medium mb-2 block">
+                      Calendrier / Durée
+                    </FormLabel>
+                    <FormDescriptionComponentUI className="mb-3 text-xs">
+                      Choisissez la date de début et de fin du plan ou indiquez
+                      le nombre de jour(s) souhaité(s).
                     </FormDescriptionComponentUI>
                     <RadioGroup
-                        value={selectionMode}
-                        onValueChange={(value: 'dates' | 'duration') => setSelectionMode(value)}
-                        className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-4 my-3"
+                      value={selectionMode}
+                      onValueChange={(value: "dates" | "duration") =>
+                        setSelectionMode(value)
+                      }
+                      className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-4 my-3"
                     >
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="dates" id="mode-dates" />
@@ -725,22 +738,40 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                       </div>
                     </RadioGroup>
 
-                    {selectionMode === 'dates' && (
+                    {selectionMode === "dates" && (
                       <div className="flex flex-col sm:flex-row gap-3 items-end">
                         <div className="flex-1 min-w-0">
-                          <Label htmlFor="start-date-picker" className="text-sm font-medium mb-1 block">Date de début</Label>
-                          <Popover open={isStartDatePickerOpen} onOpenChange={setIsStartDatePickerOpen}>
+                          <Label
+                            htmlFor="start-date-picker"
+                            className="text-sm font-medium mb-1 block"
+                          >
+                            Date de début
+                          </Label>
+                          <Popover
+                            open={isStartDatePickerOpen}
+                            onOpenChange={setIsStartDatePickerOpen}
+                          >
                             <PopoverTrigger asChild>
                               <Button
                                 id="start-date-picker"
                                 variant={"outline"}
-                                className={cn("w-full justify-start text-left font-normal h-10", !startDate && "text-muted-foreground")}
+                                className={cn(
+                                  "w-full justify-start text-left font-normal h-10",
+                                  !startDate && "text-muted-foreground"
+                                )}
                               >
                                 <CalendarDays className="mr-2 h-4 w-4" />
-                                {startDate && isValid(startDate) ? format(startDate, "PPP", { locale: fr }) : <span>Choisir une date</span>}
+                                {startDate && isValid(startDate) ? (
+                                  format(startDate, "PPP", { locale: fr })
+                                ) : (
+                                  <span>Choisir une date</span>
+                                )}
                               </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
+                            <PopoverContent
+                              className="w-auto p-0 datepicker-popover"
+                              align="start"
+                            >
                               <Calendar
                                 mode="single"
                                 selected={startDate}
@@ -748,47 +779,84 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                                   if (date) {
                                     const newStartDate = startOfDay(date);
                                     setStartDate(newStartDate);
-                                    if (endDate && isBefore(startOfDay(endDate), newStartDate)) {
-                                      setEndDate(new Date(newStartDate)); 
+                                    if (
+                                      endDate &&
+                                      isBefore(
+                                        startOfDay(endDate),
+                                        newStartDate
+                                      )
+                                    ) {
+                                      setEndDate(new Date(newStartDate));
                                     }
                                   }
                                   setIsStartDatePickerOpen(false);
                                 }}
-                                disabled={(date) => isBefore(startOfDay(date), startOfDay(new Date()))} 
+                                disabled={(date) =>
+                                  isBefore(
+                                    startOfDay(date),
+                                    startOfDay(new Date())
+                                  )
+                                }
                                 initialFocus
                               />
                             </PopoverContent>
                           </Popover>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <Label htmlFor="end-date-picker" className="text-sm font-medium mb-1 block">Date de fin</Label>
-                          <Popover open={isEndDatePickerOpen} onOpenChange={setIsEndDatePickerOpen}>
+                          <Label
+                            htmlFor="end-date-picker"
+                            className="text-sm font-medium mb-1 block"
+                          >
+                            Date de fin
+                          </Label>
+                          <Popover
+                            open={isEndDatePickerOpen}
+                            onOpenChange={setIsEndDatePickerOpen}
+                          >
                             <PopoverTrigger asChild>
                               <Button
                                 id="end-date-picker"
                                 variant={"outline"}
-                                className={cn("w-full justify-start text-left font-normal h-10", !endDate && "text-muted-foreground")}
+                                className={cn(
+                                  "w-full justify-start text-left font-normal h-10",
+                                  !endDate && "text-muted-foreground"
+                                )}
                                 disabled={!startDate || !isValid(startDate)}
                               >
                                 <CalendarDays className="mr-2 h-4 w-4" />
-                                {endDate && isValid(endDate) ? format(endDate, "PPP", { locale: fr }) : <span>Choisir une date</span>}
+                                {endDate && isValid(endDate) ? (
+                                  format(endDate, "PPP", { locale: fr })
+                                ) : (
+                                  <span>Choisir une date</span>
+                                )}
                               </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
+                            <PopoverContent
+                              className="w-auto p-0 datepicker-popover"
+                              align="start"
+                            >
                               <Calendar
                                 mode="single"
                                 selected={endDate}
                                 onSelect={(date) => {
                                   if (date && startDate && isValid(startDate)) {
                                     const newEndDate = startOfDay(date);
-                                    if (!isBefore(newEndDate, startOfDay(startDate))) { 
-                                        setEndDate(newEndDate);
+                                    if (
+                                      !isBefore(
+                                        newEndDate,
+                                        startOfDay(startDate)
+                                      )
+                                    ) {
+                                      setEndDate(newEndDate);
                                     }
                                   }
                                   setIsEndDatePickerOpen(false);
                                 }}
                                 disabled={(date) => {
-                                  const minDate = startDate && isValid(startDate) ? startOfDay(startDate) : startOfDay(new Date()); 
+                                  const minDate =
+                                    startDate && isValid(startDate)
+                                      ? startOfDay(startDate)
+                                      : startOfDay(new Date());
                                   return isBefore(startOfDay(date), minDate);
                                 }}
                                 initialFocus
@@ -797,48 +865,83 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                           </Popover>
                         </div>
                         <div className="sm:w-auto sm:min-w-[80px] text-center sm:text-left h-10 flex items-center justify-center sm:justify-start text-sm text-primary pt-1 sm:pt-0">
-                           {displayDurationFromDates}
+                          {displayDurationFromDates}
                         </div>
                       </div>
                     )}
 
-                    {selectionMode === 'duration' && (
-                       <div className="flex flex-col sm:flex-row gap-3 items-end">
-                         <div className="flex-1 min-w-0">
-                           <Label htmlFor="duration-mode-start-date-picker" className="text-sm font-medium mb-1 block">Date de début</Label>
-                           <Popover open={isDurationModeStartDatePickerOpen} onOpenChange={setIsDurationModeStartDatePickerOpen}>
+                    {selectionMode === "duration" && (
+                      <div className="flex flex-col sm:flex-row gap-3 items-end">
+                        <div className="flex-1 min-w-0">
+                          <Label
+                            htmlFor="duration-mode-start-date-picker"
+                            className="text-sm font-medium mb-1 block"
+                          >
+                            Date de début
+                          </Label>
+                          <Popover
+                            open={isDurationModeStartDatePickerOpen}
+                            onOpenChange={setIsDurationModeStartDatePickerOpen}
+                          >
                             <PopoverTrigger asChild>
                               <Button
                                 id="duration-mode-start-date-picker"
                                 variant={"outline"}
-                                className={cn("w-full justify-start text-left font-normal h-10", !durationModeStartDate && "text-muted-foreground")}
+                                className={cn(
+                                  "w-full justify-start text-left font-normal h-10",
+                                  !durationModeStartDate &&
+                                    "text-muted-foreground"
+                                )}
                               >
                                 <CalendarDays className="mr-2 h-4 w-4" />
-                                {durationModeStartDate && isValid(durationModeStartDate) ? format(durationModeStartDate, "PPP", { locale: fr }) : <span>Choisir une date</span>}
+                                {durationModeStartDate &&
+                                isValid(durationModeStartDate) ? (
+                                  format(durationModeStartDate, "PPP", {
+                                    locale: fr,
+                                  })
+                                ) : (
+                                  <span>Choisir une date</span>
+                                )}
                               </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
+                            <PopoverContent
+                              className="w-auto p-0 datepicker-popover"
+                              align="start"
+                            >
                               <Calendar
                                 mode="single"
                                 selected={durationModeStartDate}
                                 onSelect={(date) => {
                                   if (date) {
-                                    const newDurationStartDate = startOfDay(date);
-                                    setDurationModeStartDate(newDurationStartDate);
+                                    const newDurationStartDate =
+                                      startOfDay(date);
+                                    setDurationModeStartDate(
+                                      newDurationStartDate
+                                    );
                                   }
                                   setIsDurationModeStartDatePickerOpen(false);
                                 }}
-                                 disabled={(date) => isBefore(startOfDay(date), startOfDay(new Date()))} 
+                                disabled={(date) =>
+                                  isBefore(
+                                    startOfDay(date),
+                                    startOfDay(new Date())
+                                  )
+                                }
                                 initialFocus
                               />
                             </PopoverContent>
                           </Popover>
                         </div>
                         <div className="sm:w-24">
-                          <Label htmlFor="duration-input-field" className="text-sm font-medium mb-1 block">Jour(s)</Label>
+                          <Label
+                            htmlFor="duration-input-field"
+                            className="text-sm font-medium mb-1 block"
+                          >
+                            Jour(s)
+                          </Label>
                           <Input
                             id="duration-input-field"
-                            type="text" 
+                            type="text"
                             value={durationInDays}
                             onChange={handleDurationInputChange}
                             onBlur={handleDurationInputBlur}
@@ -847,11 +950,16 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
                           />
                         </div>
                         <div className="flex-1 min-w-0 h-10 flex items-center justify-start text-sm pt-1 sm:pt-0">
-                            {displayEndDateFromDuration && isValid(displayEndDateFromDuration) && (
-                                <div className="text-primary">
-                                    <span className="font-medium text-muted-foreground">Fin du plan : </span>
-                                    {format(displayEndDateFromDuration, "PPP", { locale: fr })}
-                                </div>
+                          {displayEndDateFromDuration &&
+                            isValid(displayEndDateFromDuration) && (
+                              <div className="text-primary">
+                                <span className="font-medium text-muted-foreground">
+                                  Fin du plan :{" "}
+                                </span>
+                                {format(displayEndDateFromDuration, "PPP", {
+                                  locale: fr,
+                                })}
+                              </div>
                             )}
                         </div>
                       </div>
@@ -863,391 +971,534 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
           </AccordionItem>
 
           <AccordionItem value="prefs-aliments-item" className="border-b-0">
-            <Card className="shadow-lg">
-                <div className="flex flex-row items-center justify-between w-full p-4">
-                    <AccordionTrigger className="flex flex-1 items-center gap-2 p-0 hover:no-underline group">
-                         <div className="flex items-center gap-2">
-                            <ListFilter className="h-5 w-5 text-secondary-foreground" />
-                            <CardTitle className="text-lg font-semibold">Préférences alimentaires</CardTitle>
-                         </div>
-                    </AccordionTrigger>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="ml-4 shrink-0" 
-                      onClick={() => {
-                          setNewFoodData(initialNewFoodData);
-                          setAddFoodFormError(null);
-                          setIsAddFoodDialogOpen(true);
-                      }}
-                      >
-                      <PlusCircle className="h-4 w-4 sm:mr-2" />
-                      <span className="hidden sm:inline">Ajouter un aliment</span>
-                      <span className="sm:hidden">Ajouter</span>
-                    </Button>
-                </div>
+            <Card className="shadow-lg card-glow-effect card-variant">
+              <div className="flex flex-row items-center justify-between w-full p-4">
+                <AccordionTrigger className="flex flex-1 items-center gap-2 p-0 hover:no-underline group">
+                  <div className="flex items-center gap-2">
+                    <ListFilter className="h-5 w-5 text-secondary-foreground" />
+                    <CardTitle className="text-lg font-semibold">
+                      Préférences alimentaires
+                    </CardTitle>
+                  </div>
+                </AccordionTrigger>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="ml-4 shrink-0"
+                  onClick={() => {
+                    setNewFoodData(initialNewFoodData);
+                    setAddFoodFormError(null);
+                    setIsAddFoodDialogOpen(true);
+                  }}
+                >
+                  <PlusCircle className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Ajouter un aliment</span>
+                  <span className="sm:hidden">Ajouter</span>
+                </Button>
+              </div>
               <AccordionContent className="pt-0">
-                  <CardContent>
-                      <FormDescriptionComponentUI className="mb-2 text-xs">
-                        Cochez vos aliments favoris, à éviter ou allergènes.<br/>
-                        Les aliments favoris seront privilégiés pour vos plans de repas.
-                      </FormDescriptionComponentUI>
-                      <div className="max-h-[400px] overflow-y-auto p-1 rounded-md border mt-2">
-                      <Accordion type="multiple" className="w-full">
-                          {foodCategories.map(category => {
-                          const CategoryIcon = categoryIcons[category.categoryName] || ListFilter;
-                          return (
-                              <AccordionItem value={category.categoryName} key={category.categoryName} className="border-b-0 last:border-b-0">
-                                <AccordionTrigger className="py-3 px-2 hover:no-underline hover:bg-muted/50 rounded-md">
-                                    <div className="flex flex-1 items-center gap-2"> 
-                                    <CategoryIcon className="h-4 w-4 text-secondary-foreground" />
-                                    <span className="text-md font-semibold text-primary">{category.categoryName}</span>
-                                    </div>
-                                </AccordionTrigger>
-                              <AccordionContent className="pt-1 pb-2 px-2">
-                                  <ul className="space-y-1 pl-2">
-                                  {category.items.map(item => (
-                                      <li key={item.id} className="py-1 border-b border-border/50 last:border-b-0">
-                                      <div className="flex flex-col sm:grid sm:grid-cols-[1fr_auto] sm:items-center gap-x-1 sm:gap-x-2"> 
-                                          <div className="mb-1 sm:mb-0">
-                                            <span className={cn(
-                                                "text-sm font-medium",
-                                                item.isDisliked && "line-through",
-                                                item.isAllergenic && "text-destructive"
-                                            )}>{item.name}</span>
-                                            <span className={cn(
-                                                "text-xs text-muted-foreground ml-1",
-                                                item.isDisliked && "line-through",
-                                                item.isAllergenic && "text-destructive"
-                                            )}>{item.ig}</span>
-                                          </div>
-                                          <div className="flex items-center justify-start sm:justify-self-end gap-x-2 sm:gap-x-1 mt-1 sm:mt-0">
-                                              <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="icon" 
-                                                className="p-1 h-7 w-7"
-                                                onClick={() => handleOpenNutritionalInfoDialog(item, category.categoryName)}
-                                                title="Valeurs nutritionnelles"
-                                              >
-                                                <BarChart2 className="h-3.5 w-3.5" />
-                                              </Button>
-                                              <div className="flex items-center space-x-1">
-                                                <Checkbox
-                                                    id={`${item.id}-favorite`}
-                                                    checked={item.isFavorite}
-                                                    onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isFavorite", !!checked)}
-                                                    aria-label={`Marquer ${item.name} comme favori`}
-                                                    disabled={item.isDisliked || item.isAllergenic}
-                                                />
-                                                <Label htmlFor={`${item.id}-favorite`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${ (item.isDisliked || item.isAllergenic) ? 'opacity-50 cursor-not-allowed' : ''}`} title="Favori">
-                                                    <Star className="h-3.5 w-3.5" />
-                                                </Label>
-                                              </div>
-                                              <div className="flex items-center space-x-1">
-                                                <Checkbox
-                                                    id={`${item.id}-disliked`}
-                                                    checked={item.isDisliked}
-                                                    onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isDisliked", !!checked)}
-                                                    aria-label={`Marquer ${item.name} comme non aimé`}
-                                                    disabled={item.isFavorite}
-                                                />
-                                                <Label htmlFor={`${item.id}-disliked`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${item.isFavorite ? 'opacity-50 cursor-not-allowed' : ''}`} title="Je n'aime pas">
-                                                    <ThumbsDown className="h-3.5 w-3.5" />
-                                                </Label>
-                                              </div>
-                                              <div className="flex items-center space-x-1">
-                                                <Checkbox
-                                                    id={`${item.id}-allergenic`}
-                                                    checked={item.isAllergenic}
-                                                    onCheckedChange={(checked) => handleFoodPreferenceChange(category.categoryName, item.id, "isAllergenic", !!checked)}
-                                                    aria-label={`Marquer ${item.name} comme allergène`}
-                                                    disabled={item.isFavorite}
-                                                />
-                                                <Label htmlFor={`${item.id}-allergenic`} className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${item.isFavorite ? 'opacity-50 cursor-not-allowed' : ''}`} title="Allergie/Intolérance">
-                                                    <AlertTriangle className="h-3.5 w-3.5" />
-                                                </Label>
-                                              </div>
-                                          </div>
+                <CardContent>
+                  <FormDescriptionComponentUI className="mb-2 text-xs">
+                    Cochez vos aliments favoris, à éviter ou allergènes.
+                    <br />
+                    Les aliments favoris seront privilégiés pour vos plans de
+                    repas.
+                  </FormDescriptionComponentUI>
+                  <div className="max-h-[400px] overflow-y-auto p-1 rounded-md border mt-2">
+                    <Accordion type="multiple" className="w-full">
+                      {foodCategories.map((category) => {
+                        const CategoryIcon =
+                          categoryIcons[category.categoryName] || ListFilter;
+                        return (
+                          <AccordionItem
+                            value={category.categoryName}
+                            key={category.categoryName}
+                            className="border-b-0 last:border-b-0"
+                          >
+                            <AccordionTrigger className="py-3 px-2 hover:no-underline hover:bg-muted/50 rounded-md">
+                              <div className="flex flex-1 items-center gap-2">
+                                <CategoryIcon className="h-4 w-4 text-secondary-foreground" />
+                                <span className="text-md font-semibold text-primary">
+                                  {category.categoryName}
+                                </span>
+                              </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="pt-1 pb-2 px-2">
+                              <ul className="space-y-1 pl-2">
+                                {category.items.map((item) => (
+                                  <li
+                                    key={item.id}
+                                    className="py-1 border-b border-border/50 last:border-b-0"
+                                  >
+                                    <div className="flex flex-col sm:grid sm:grid-cols-[1fr_auto] sm:items-center gap-x-1 sm:gap-x-2">
+                                      <div className="mb-1 sm:mb-0">
+                                        <span
+                                          className={cn(
+                                            "text-sm font-medium",
+                                            item.isDisliked && "line-through",
+                                            item.isAllergenic &&
+                                              "text-destructive"
+                                          )}
+                                        >
+                                          {item.name}
+                                        </span>
+                                        <span
+                                          className={cn(
+                                            "text-xs text-muted-foreground ml-1",
+                                            item.isDisliked && "line-through",
+                                            item.isAllergenic &&
+                                              "text-destructive"
+                                          )}
+                                        >
+                                          {item.ig}
+                                        </span>
                                       </div>
-                                      </li>
-                                  ))}
-                                  </ul>
-                              </AccordionContent>
-                              </AccordionItem>
-                          );
-                          })}
-                      </Accordion>
-                      </div>
-                  </CardContent>
-                </AccordionContent>
+                                      <div className="flex items-center justify-start sm:justify-self-end gap-x-2 sm:gap-x-1 mt-1 sm:mt-0">
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="icon"
+                                          className="p-1 h-7 w-7"
+                                          onClick={() =>
+                                            handleOpenNutritionalInfoDialog(
+                                              item,
+                                              category.categoryName
+                                            )
+                                          }
+                                          title="Valeurs nutritionnelles"
+                                        >
+                                          <BarChart2 className="h-3.5 w-3.5" />
+                                        </Button>
+                                        <div className="flex items-center space-x-1">
+                                          <Checkbox
+                                            id={`${item.id}-favorite`}
+                                            checked={item.isFavorite}
+                                            onCheckedChange={(checked) =>
+                                              handleFoodPreferenceChange(
+                                                category.categoryName,
+                                                item.id,
+                                                "isFavorite",
+                                                !!checked
+                                              )
+                                            }
+                                            aria-label={`Marquer ${item.name} comme favori`}
+                                            disabled={
+                                              item.isDisliked ||
+                                              item.isAllergenic
+                                            }
+                                          />
+                                          <Label
+                                            htmlFor={`${item.id}-favorite`}
+                                            className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${
+                                              item.isDisliked ||
+                                              item.isAllergenic
+                                                ? "opacity-50 cursor-not-allowed"
+                                                : ""
+                                            }`}
+                                            title="Favori"
+                                          >
+                                            <Star className="h-3.5 w-3.5" />
+                                          </Label>
+                                        </div>
+                                        <div className="flex items-center space-x-1">
+                                          <Checkbox
+                                            id={`${item.id}-disliked`}
+                                            checked={item.isDisliked}
+                                            onCheckedChange={(checked) =>
+                                              handleFoodPreferenceChange(
+                                                category.categoryName,
+                                                item.id,
+                                                "isDisliked",
+                                                !!checked
+                                              )
+                                            }
+                                            aria-label={`Marquer ${item.name} comme non aimé`}
+                                            disabled={item.isFavorite}
+                                          />
+                                          <Label
+                                            htmlFor={`${item.id}-disliked`}
+                                            className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${
+                                              item.isFavorite
+                                                ? "opacity-50 cursor-not-allowed"
+                                                : ""
+                                            }`}
+                                            title="Je n'aime pas"
+                                          >
+                                            <ThumbsDown className="h-3.5 w-3.5" />
+                                          </Label>
+                                        </div>
+                                        <div className="flex items-center space-x-1">
+                                          <Checkbox
+                                            id={`${item.id}-allergenic`}
+                                            checked={item.isAllergenic}
+                                            onCheckedChange={(checked) =>
+                                              handleFoodPreferenceChange(
+                                                category.categoryName,
+                                                item.id,
+                                                "isAllergenic",
+                                                !!checked
+                                              )
+                                            }
+                                            aria-label={`Marquer ${item.name} comme allergène`}
+                                            disabled={item.isFavorite}
+                                          />
+                                          <Label
+                                            htmlFor={`${item.id}-allergenic`}
+                                            className={`text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer ${
+                                              item.isFavorite
+                                                ? "opacity-50 cursor-not-allowed"
+                                                : ""
+                                            }`}
+                                            title="Allergie/Intolérance"
+                                          >
+                                            <AlertTriangle className="h-3.5 w-3.5" />
+                                          </Label>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </li>
+                                ))}
+                              </ul>
+                            </AccordionContent>
+                          </AccordionItem>
+                        );
+                      })}
+                    </Accordion>
+                  </div>
+                </CardContent>
+              </AccordionContent>
             </Card>
           </AccordionItem>
         </Accordion>
-        
+
         <div className="flex flex-col sm:flex-row gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={handleSaveSettings} className="w-full sm:flex-1">
-                <Save className="mr-2 h-4 w-4" />
-                Sauvegarder les paramètres
-            </Button>
-            <Button
-                type="button"
-                variant="outline"
-                onClick={handleLoadSettings}
-                className="w-full sm:flex-1"
-                disabled={!isClient || (isClient && typeof window !== 'undefined' && !localStorage.getItem("diabeatz-form-settings"))}
-            >
-                <Upload className="mr-2 h-4 w-4" />
-                Charger les paramètres
-            </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleSaveSettings}
+            className="w-full sm:flex-1"
+          >
+            <Save className="mr-2 h-4 w-4" />
+            Sauvegarder les paramètres
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleLoadSettings}
+            className="w-full sm:flex-1"
+            disabled={
+              !isClient ||
+              (isClient &&
+                typeof window !== "undefined" &&
+                !localStorage.getItem("diabeatz-form-settings"))
+            }
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            Charger les paramètres
+          </Button>
         </div>
 
-        <Button type="submit" disabled={isLoading || (isDataLoading && isClient)} className="w-full">
-        {isLoading || (isDataLoading && isClient) ? (
+        <Button
+          type="submit"
+          disabled={isLoading || (isDataLoading && isClient)}
+          className="w-full"
+        >
+          {isLoading || (isDataLoading && isClient) ? (
             <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            {isLoading ? "Génération en cours..." : "Chargement..."}
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              {isLoading ? "Génération en cours..." : "Chargement..."}
             </>
-        ) : (
+          ) : (
             <>
-            <Wand2 className="mr-2 h-4 w-4" />
-            Générer le plan alimentaire
+              <Wand2 className="mr-2 h-4 w-4" />
+              Générer le plan alimentaire
             </>
-        )}
+          )}
         </Button>
-        
-         <Accordion type="single" collapsible className="w-full">
-             <AccordionItem value="conseils-aliments-item" className="border-b-0">
-                <Card className="shadow-lg">
-                    <AccordionTrigger className="w-full text-left p-0 hover:no-underline group">
-                        <CardHeader className="flex flex-row items-center justify-between w-full p-4">
-                            <div className="flex items-center gap-2">
-                                <BookOpenText className="h-5 w-5 text-secondary-foreground" />
-                                <CardTitle className="text-lg font-semibold text-foreground">
-                                Conseils alimentaires optimisés pour Diabète de Type 2
-                                </CardTitle>
-                            </div>
-                        </CardHeader>
-                    </AccordionTrigger>
-                  <AccordionContent className="pt-0">
-                      <CardContent>
-                           <RichTextDisplay text={form.watch('diabeticResearchSummary')} />
-                          <Button
-                              type="button"
-                              variant="link"
-                              onClick={handleOpenEditTipsDialog}
-                              className="text-sm p-0 h-auto mt-2"
-                          >
-                              Modifier les conseils
-                          </Button>
-                      </CardContent>
-                  </AccordionContent>
-                </Card>
-            </AccordionItem>
-        </Accordion>
 
+        <Accordion type="single" collapsible className="w-full">
+          <AccordionItem value="conseils-aliments-item" className="border-b-0">
+            <Card className="shadow-lg card-glow-effect card-variant">
+              <AccordionTrigger className="w-full text-left p-0 hover:no-underline group">
+                <CardHeader className="flex flex-row items-center justify-between w-full p-4">
+                  <div className="flex items-center gap-2">
+                    <BookOpenText className="h-5 w-5 text-secondary-foreground" />
+                    <CardTitle className="text-lg font-semibold text-foreground">
+                      Conseils alimentaires optimisés pour Diabète de Type 2
+                    </CardTitle>
+                  </div>
+                </CardHeader>
+              </AccordionTrigger>
+              <AccordionContent className="pt-0">
+                <CardContent>
+                  <RichTextDisplay
+                    text={form.watch("diabeticResearchSummary")}
+                  />
+                  <Button
+                    type="button"
+                    variant="link"
+                    onClick={handleOpenEditTipsDialog}
+                    className="text-sm p-0 h-auto mt-2"
+                  >
+                    Modifier les conseils
+                  </Button>
+                </CardContent>
+              </AccordionContent>
+            </Card>
+          </AccordionItem>
+        </Accordion>
       </form>
-        <Dialog open={isEditTipsDialogOpen} onOpenChange={setIsEditTipsDialogOpen}>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>Modifier les Conseils Alimentaires</DialogTitle>
-              <DialogDescriptionComponent>
-                Modifiez le texte des conseils ci-dessous. Utilisez `**texte**` pour le gras.
-                Les annotations comme (en gras et bleu) seront interprétées pour le style.
-              </DialogDescriptionComponent>
-            </DialogHeader>
-            <div className="py-4">
-              <Textarea
-                value={editingTips}
-                onChange={(e) => setEditingTips(e.target.value)}
-                className="min-h-[250px] text-sm"
-                rows={15}
+      <Dialog
+        open={isEditTipsDialogOpen}
+        onOpenChange={setIsEditTipsDialogOpen}
+      >
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Modifier les Conseils Alimentaires</DialogTitle>
+            <DialogDescriptionComponent>
+              Modifiez le texte des conseils ci-dessous. Utilisez `**texte**`
+              pour le gras. Les annotations comme (en gras et bleu) seront
+              interprétées pour le style.
+            </DialogDescriptionComponent>
+          </DialogHeader>
+          <div className="py-4">
+            <Textarea
+              value={editingTips}
+              onChange={(e) => setEditingTips(e.target.value)}
+              className="min-h-[250px] text-sm"
+              rows={15}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsEditTipsDialogOpen(false)}
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={() => {
+                form.setValue("diabeticResearchSummary", editingTips, {
+                  shouldValidate: true,
+                  shouldDirty: true,
+                });
+                setIsEditTipsDialogOpen(false);
+              }}
+            >
+              Enregistrer les modifications
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isNutritionalInfoDialogOpen}
+        onOpenChange={setIsNutritionalInfoDialogOpen}
+      >
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>
+              Valeurs nutritionnelles pour{" "}
+              {selectedFoodItemForNutritionalInfo?.name}
+            </DialogTitle>
+            <DialogDescriptionComponent>
+              Modifiez les informations nutritionnelles ci-dessous. Ces valeurs
+              sont indicatives.
+            </DialogDescriptionComponent>
+          </DialogHeader>
+          <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+            {(
+              Object.keys(editableNutritionalInfo) as Array<
+                keyof EditableNutritionalInfo
+              >
+            ).map((key) => {
+              const labelMap: Record<keyof EditableNutritionalInfo, string> = {
+                calories: "Calories (kcal/portion ou 100g)",
+                carbs: "Glucides (g)",
+                protein: "Protéines (g)",
+                fat: "Lipides (g)",
+                sugars: "dont Sucres (g)",
+                fiber: "Fibres (g)",
+                sodium: "Sel/Sodium (mg ou g)",
+                notes: "Notes / Portion de référence",
+              };
+              const currentLabel =
+                labelMap[key] || key.charAt(0).toUpperCase() + key.slice(1);
+
+              return (
+                <div
+                  key={key}
+                  className="grid grid-cols-[1fr_2fr] items-center gap-x-2"
+                >
+                  <Label
+                    htmlFor={`nutritional-${key}`}
+                    className="text-right text-xs whitespace-nowrap"
+                  >
+                    {currentLabel} :
+                  </Label>
+                  {key === "notes" ? (
+                    <Textarea
+                      id={`nutritional-${key}`}
+                      name={key}
+                      value={editableNutritionalInfo[key] || ""}
+                      onChange={handleNutritionalInfoInputChange}
+                      className="col-span-1 text-sm"
+                      rows={3}
+                    />
+                  ) : (
+                    <Input
+                      id={`nutritional-${key}`}
+                      name={key}
+                      value={editableNutritionalInfo[key] || ""}
+                      onChange={handleNutritionalInfoInputChange}
+                      className="col-span-1 text-sm"
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsNutritionalInfoDialogOpen(false)}
+            >
+              Annuler
+            </Button>
+            <Button onClick={handleSaveNutritionalInfo}>Enregistrer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAddFoodDialogOpen} onOpenChange={setIsAddFoodDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Ajouter un nouvel aliment</DialogTitle>
+            <DialogDescriptionComponent>
+              Remplissez les informations ci-dessous pour ajouter un aliment à
+              vos préférences.
+            </DialogDescriptionComponent>
+          </DialogHeader>
+          <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-3">
+            {addFoodFormError && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Erreur</AlertTitle>
+                <AlertDescriptionShadcn>
+                  {addFoodFormError}
+                </AlertDescriptionShadcn>
+              </Alert>
+            )}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="new-food-name" className="text-right col-span-1">
+                Nom*
+              </Label>
+              <Input
+                id="new-food-name"
+                name="name"
+                value={newFoodData.name}
+                onChange={handleAddNewFoodChange}
+                className="col-span-3"
+                placeholder="Ex: Tomate cerise"
               />
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsEditTipsDialogOpen(false)}>Annuler</Button>
-              <Button
-                onClick={() => {
-                  form.setValue('diabeticResearchSummary', editingTips, { shouldValidate: true, shouldDirty: true });
-                  setIsEditTipsDialogOpen(false);
-                }}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label
+                htmlFor="new-food-category"
+                className="text-right col-span-1"
               >
-                Enregistrer les modifications
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={isNutritionalInfoDialogOpen} onOpenChange={setIsNutritionalInfoDialogOpen}>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Valeurs nutritionnelles pour {selectedFoodItemForNutritionalInfo?.name}</DialogTitle>
-              <DialogDescriptionComponent>
-                Modifiez les informations nutritionnelles ci-dessous. Ces valeurs sont indicatives.
-              </DialogDescriptionComponent>
-            </DialogHeader>
-            <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
-              {(Object.keys(editableNutritionalInfo) as Array<keyof EditableNutritionalInfo>).map((key) => {
-                const labelMap: Record<keyof EditableNutritionalInfo, string> = {
-                    calories: "Calories (kcal/portion ou 100g)",
-                    carbs: "Glucides (g)",
-                    protein: "Protéines (g)",
-                    fat: "Lipides (g)",
-                    sugars: "dont Sucres (g)",
-                    fiber: "Fibres (g)",
-                    sodium: "Sel/Sodium (mg ou g)",
-                    notes: "Notes / Portion de référence",
+                Catégorie*
+              </Label>
+              <Select
+                value={newFoodData.categoryName}
+                onValueChange={handleAddNewFoodCategoryChange}
+              >
+                <SelectTrigger id="new-food-category" className="col-span-3">
+                  <SelectValue placeholder="Choisir une catégorie" />
+                </SelectTrigger>
+                <SelectContent>
+                  {baseInitialFoodCategories.map((cat) => (
+                    <SelectItem key={cat.categoryName} value={cat.categoryName}>
+                      {cat.categoryName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="new-food-ig" className="text-right col-span-1">
+                IG
+              </Label>
+              <Input
+                id="new-food-ig"
+                name="ig"
+                value={newFoodData.ig}
+                onChange={handleAddNewFoodChange}
+                className="col-span-3"
+                placeholder="Ex: (IG: ~15)"
+              />
+            </div>
+            {(Object.keys(initialNewFoodData) as Array<keyof NewFoodData>)
+              .filter((key) => !["name", "categoryName", "ig"].includes(key))
+              .map((key) => {
+                const labelMap: Record<string, string> = {
+                  calories: "Calories (kcal)",
+                  carbs: "Glucides (g)",
+                  protein: "Protéines (g)",
+                  fat: "Lipides (g)",
+                  sugars: "dont Sucres (g)",
+                  fiber: "Fibres (g)",
+                  sodium: "Sel/Sodium (mg ou g)",
+                  notes: "Notes / Portion",
                 };
-                const currentLabel = labelMap[key] || key.charAt(0).toUpperCase() + key.slice(1);
-
+                const currentLabel =
+                  labelMap[key] || key.charAt(0).toUpperCase() + key.slice(1);
                 return (
-                  <div key={key} className="grid grid-cols-[1fr_2fr] items-center gap-x-2">
-                    <Label htmlFor={`nutritional-${key}`} className="text-right text-xs whitespace-nowrap">
-                      {currentLabel} :
+                  <div
+                    key={key}
+                    className="grid grid-cols-4 items-center gap-4"
+                  >
+                    <Label
+                      htmlFor={`new-food-${key}`}
+                      className="text-right col-span-1 text-sm"
+                    >
+                      {currentLabel}
                     </Label>
-                    {key === 'notes' ? (
-                       <Textarea
-                        id={`nutritional-${key}`}
+                    {key === "notes" ? (
+                      <Textarea
+                        id={`new-food-${key}`}
                         name={key}
-                        value={editableNutritionalInfo[key] || ""}
-                        onChange={handleNutritionalInfoInputChange}
-                        className="col-span-1 text-sm"
-                        rows={3}
+                        value={newFoodData[key as keyof NewFoodData] || ""}
+                        onChange={handleAddNewFoodChange}
+                        className="col-span-3"
+                        rows={2}
                       />
                     ) : (
                       <Input
-                        id={`nutritional-${key}`}
+                        id={`new-food-${key}`}
                         name={key}
-                        value={editableNutritionalInfo[key] || ""}
-                        onChange={handleNutritionalInfoInputChange}
-                        className="col-span-1 text-sm"
+                        value={newFoodData[key as keyof NewFoodData] || ""}
+                        onChange={handleAddNewFoodChange}
+                        className="col-span-3"
                       />
                     )}
                   </div>
                 );
               })}
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsNutritionalInfoDialogOpen(false)}>Annuler</Button>
-              <Button onClick={handleSaveNutritionalInfo}>
-                Enregistrer
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline">
+                Annuler
               </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={isAddFoodDialogOpen} onOpenChange={setIsAddFoodDialogOpen}>
-          <DialogContent className="sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Ajouter un nouvel aliment</DialogTitle>
-              <DialogDescriptionComponent>
-                Remplissez les informations ci-dessous pour ajouter un aliment à vos préférences.
-              </DialogDescriptionComponent>
-            </DialogHeader>
-            <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-3">
-              {addFoodFormError && (
-                <Alert variant="destructive">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertTitle>Erreur</AlertTitle>
-                  <AlertDescriptionShadcn>{addFoodFormError}</AlertDescriptionShadcn>
-                </Alert>
-              )}
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="new-food-name" className="text-right col-span-1">
-                  Nom*
-                </Label>
-                <Input
-                  id="new-food-name"
-                  name="name"
-                  value={newFoodData.name}
-                  onChange={handleAddNewFoodChange}
-                  className="col-span-3"
-                  placeholder="Ex: Tomate cerise"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="new-food-category" className="text-right col-span-1">
-                  Catégorie*
-                </Label>
-                <Select
-                  value={newFoodData.categoryName}
-                  onValueChange={handleAddNewFoodCategoryChange}
-                >
-                  <SelectTrigger id="new-food-category" className="col-span-3">
-                    <SelectValue placeholder="Choisir une catégorie" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {baseInitialFoodCategories.map(cat => (
-                      <SelectItem key={cat.categoryName} value={cat.categoryName}>
-                        {cat.categoryName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="new-food-ig" className="text-right col-span-1">
-                  IG
-                </Label>
-                <Input
-                  id="new-food-ig"
-                  name="ig"
-                  value={newFoodData.ig}
-                  onChange={handleAddNewFoodChange}
-                  className="col-span-3"
-                  placeholder="Ex: (IG: ~15)"
-                />
-              </div>
-              {(Object.keys(initialNewFoodData) as Array<keyof NewFoodData>)
-                .filter(key => !["name", "categoryName", "ig"].includes(key))
-                .map(key => {
-                  const labelMap: Record<string, string> = {
-                    calories: "Calories (kcal)",
-                    carbs: "Glucides (g)",
-                    protein: "Protéines (g)",
-                    fat: "Lipides (g)",
-                    sugars: "dont Sucres (g)",
-                    fiber: "Fibres (g)",
-                    sodium: "Sel/Sodium (mg ou g)",
-                    notes: "Notes / Portion",
-                  };
-                  const currentLabel = labelMap[key] || key.charAt(0).toUpperCase() + key.slice(1);
-                  return (
-                    <div key={key} className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor={`new-food-${key}`} className="text-right col-span-1 text-sm">
-                        {currentLabel}
-                      </Label>
-                      {key === 'notes' ? (
-                        <Textarea
-                          id={`new-food-${key}`}
-                          name={key}
-                          value={newFoodData[key as keyof NewFoodData] || ""}
-                          onChange={handleAddNewFoodChange}
-                          className="col-span-3"
-                          rows={2}
-                        />
-                      ) : (
-                        <Input
-                          id={`new-food-${key}`}
-                          name={key}
-                          value={newFoodData[key as keyof NewFoodData] || ""}
-                          onChange={handleAddNewFoodChange}
-                          className="col-span-3"
-                        />
-                      )}
-                    </div>
-                  );
-              })}
-            </div>
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button type="button" variant="outline">Annuler</Button>
-              </DialogClose>
-              <Button type="button" onClick={handleAddNewFood}>Ajouter l'aliment</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </DialogClose>
+            <Button type="button" onClick={handleAddNewFood}>
+              Ajouter l'aliment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Form>
   );
 }

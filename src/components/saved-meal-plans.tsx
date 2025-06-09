@@ -25,26 +25,32 @@ type SavedMealPlansProps = {
 
 export function SavedMealPlans({ savedPlans, onLoadPlan, onDeletePlan }: SavedMealPlansProps) {
   return (
-    <Card className="shadow-lg">
+    <Card className="shadow-lg card-glow-effect card-variant">
       <Accordion type="single" collapsible>
         <AccordionItem value="saved-plans-item" className="border-b-0">
           <AccordionTrigger className="w-full text-left p-0 hover:no-underline">
             <CardHeader className="flex flex-row items-center justify-between w-full p-4">
               <div className="flex items-center gap-2">
                 <ListChecks className="h-5 w-5 text-secondary-foreground" />
-                <CardTitle className="text-lg font-semibold">Plans sauvegardés</CardTitle>
+                <CardTitle className="text-lg font-semibold">
+                  Plans sauvegardés
+                </CardTitle>
               </div>
             </CardHeader>
           </AccordionTrigger>
           <AccordionContent className="pt-0">
             <CardContent>
-              <CardDescription className="mb-4">Chargez ou supprimez vos plans repas précédemment sauvegardés.</CardDescription>
+              <CardDescription className="mb-4">
+                Chargez ou supprimez vos plans repas précédemment sauvegardés.
+              </CardDescription>
               <ScrollArea className="h-[250px] pr-3">
                 {savedPlans.length === 0 ? (
                   <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-6">
                     <Inbox className="h-12 w-12 mb-3" />
                     <p className="font-medium">Aucun plan sauvegardé</p>
-                    <p className="text-sm">Vos plans repas sauvegardés apparaîtront ici.</p>
+                    <p className="text-sm">
+                      Vos plans repas sauvegardés apparaîtront ici.
+                    </p>
                   </div>
                 ) : (
                   <ul className="space-y-3">
@@ -52,23 +58,28 @@ export function SavedMealPlans({ savedPlans, onLoadPlan, onDeletePlan }: SavedMe
                       let dateToFormat: Date;
                       if (plan.createdAt instanceof Timestamp) {
                         dateToFormat = plan.createdAt.toDate();
-                      } else if (typeof plan.createdAt === 'string') {
+                      } else if (typeof plan.createdAt === "string") {
                         dateToFormat = new Date(plan.createdAt);
                       } else {
                         // Fallback or error handling if createdAt is an unexpected type
                         // For now, let's try to create a date, which might result in "Invalid Date"
                         // but it's better than crashing.
                         // @ts-ignore
-                        dateToFormat = new Date(plan.createdAt); 
+                        dateToFormat = new Date(plan.createdAt);
                       }
 
                       return (
                         <li key={plan.id}>
                           <div className="flex items-center justify-between p-3 bg-background rounded-md border hover:shadow-md transition-shadow">
                             <div>
-                              <p className="font-semibold text-sm">{plan.name}</p>
+                              <p className="font-semibold text-sm">
+                                {plan.name}
+                              </p>
                               <p className="text-xs text-muted-foreground">
-                                Créé le: {isValidDate(dateToFormat) ? format(dateToFormat, "PPPp", { locale: fr }) : "Date invalide"}
+                                Créé le:{" "}
+                                {isValidDate(dateToFormat)
+                                  ? format(dateToFormat, "PPPp", { locale: fr })
+                                  : "Date invalide"}
                               </p>
                             </div>
                             <div className="flex gap-2">
@@ -90,7 +101,9 @@ export function SavedMealPlans({ savedPlans, onLoadPlan, onDeletePlan }: SavedMe
                               </Button>
                             </div>
                           </div>
-                          {index < savedPlans.length - 1 && <Separator className="my-2" />}
+                          {index < savedPlans.length - 1 && (
+                            <Separator className="my-2" />
+                          )}
                         </li>
                       );
                     })}

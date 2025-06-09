@@ -66,21 +66,27 @@ export function MedicationManagementCard({
   onDeleteMedication,
 }: MedicationManagementCardProps) {
   return (
-    <Card className="shadow-lg">
+    <Card className="shadow-lg card-glow-effect card-variant">
       <Accordion type="single" collapsible>
-        <AccordionItem value="medication-management-item" className="border-b-0">
+        <AccordionItem
+          value="medication-management-item"
+          className="border-b-0"
+        >
           <AccordionTrigger className="w-full text-left p-0 hover:no-underline">
             <CardHeader className="flex flex-row items-center justify-between w-full p-4">
               <div className="flex items-center gap-2">
                 <Pill className="h-5 w-5 text-secondary-foreground" />
-                <CardTitle className="text-lg font-semibold">Gestion des Médicaments</CardTitle>
+                <CardTitle className="text-lg font-semibold">
+                  Gestion des Médicaments
+                </CardTitle>
               </div>
             </CardHeader>
           </AccordionTrigger>
           <AccordionContent className="pt-0">
             <CardContent>
               <CardDescription className="mb-4">
-                Suivez et gérez vos médicaments, leurs stocks et rappels de prise.
+                Suivez et gérez vos médicaments, leurs stocks et rappels de
+                prise.
               </CardDescription>
               <Button onClick={onAddMedication} className="w-full mb-4">
                 <PlusCircle className="mr-2 h-4 w-4" /> Ajouter un médicament
@@ -95,17 +101,41 @@ export function MedicationManagementCard({
                 ) : (
                   <ul className="space-y-3">
                     {medications.map((med) => {
-                      const isLowStock = med.lowStockThreshold !== undefined && med.stock <= med.lowStockThreshold;
+                      const isLowStock =
+                        med.lowStockThreshold !== undefined &&
+                        med.stock <= med.lowStockThreshold;
                       return (
-                        <li key={med.id} className={cn("p-3 bg-card/80 dark:bg-card/90 rounded-lg border hover:shadow-md transition-shadow", isLowStock && "border-destructive/50 ring-1 ring-destructive/30")}>
+                        <li
+                          key={med.id}
+                          className={cn(
+                            "p-3 bg-card/80 dark:bg-card/90 rounded-lg border hover:shadow-md transition-shadow",
+                            isLowStock &&
+                              "border-destructive/50 ring-1 ring-destructive/30"
+                          )}
+                        >
                           <div className="flex items-start justify-between mb-2">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center mb-0.5">
-                                {med.color && <div className="w-3 h-3 rounded-full mr-2 flex-shrink-0 border" style={{ backgroundColor: med.color }} title={`Couleur: ${med.color}`} />}
+                                {med.color && (
+                                  <div
+                                    className="w-3 h-3 rounded-full mr-2 flex-shrink-0 border"
+                                    style={{ backgroundColor: med.color }}
+                                    title={`Couleur: ${med.color}`}
+                                  />
+                                )}
                                 <FormIcon form={med.form} />
-                                <h4 className="font-semibold text-sm truncate" title={med.name}>{med.name}</h4>
+                                <h4
+                                  className="font-semibold text-sm truncate"
+                                  title={med.name}
+                                >
+                                  {med.name}
+                                </h4>
                               </div>
-                              {med.strength && <p className="text-xs text-muted-foreground ml-6">Dosage: {med.strength}</p>}
+                              {med.strength && (
+                                <p className="text-xs text-muted-foreground ml-6">
+                                  Dosage: {med.strength}
+                                </p>
+                              )}
                             </div>
                             <div className="flex gap-2 flex-shrink-0 ml-2">
                               <Button
@@ -128,47 +158,77 @@ export function MedicationManagementCard({
                               </Button>
                             </div>
                           </div>
-                          
+
                           <div className="space-y-1 text-xs">
                             <div className="flex items-start">
-                                <Tag className="h-3.5 w-3.5 mr-1.5 mt-0.5 text-muted-foreground flex-shrink-0"/> 
-                                <div><strong>Rôle:</strong> {med.description}</div>
+                              <Tag className="h-3.5 w-3.5 mr-1.5 mt-0.5 text-muted-foreground flex-shrink-0" />
+                              <div>
+                                <strong>Rôle:</strong> {med.description}
+                              </div>
                             </div>
                             <div className="flex items-start">
-                                <HelpCircle className="h-3.5 w-3.5 mr-1.5 mt-0.5 text-muted-foreground flex-shrink-0"/>
-                                <div><strong>Instructions:</strong> {med.instructions}</div>
+                              <HelpCircle className="h-3.5 w-3.5 mr-1.5 mt-0.5 text-muted-foreground flex-shrink-0" />
+                              <div>
+                                <strong>Instructions:</strong>{" "}
+                                {med.instructions}
+                              </div>
                             </div>
-                            {med.reminder && med.reminder.frequency !== 'asNeeded' && (
+                            {med.reminder &&
+                              med.reminder.frequency !== "asNeeded" && (
                                 <>
-                                    <div className="flex items-start">
-                                        <Repeat className="h-3.5 w-3.5 mr-1.5 mt-0.5 text-muted-foreground flex-shrink-0"/>
-                                        <div><strong>Fréquence:</strong> {formatFrequency(med.reminder)}</div>
+                                  <div className="flex items-start">
+                                    <Repeat className="h-3.5 w-3.5 mr-1.5 mt-0.5 text-muted-foreground flex-shrink-0" />
+                                    <div>
+                                      <strong>Fréquence:</strong>{" "}
+                                      {formatFrequency(med.reminder)}
                                     </div>
-                                    {med.reminder.times.length > 0 && (
-                                        <div className="flex items-start">
-                                            <Clock className="h-3.5 w-3.5 mr-1.5 mt-0.5 text-muted-foreground flex-shrink-0"/>
-                                            <div><strong>Heures:</strong> {med.reminder.times.join(', ')}</div>
-                                        </div>
-                                    )}
+                                  </div>
+                                  {med.reminder.times.length > 0 && (
+                                    <div className="flex items-start">
+                                      <Clock className="h-3.5 w-3.5 mr-1.5 mt-0.5 text-muted-foreground flex-shrink-0" />
+                                      <div>
+                                        <strong>Heures:</strong>{" "}
+                                        {med.reminder.times.join(", ")}
+                                      </div>
+                                    </div>
+                                  )}
                                 </>
-                            )}
-                             {med.reminder && med.reminder.frequency === 'asNeeded' && (
+                              )}
+                            {med.reminder &&
+                              med.reminder.frequency === "asNeeded" && (
                                 <div className="flex items-start">
-                                    <Repeat className="h-3.5 w-3.5 mr-1.5 mt-0.5 text-muted-foreground flex-shrink-0"/>
-                                    <div><strong>Fréquence:</strong> Si besoin (pas de rappel programmé)</div>
+                                  <Repeat className="h-3.5 w-3.5 mr-1.5 mt-0.5 text-muted-foreground flex-shrink-0" />
+                                  <div>
+                                    <strong>Fréquence:</strong> Si besoin (pas
+                                    de rappel programmé)
+                                  </div>
                                 </div>
-                             )}
+                              )}
                           </div>
 
                           <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/50">
-                            <p className={cn("text-xs font-medium", isLowStock ? "text-destructive animate-pulse" : "text-muted-foreground")}>
+                            <p
+                              className={cn(
+                                "text-xs font-medium",
+                                isLowStock
+                                  ? "text-destructive animate-pulse"
+                                  : "text-muted-foreground"
+                              )}
+                            >
                               Stock: {med.stock} unité(s)
-                              {isLowStock && <AlertTriangle className="inline-block h-3.5 w-3.5 ml-1 mb-0.5" />}
+                              {isLowStock && (
+                                <AlertTriangle className="inline-block h-3.5 w-3.5 ml-1 mb-0.5" />
+                              )}
                             </p>
                             {med.lowStockThreshold !== undefined && (
-                               <Badge variant={isLowStock ? "destructive" : "secondary"} className="text-xs">
+                              <Badge
+                                variant={
+                                  isLowStock ? "destructive" : "secondary"
+                                }
+                                className="text-xs"
+                              >
                                 Seuil: {med.lowStockThreshold}
-                               </Badge>
+                              </Badge>
                             )}
                           </div>
                         </li>

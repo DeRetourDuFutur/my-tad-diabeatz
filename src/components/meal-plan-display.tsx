@@ -131,20 +131,29 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
 
   if (!mealPlan || !mealPlan.days || mealPlan.days.length === 0) {
     return (
-      <Card className="shadow-lg">
-        <Accordion type="single" collapsible defaultValue="meal-display-placeholder-item">
-          <AccordionItem value="meal-display-placeholder-item" className="border-b-0">
+      <Card className="shadow-lg card-glow-effect card-variant">
+        <Accordion
+          type="single"
+          collapsible
+          defaultValue="meal-display-placeholder-item"
+        >
+          <AccordionItem
+            value="meal-display-placeholder-item"
+            className="border-b-0"
+          >
             <AccordionTrigger className="w-full text-left p-0 hover:no-underline">
               <CardHeader className="flex flex-row items-center justify-between w-full p-4">
                 <div className="flex items-center gap-2">
                   <NotebookPen className="h-5 w-5 text-secondary-foreground" />
-                  <CardTitle className="text-lg font-semibold">Votre Plan Repas Généré</CardTitle>
+                  <CardTitle className="text-lg font-semibold">
+                    Votre Plan Repas Généré
+                  </CardTitle>
                 </div>
               </CardHeader>
             </AccordionTrigger>
             <AccordionContent className="pt-0">
               <CardContent className="flex flex-col items-center justify-center p-8 min-h-[200px] text-center">
-                 <ChefHat className="h-16 w-16 text-primary/50 mb-4" />
+                <ChefHat className="h-16 w-16 text-primary/50 mb-4" />
                 <CardDescription>
                   Générez un plan via le formulaire pour l'afficher ici.
                 </CardDescription>
