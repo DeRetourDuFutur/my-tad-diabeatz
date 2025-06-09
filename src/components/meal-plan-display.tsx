@@ -178,7 +178,7 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
           </div>
           <Button onClick={onSavePlan} size="sm" variant="outline" className="button-neon-glow">
             <Save className="mr-2 h-4 w-4" />
-            {mealPlanName ? "Mettre à jour" : "Sauvegarder"}
+            Sauvegarder
           </Button>
         </div>
       </CardHeader>

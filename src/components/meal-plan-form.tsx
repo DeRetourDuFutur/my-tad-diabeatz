@@ -91,7 +91,9 @@ const categoryIcons: Record<string, React.ElementType> = {
 
 import { useMealPlanFormLogic, defaultResearchSummary } from './meal-plan-form/useMealPlanFormLogic';
 
-export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPlanFormProps) {
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore'; // Added for Firestore saving
+
+export function MealPlanForm({ onMealPlanGenerated: onMealPlanGeneratedProp, onGenerationError: onGenerationErrorProp }: MealPlanFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   // const { toast } = useToast(); // Sera géré par le hook
   
@@ -127,6 +129,49 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
   // TODO: Implement proper user authentication and get userId
   const userId = 'testUser'; // Replace with actual user ID from auth system
 
+  const handleGenerationError = (error: string) => {
+    if (onGenerationErrorProp) {
+      onGenerationErrorProp(error);
+    }
+  };
+
+  const handleMealPlanGenerated = async (result: GenerateMealPlanOutput, planName?: string) => {
+    if (onMealPlanGeneratedProp) {
+      onMealPlanGeneratedProp(result, planName);
+    }
+
+    if (userId) {
+      try {
+        const mealPlansCollectionRef = collection(db, 'users', userId, 'mealPlans');
+        await addDoc(mealPlansCollectionRef, {
+          ...result,
+          planName: planName || `Plan du ${format(new Date(), "dd/MM/yyyy HH:mm")}`,
+          createdAt: serverTimestamp(),
+          // generationParams: { // Optional: Store generation parameters for history/re-generation
+          //   selectionMode,
+          //   startDate: startDate ? startDate.toISOString() : null,
+          //   endDate: endDate ? endDate.toISOString() : null,
+          //   durationInDays,
+          //   durationModeStartDate: durationModeStartDate ? durationModeStartDate.toISOString() : null,
+          //   diabeticResearchSummary: form.getValues("diabeticResearchSummary"),
+          //   // foodCategories, // Consider if this is too much data or if a summary is better
+          // }
+        });
+        toast({
+          title: "Plan sauvegardé !",
+          description: "Votre nouveau plan alimentaire a été sauvegardé dans votre historique.",
+        });
+      } catch (error) {
+        console.error("Error saving meal plan to Firestore:", error);
+        toast({
+          title: "Erreur de sauvegarde Firestore",
+          description: "Impossible de sauvegarder le plan alimentaire.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
   const {
     form,
     toast,
@@ -148,8 +193,8 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
   } = useMealPlanFormLogic({
     userId,
     defaultResearchSummary,
-    onMealPlanGenerated,
-    onGenerationError,
+    onMealPlanGenerated: handleMealPlanGenerated, // Renamed to avoid conflict and clarify internal handling
+    onGenerationError: handleGenerationError, // Renamed for clarity
     setIsLoading,
   });
 
@@ -197,8 +242,6 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isClient, isDataLoading, selectionMode, startDate, endDate, durationInDays, durationModeStartDate, form.setValue]);
-
-
 
     // La logique de handleLoadSettingsAndPreferences et le useEffect associé sont maintenant dans useMealPlanFormLogic.
   // Le useEffect qui appelle handleLoadSettingsAndPreferences est également dans le hook.

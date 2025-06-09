@@ -97,13 +97,13 @@ const prompt = ai.definePrompt({
 
   Générez un plan repas EN FRANÇAIS pour la durée spécifiée : {{{planDuration}}}.
   Pour CHAQUE JOUR de cette durée, créez un plan quotidien.
-  Chaque plan quotidien ("DailyMealPlanSchema") doit avoir un "dayIdentifier" (par exemple, "Jour 1", "Lundi").
+  Chaque plan quotidien ("DailyMealPlanSchema") doit IMPÉRATIVEMENT avoir un "dayIdentifier" (par exemple, "Jour 1", "Lundi"), ainsi que les sections "breakfast", "lunch", et "dinner".
 
   Pour le PETIT-DÉJEUNER ("BreakfastSchema") de chaque jour :
   - Fournissez un "mainItem" (élément principal) détaillé selon "MealComponentSchema".
   - Spécifiez "waterToDrink" (quantité d'eau à boire, ex: "1 grand verre d'eau (250ml)").
 
-  Pour le DÉJEUNER et le DÎNER ("LunchDinnerSchema") de chaque jour :
+  Pour le DÉJEUNER ("lunch") et le DÎNER ("dinner") ("LunchDinnerSchema") de chaque jour (ces deux repas sont OBLIGATOIRES pour chaque jour) :
   - Fournissez "starter" (entrée, optionnelle) selon "MealComponentSchema".
   - Fournissez "mainCourse" (plat principal AVEC son accompagnement clairement inclus dans sa description/recette) selon "MealComponentSchema".
   - Fournissez "cheese" (fromage, optionnel) selon "MealComponentSchema".
