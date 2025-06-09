@@ -1,8 +1,11 @@
-
 {
-  "name": "nextn",
-  "version": "0.1.0",
-  "private": true,
+  "name": "ma-sante-plus",
+  "version": "1.0.0",
+  "description": "MaSanté+ est une application web moderne conçue pour aider les utilisateurs à gérer leur diabète de type 2 *et leur cholestérol au quotidien. Elle intègre une planification de repas intelligente assistée par IA, un suivi des médicaments, et une interface utilisateur intuitive pour une meilleure prise en charge de la santé.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
   "scripts": {
     "dev": "next dev --turbopack -p 9002",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
@@ -38,6 +41,7 @@
     "@radix-ui/react-tooltip": "^1.1.8",
     "@tanstack-query-firebase/react": "^1.0.5",
     "@tanstack/react-query": "^5.66.0",
+    "autoprefixer": "^10.4.21",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
@@ -57,14 +61,17 @@
     "tailwindcss-animate": "^1.0.7",
     "zod": "^3.24.2"
   },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
   "devDependencies": {
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-color": "^2.17.0",
     "@types/react-dom": "^18",
     "genkit-cli": "^1.8.0",
-    "postcss": "^8",
-    "tailwindcss": "^3.4.1",
+    "postcss": "^8.5.4",
+    "tailwindcss": "^3.4.17",
     "typescript": "^5"
   }
 }

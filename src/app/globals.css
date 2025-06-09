@@ -24,25 +24,25 @@
     --muted-foreground: 240 5% 65%; /* Texte muted */
 
     --accent: 300 100% 55%; /* Violet/Magenta néon pour accent */
-    --accent-foreground: 240 10% 4%;
+    --accent-foreground: 240 10% 4%; /* Texte accentué */
 
     --destructive: 0 90% 60%; /* Rouge néon pour destructive */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 240 10% 15%; /* Bordure subtile, peut-être avec une touche de néon au survol */
+    --border: 240 10% 15%; /* Bordure subtile */
     --input: 240 10% 12%; /* Fond d'input */
     --ring: 200 100% 55%; /* Anneau de focus bleu néon */
 
-    /* Couleurs pour les graphiques, adaptées au thème néon */
+    /* Couleurs pour les graphiques */
     --chart-1: 200 100% 50%; /* Bleu néon */
     --chart-2: 150 100% 45%; /* Vert néon */
     --chart-3: 300 100% 55%; /* Violet/Magenta néon */
     --chart-4: 50 100% 50%;  /* Jaune/Orange néon */
     --chart-5: 0 90% 60%;   /* Rouge néon */
-    
+
     --radius: 0.5rem;
 
-    /* Couleurs spécifiques Sidebar (si utilisées, ici pour la cohérence) */
+    /* Couleurs spécifiques Sidebar */
     --sidebar-background: 240 10% 6%;
     --sidebar-foreground: 240 5% 88%;
     --sidebar-primary: 200 100% 50%;
@@ -53,7 +53,7 @@
     --sidebar-ring: 200 100% 55%;
   }
 
-  /* Le mode .dark sera le mode par défaut avec ce thème */
+  /* Mode sombre */
   .dark {
     --background: 240 10% 4%;
     --foreground: 240 5% 90%;
@@ -82,7 +82,7 @@
     --border: 240 10% 15%;
     --input: 240 10% 12%;
     --ring: 200 100% 55%;
-    
+
     --chart-1: 200 100% 50%;
     --chart-2: 150 100% 45%;
     --chart-3: 300 100% 55%;
@@ -101,9 +101,15 @@
 }
 
 @layer base {
-  * {
-    @apply border-border;
+  .border-border {
+    @apply border; /* Applique une bordure par défaut */
+    border-color: hsl(var(--border)); /* Utilise la variable CSS personnalisée */
   }
+
+  * {
+    @apply border-border; /* Applique la classe personnalisée */
+  }
+
   body {
     @apply bg-background text-foreground;
   }
@@ -113,17 +119,20 @@
   .card-neon-glow {
     @apply transition-all duration-300 ease-in-out;
   }
-  .card-neon-glow:hover, .card-neon-glow:focus-within {
-    @apply shadow-[0_0_15px_2px_theme(colors.primary/50%),0_0_5px_0px_theme(colors.primary/70%)] border-primary/50;
+  .card-neon-glow:hover,
+  .card-neon-glow:focus-within {
+    @apply shadow-neon-primary border-primary/50;
   }
 
   .button-neon-glow {
-     @apply transition-all duration-300 ease-in-out;
+    @apply transition-all duration-300 ease-in-out;
   }
-  .button-neon-glow:hover, .button-neon-glow:focus {
-    @apply shadow-[0_0_10px_1px_theme(colors.primary/70%),0_0_3px_0px_theme(colors.primary)] brightness-110;
+  .button-neon-glow:hover,
+  .button-neon-glow:focus {
+    @apply shadow-neon-primary-hover brightness-110;
   }
-   .button-neon-glow.bg-destructive:hover, .button-neon-glow.bg-destructive:focus {
-    @apply shadow-[0_0_10px_1px_theme(colors.destructive/70%),0_0_3px_0px_theme(colors.destructive)] brightness-110;
+  .button-neon-glow.bg-destructive:hover,
+  .button-neon-glow.bg-destructive:focus {
+    @apply shadow-neon-destructive brightness-110;
   }
 }
