@@ -54,6 +54,14 @@ export interface FormSettings {
   durationModeStartDate?: string; // ISO string for localStorage (start date for "Par Durée" mode)
 }
 
+export interface SavedFormSettings extends FormSettings {
+  id: string; // Unique ID for the saved settings (e.g., Firestore document ID or timestamp-based)
+  name: string; // User-defined name for this settings configuration (e.g., "Régime Strict", "Weekend Léger")
+  createdAt?: Timestamp | string; // Optional: Timestamp of when the settings were saved
+}
+
+export type FormSettingsHistory = SavedFormSettings[];
+
 export type ReminderFrequency = 'daily' | 'everyXdays' | 'specificDays' | 'asNeeded';
 
 export interface MedicationReminder {

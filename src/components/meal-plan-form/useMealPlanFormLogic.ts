@@ -5,12 +5,12 @@ import { differenceInDays, isBefore } from 'date-fns'; // Added import
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, getDocs, deleteDoc } from 'firebase/firestore'; // Added collection, getDocs, deleteDoc
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
-import type { FormSettings, FoodCategory, Medication } from '@/lib/types'; // Added Medication
+import type { FormSettings, FoodCategory, Medication, SavedFormSettings, FormSettingsHistory } from '@/lib/types'; // Added Medication, SavedFormSettings, FormSettingsHistory
 import { initialFoodCategories as baseInitialFoodCategories } from '@/lib/food-data';
-import { addDays, startOfDay, parseISO, isValid } from 'date-fns';
+import { addDays, startOfDay, parseISO, isValid, formatISO } from 'date-fns'; // Added formatISO
 import type { NewFoodData } from './types';
 
 export const initialNewFoodData: NewFoodData = {
@@ -85,6 +85,8 @@ export interface UseMealPlanFormLogicProps {
 }
 
 export const useMealPlanFormLogic = ({ userId, defaultResearchSummary, onMealPlanGenerated, onGenerationError, setIsLoading, medications }: UseMealPlanFormLogicProps) => {
+  const [formSettingsHistory, setFormSettingsHistory] = useState<FormSettingsHistory>([]);
+  const [selectedConfigurationId, setSelectedConfigurationId] = useState<string | null>(null);
   const [displayDurationFromDates, setDisplayDurationFromDates] = useState<string>("1 jour");
   const [displayEndDateFromDuration, setDisplayEndDateFromDuration] = useState<Date | undefined>(undefined);
   const [isClient, setIsClient] = useState(false);
@@ -124,10 +126,10 @@ export const useMealPlanFormLogic = ({ userId, defaultResearchSummary, onMealPla
         });
         setSelectionMode(loadedSettings.selectionMode || 'dates');
         const tomorrow = startOfDay(addDays(new Date(), 1));
-        setStartDate(loadedSettings.startDate && isValid(parseISO(loadedSettings.startDate)) ? startOfDay(parseISO(loadedSettings.startDate)) : tomorrow);
-        setEndDate(loadedSettings.endDate && isValid(parseISO(loadedSettings.endDate)) ? startOfDay(parseISO(loadedSettings.endDate)) : tomorrow);
+        setStartDate(typeof loadedSettings.startDate === 'string' && isValid(parseISO(loadedSettings.startDate)) ? startOfDay(parseISO(loadedSettings.startDate)) : tomorrow);
+        setEndDate(typeof loadedSettings.endDate === 'string' && isValid(parseISO(loadedSettings.endDate)) ? startOfDay(parseISO(loadedSettings.endDate)) : tomorrow);
         setDurationInDays(loadedSettings.durationInDays || "1");
-        setDurationModeStartDate(loadedSettings.durationModeStartDate && isValid(parseISO(loadedSettings.durationModeStartDate)) ? startOfDay(parseISO(loadedSettings.durationModeStartDate)) : tomorrow);
+        setDurationModeStartDate(typeof loadedSettings.durationModeStartDate === 'string' && isValid(parseISO(loadedSettings.durationModeStartDate)) ? startOfDay(parseISO(loadedSettings.durationModeStartDate)) : tomorrow);
       } else {
         const tomorrow = startOfDay(addDays(new Date(), 1));
         setStartDate(tomorrow); setEndDate(tomorrow); setDurationModeStartDate(tomorrow);
@@ -179,6 +181,153 @@ export const useMealPlanFormLogic = ({ userId, defaultResearchSummary, onMealPla
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isClient, userId, form.reset, toast]);
+
+  const loadFormSettingsHistory = useCallback(async () => {
+    if (!userId || !isClient) return;
+    try {
+      const historyCollectionRef = collection(db, 'users', userId, 'formSettingsHistory');
+      const historySnapshot = await getDocs(historyCollectionRef);
+      const loadedHistory = historySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SavedFormSettings));
+      setFormSettingsHistory(loadedHistory.sort((a, b) => {
+        if (a.createdAt && b.createdAt) {
+          const dateA = typeof a.createdAt === 'string' ? new Date(a.createdAt) : a.createdAt.toDate();
+          const dateB = typeof b.createdAt === 'string' ? new Date(b.createdAt) : b.createdAt.toDate();
+          return dateB.getTime() - dateA.getTime();
+        }
+        return 0;
+      }));
+    } catch (error) {
+      console.error("Error loading form settings history from Firebase:", error);
+      toast({ title: "Erreur de chargement", description: "Impossible de charger l'historique des configurations.", variant: "destructive" });
+    }
+  }, [userId, isClient, toast]);
+
+  useEffect(() => {
+    if (isClient && userId) {
+      loadFormSettingsHistory();
+    }
+  }, [isClient, userId, loadFormSettingsHistory]);
+
+
+  const handleSaveConfiguration = async (name: string) => {
+    if (!userId || !name.trim()) return;
+    setIsDataLoading(true);
+    try {
+      const currentSettings: FormSettings = {
+        planName: form.getValues("planName"),
+        diabeticResearchSummary: form.getValues("diabeticResearchSummary"),
+        selectionMode,
+        startDate: startDate ? formatISO(startDate) : undefined,
+        endDate: endDate ? formatISO(endDate) : undefined,
+        durationInDays,
+        durationModeStartDate: durationModeStartDate ? formatISO(durationModeStartDate) : undefined,
+      };
+      const newConfigDocRef = doc(collection(db, 'users', userId, 'formSettingsHistory'));
+      const newConfig: SavedFormSettings = {
+        ...currentSettings,
+        id: newConfigDocRef.id,
+        name: name.trim(),
+        createdAt: new Date().toISOString(),
+      };
+      await setDoc(newConfigDocRef, newConfig);
+      setFormSettingsHistory(prev => [newConfig, ...prev].sort((a, b) => {
+        if (a.createdAt && b.createdAt) {
+          const dateA = typeof a.createdAt === 'string' ? new Date(a.createdAt) : a.createdAt.toDate();
+          const dateB = typeof b.createdAt === 'string' ? new Date(b.createdAt) : b.createdAt.toDate();
+          return dateB.getTime() - dateA.getTime();
+        }
+        return 0;
+      }));
+      toast({ title: "Configuration sauvegardée", description: `La configuration "${name.trim()}" a été sauvegardée.` });
+      // Optionally, save food preferences with the configuration
+      // const foodPrefsDocRef = doc(db, 'users', userId, 'foodPreferences', newConfigDocRef.id);
+      // await setDoc(foodPrefsDocRef, { categories: foodCategories });
+
+      // Save as default if it's the first one or explicitly chosen
+      const defaultSettingsDocRef = doc(db, 'users', userId, 'formSettings', 'default');
+      await setDoc(defaultSettingsDocRef, currentSettings);
+
+    } catch (error) {
+      console.error("Error saving configuration to Firebase:", error);
+      toast({ title: "Erreur de sauvegarde", description: "Impossible de sauvegarder la configuration.", variant: "destructive" });
+    } finally {
+      setIsDataLoading(false);
+    }
+  };
+
+  const handleLoadConfiguration = async (configId: string) => {
+    if (!userId) return;
+    const configToLoad = formSettingsHistory.find(c => c.id === configId);
+    if (!configToLoad) {
+      toast({ title: "Erreur", description: "Configuration non trouvée.", variant: "destructive" });
+      return;
+    }
+    setIsDataLoading(true);
+    try {
+      form.reset({
+        planName: configToLoad.planName || "",
+        diabeticResearchSummary: configToLoad.diabeticResearchSummary || defaultResearchSummary,
+      });
+      setSelectionMode(configToLoad.selectionMode || 'dates');
+      const tomorrow = startOfDay(addDays(new Date(), 1));
+      setStartDate(typeof configToLoad.startDate === 'string' && isValid(parseISO(configToLoad.startDate)) ? startOfDay(parseISO(configToLoad.startDate)) : tomorrow);
+      setEndDate(typeof configToLoad.endDate === 'string' && isValid(parseISO(configToLoad.endDate)) ? startOfDay(parseISO(configToLoad.endDate)) : tomorrow);
+      setDurationInDays(configToLoad.durationInDays || "1");
+      setDurationModeStartDate(typeof configToLoad.durationModeStartDate === 'string' && isValid(parseISO(configToLoad.durationModeStartDate)) ? startOfDay(parseISO(configToLoad.durationModeStartDate)) : tomorrow);
+      setSelectedConfigurationId(configId);
+      toast({ title: "Configuration chargée", description: `La configuration "${configToLoad.name}" a été chargée.` });
+
+      // Optionally, load associated food preferences if they were saved separately
+      // const foodPrefsDocRef = doc(db, 'users', userId, 'foodPreferences', configId);
+      // const foodPrefsDocSnap = await getDoc(foodPrefsDocRef);
+      // if (foodPrefsDocSnap.exists()) {
+      //   setFoodCategories(foodPrefsDocSnap.data().categories as FoodCategory[]);
+      // } else {
+         // If no specific prefs for this config, load default or base
+      //    const defaultFoodPrefsDocRef = doc(db, 'users', userId, 'foodPreferences', 'default');
+      //    const defaultFoodPrefsSnap = await getDoc(defaultFoodPrefsDocRef);
+      //    if (defaultFoodPrefsSnap.exists()) {
+      //       setFoodCategories(defaultFoodPrefsSnap.data().categories as FoodCategory[]);
+      //    } else {
+      //       setFoodCategories(baseInitialFoodCategories.map(cat => ({...cat, items: [...cat.items].sort((a,b) => a.name.localeCompare(b.name))})).sort((a,b) => a.categoryName.localeCompare(b.categoryName)));
+      //    }
+      // }
+
+    } catch (error) {
+      console.error("Error loading configuration details:", error);
+      toast({ title: "Erreur de chargement", description: "Impossible de charger les détails de la configuration.", variant: "destructive" });
+    } finally {
+      setIsDataLoading(false);
+    }
+  };
+
+  const handleDeleteConfiguration = async (configId: string) => {
+    if (!userId) return;
+    const configToDelete = formSettingsHistory.find(c => c.id === configId);
+    if (!configToDelete) return;
+
+    setIsDataLoading(true);
+    try {
+      const configDocRef = doc(db, 'users', userId, 'formSettingsHistory', configId);
+      await deleteDoc(configDocRef);
+      // Optionally, delete associated food preferences
+      // const foodPrefsDocRef = doc(db, 'users', userId, 'foodPreferences', configId);
+      // await deleteDoc(foodPrefsDocRef);
+
+      setFormSettingsHistory(prev => prev.filter(c => c.id !== configId));
+      if (selectedConfigurationId === configId) {
+        setSelectedConfigurationId(null); // Deselect if the loaded one is deleted
+        // Optionally, load default settings or clear form
+        handleLoadSettingsAndPreferences(); 
+      }
+      toast({ title: "Configuration supprimée", description: `La configuration "${configToDelete.name}" a été supprimée.` });
+    } catch (error) {
+      console.error("Error deleting configuration from Firebase:", error);
+      toast({ title: "Erreur de suppression", description: "Impossible de supprimer la configuration.", variant: "destructive" });
+    } finally {
+      setIsDataLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (isClient && userId) {
@@ -389,6 +538,12 @@ export const useMealPlanFormLogic = ({ userId, defaultResearchSummary, onMealPla
 
 
   return {
+    formSettingsHistory,
+    selectedConfigurationId,
+    handleSaveConfiguration,
+    handleLoadConfiguration,
+    handleDeleteConfiguration,
+    setSelectedConfigurationId,
     form,
     toast,
     isClient,
