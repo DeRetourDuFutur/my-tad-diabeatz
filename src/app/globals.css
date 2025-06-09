@@ -188,7 +188,7 @@
       0 4px 24px rgba(0,0,0,0.24);
     backdrop-filter: blur(8px);
   }
-
+  input[type="date"]:focus
   .card-variant:hover {
     transform: translateY(-6px) scale(1.025);
     border-color: #22d3ee;
