@@ -21,9 +21,10 @@ type SavedMealPlansProps = {
   savedPlans: StoredMealPlan[];
   onLoadPlan: (planId: string) => void;
   onDeletePlan: (planId: string) => void;
+  isLoading: boolean; // Added isLoading prop
 };
 
-export function SavedMealPlans({ savedPlans, onLoadPlan, onDeletePlan }: SavedMealPlansProps) {
+export function SavedMealPlans({ savedPlans, onLoadPlan, onDeletePlan, isLoading }: SavedMealPlansProps) { // Added isLoading to destructuring
   return (
     <Card className="shadow-lg card-glow-effect card-variant">
       <Accordion type="single" collapsible>
@@ -44,7 +45,12 @@ export function SavedMealPlans({ savedPlans, onLoadPlan, onDeletePlan }: SavedMe
                 Chargez ou supprimez vos plans repas précédemment sauvegardés.
               </CardDescription>
               <ScrollArea className="h-[250px] pr-3">
-                {savedPlans.length === 0 ? (
+                {isLoading && savedPlans.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-6">
+                    <ListChecks className="h-12 w-12 mb-3 animate-pulse" />
+                    <p className="font-medium">Chargement des plans...</p>
+                  </div>
+                ) : savedPlans.length === 0 ? (
                   <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-6">
                     <Inbox className="h-12 w-12 mb-3" />
                     <p className="font-medium">Aucun plan sauvegardé</p>

@@ -93,7 +93,11 @@ import { useMealPlanFormLogic, defaultResearchSummary } from './meal-plan-form/u
 
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore'; // Added for Firestore saving
 
-export function MealPlanForm({ onMealPlanGenerated: onMealPlanGeneratedProp, onGenerationError: onGenerationErrorProp }: MealPlanFormProps) {
+export function MealPlanForm({ 
+  onMealPlanGenerated: onMealPlanGeneratedProp, 
+  onGenerationError: onGenerationErrorProp,
+  medications: medicationsProp // Added medications to props
+}: MealPlanFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   // const { toast } = useToast(); // Sera géré par le hook
   
@@ -196,7 +200,10 @@ export function MealPlanForm({ onMealPlanGenerated: onMealPlanGeneratedProp, onG
     onMealPlanGenerated: handleMealPlanGenerated, // Renamed to avoid conflict and clarify internal handling
     onGenerationError: handleGenerationError, // Renamed for clarity
     setIsLoading,
+    medications: medicationsProp, // Pass medications from props to the hook
   });
+
+  const [currentFormSettings, setCurrentFormSettings] = useState<FormSettings | null>(null);
 
   // useEffect(() => { // Géré par le hook
   //   setIsClient(true);
@@ -1060,7 +1067,7 @@ export function MealPlanForm({ onMealPlanGenerated: onMealPlanGeneratedProp, onG
         open={isNutritionalInfoDialogOpen}
         onOpenChange={setIsNutritionalInfoDialogOpen}
       >
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[425px] bg-gradient-to-br from-blue-900 via-black to-black border border-cyan-400 shadow-[0_0_15px_5px_rgba(0,255,255,0.5)] rounded-lg">
           <DialogHeader>
             <DialogTitle>
               Valeurs nutritionnelles pour{" "}
@@ -1107,7 +1114,7 @@ export function MealPlanForm({ onMealPlanGenerated: onMealPlanGeneratedProp, onG
                       name={key}
                       value={editableNutritionalInfo[key] || ""}
                       onChange={handleNutritionalInfoInputChange}
-                      className="col-span-1 text-sm"
+                      className="col-span-1 text-sm border border-cyan-400/50 shadow-[0_0_5px_1px_rgba(0,255,255,0.3)] focus:border-cyan-300 focus:shadow-[0_0_8px_2px_rgba(0,255,255,0.5)] transition-all duration-300"
                       rows={3}
                     />
                   ) : (
@@ -1116,7 +1123,7 @@ export function MealPlanForm({ onMealPlanGenerated: onMealPlanGeneratedProp, onG
                       name={key}
                       value={editableNutritionalInfo[key] || ""}
                       onChange={handleNutritionalInfoInputChange}
-                      className="col-span-1 text-sm"
+                      className="col-span-1 text-sm border border-cyan-400/50 shadow-[0_0_5px_1px_rgba(0,255,255,0.3)] focus:border-cyan-300 focus:shadow-[0_0_8px_2px_rgba(0,255,255,0.5)] transition-all duration-300"
                     />
                   )}
                 </div>
@@ -1136,15 +1143,15 @@ export function MealPlanForm({ onMealPlanGenerated: onMealPlanGeneratedProp, onG
       </Dialog>
 
       <Dialog open={isAddFoodDialogOpen} onOpenChange={setIsAddFoodDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg border border-cyan-400/50 shadow-[0_0_10px_2px_rgba(0,255,255,0.4)] focus-within:border-cyan-300 focus-within:shadow-[0_0_12px_3px_rgba(0,255,255,0.6)] transition-all duration-300 bg-slate-900">
           <DialogHeader>
             <DialogTitle>Ajouter un nouvel aliment</DialogTitle>
             <DialogDescriptionComponent>
-              Remplissez les informations ci-dessous pour ajouter un aliment à
-              vos préférences.
+              Veuillez remplir les informations pour le nouvel aliment.
             </DialogDescriptionComponent>
+            {/* Description removed as per request */}
           </DialogHeader>
-          <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-3">
+          <div className="grid gap-2 py-2 pr-1 pl-1 max-h-[calc(80vh-120px)] overflow-y-auto"> {/* Adjusted gap, py, pr, pl and max-h for better content fitting */}
             {addFoodFormError && (
               <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
@@ -1154,7 +1161,7 @@ export function MealPlanForm({ onMealPlanGenerated: onMealPlanGeneratedProp, onG
                 </AlertDescriptionShadcn>
               </Alert>
             )}
-            <div className="grid grid-cols-4 items-center gap-4">
+            <div className="grid grid-cols-5 items-center gap-2"> {/* Adjusted gap */}
               <Label htmlFor="new-food-name" className="text-right col-span-1">
                 Nom*
               </Label>
@@ -1163,11 +1170,11 @@ export function MealPlanForm({ onMealPlanGenerated: onMealPlanGeneratedProp, onG
                 name="name"
                 value={newFoodData.name}
                 onChange={handleAddNewFoodChange}
-                className="col-span-3"
+                className="col-span-4 border border-cyan-400/50 shadow-[0_0_5px_1px_rgba(0,255,255,0.3)] focus:border-cyan-300 focus:shadow-[0_0_8px_2px_rgba(0,255,255,0.5)] transition-all duration-300"
                 placeholder="Ex: Tomate cerise"
               />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
+            <div className="grid grid-cols-5 items-center gap-2"> {/* Adjusted gap */}
               <Label
                 htmlFor="new-food-category"
                 className="text-right col-span-1"
@@ -1178,19 +1185,19 @@ export function MealPlanForm({ onMealPlanGenerated: onMealPlanGeneratedProp, onG
                 value={newFoodData.categoryName}
                 onValueChange={handleAddNewFoodCategoryChange}
               >
-                <SelectTrigger id="new-food-category" className="col-span-3">
+                <SelectTrigger id="new-food-category" className="col-span-4 border border-cyan-400/50 shadow-[0_0_5px_1px_rgba(0,255,255,0.3)] focus:border-cyan-300 focus:shadow-[0_0_8px_2px_rgba(0,255,255,0.5)] transition-all duration-300">
                   <SelectValue placeholder="Choisir une catégorie" />
                 </SelectTrigger>
-                <SelectContent>
-                  {baseInitialFoodCategories.map((cat) => (
-                    <SelectItem key={cat.categoryName} value={cat.categoryName}>
-                      {cat.categoryName}
+                <SelectContent className="bg-slate-900">
+                  {foodCategories.map((category) => (
+                    <SelectItem key={category.categoryName} value={category.categoryName}>
+                      {category.categoryName}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
+            <div className="grid grid-cols-5 items-center gap-2"> {/* Adjusted gap */}
               <Label htmlFor="new-food-ig" className="text-right col-span-1">
                 IG
               </Label>
@@ -1199,7 +1206,7 @@ export function MealPlanForm({ onMealPlanGenerated: onMealPlanGeneratedProp, onG
                 name="ig"
                 value={newFoodData.ig}
                 onChange={handleAddNewFoodChange}
-                className="col-span-3"
+                className="col-span-4 border border-cyan-400/50 shadow-[0_0_5px_1px_rgba(0,255,255,0.3)] focus:border-cyan-300 focus:shadow-[0_0_8px_2px_rgba(0,255,255,0.5)] transition-all duration-300"
                 placeholder="Ex: (IG: ~15)"
               />
             </div>
@@ -1221,7 +1228,7 @@ export function MealPlanForm({ onMealPlanGenerated: onMealPlanGeneratedProp, onG
                 return (
                   <div
                     key={key}
-                    className="grid grid-cols-4 items-center gap-4"
+                    className="grid grid-cols-5 items-center gap-3" // Changed to grid-cols-5, reduced gap
                   >
                     <Label
                       htmlFor={`new-food-${key}`}
@@ -1235,7 +1242,7 @@ export function MealPlanForm({ onMealPlanGenerated: onMealPlanGeneratedProp, onG
                         name={key}
                         value={newFoodData[key as keyof NewFoodData] || ""}
                         onChange={handleAddNewFoodChange}
-                        className="col-span-3"
+                        className="col-span-4 border border-cyan-400/50 shadow-[0_0_5px_1px_rgba(0,255,255,0.3)] focus:border-cyan-300 focus:shadow-[0_0_8px_2px_rgba(0,255,255,0.5)] transition-all duration-300" // Adjusted col-span
                         rows={2}
                       />
                     ) : (
@@ -1244,7 +1251,7 @@ export function MealPlanForm({ onMealPlanGenerated: onMealPlanGeneratedProp, onG
                         name={key}
                         value={newFoodData[key as keyof NewFoodData] || ""}
                         onChange={handleAddNewFoodChange}
-                        className="col-span-3"
+                        className="col-span-4 border border-cyan-400/50 shadow-[0_0_5px_1px_rgba(0,255,255,0.3)] focus:border-cyan-300 focus:shadow-[0_0_8px_2px_rgba(0,255,255,0.5)] transition-all duration-300" // Adjusted col-span
                       />
                     )}
                   </div>

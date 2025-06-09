@@ -16,33 +16,33 @@ import { Label } from "@/components/ui/label";
 type SavePlanDialogProps = {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onSave: (name: string) => void;
-  initialName?: string;
+  onSave: (name: string) => void; // Changed from onSavePlan to onSave to match usage
+  currentPlanName?: string; // Changed from initialName to currentPlanName
 };
 
-export function SavePlanDialog({ isOpen, onOpenChange, onSave, initialName = "" }: SavePlanDialogProps) {
-  const [name, setName] = useState(initialName);
+export function SavePlanDialog({ isOpen, onOpenChange, onSave, currentPlanName }: SavePlanDialogProps) { // Changed onSavePlan to onSave, initialName to currentPlanName
+  const [name, setName] = useState(currentPlanName || "");
 
   useEffect(() => {
     if (isOpen) {
-      setName(initialName || `Mon Plan Repas ${new Date().toLocaleDateString('fr-FR')}`);
+      setName(currentPlanName || `Mon Plan Repas ${new Date().toLocaleDateString('fr-FR')}`);
     }
-  }, [isOpen, initialName]);
+  }, [isOpen, currentPlanName]);
 
   const handleSave = () => {
     if (name.trim()) {
-      onSave(name.trim());
-      onOpenChange(false);
+      onSave(name.trim()); // Ensure onSave is called, not onSavePlan
+      // onOpenChange(false); // This is typically handled by the parent component after save completes
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] bg-gradient-to-br from-blue-900 via-black to-black border border-cyan-400 shadow-[0_0_15px_5px_rgba(0,255,255,0.5)] rounded-lg">
+      <DialogContent className="sm:max-w-md bg-popover">
         <DialogHeader>
-<DialogTitle className="mb-2">{initialName ? "Sauvegarder la plan dans votre historique" : "Sauvegarder le Plan Repas"}</DialogTitle>
+          <DialogTitle>Sauvegarder le plan dans votre historique</DialogTitle>
              <DialogDescription>
-               {initialName ? "Vous pouvez renommer votre plan avant de l'enregistrer" : "Donnez un nom à votre nouveau plan repas pour le retrouver facilement."}
+               {currentPlanName ? "Vous pouvez renommer votre plan avant de l'enregistrer" : "Donnez un nom à votre nouveau plan repas pour le retrouver facilement."}
              </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">

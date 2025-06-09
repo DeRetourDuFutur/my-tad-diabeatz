@@ -200,62 +200,60 @@ export default function HomePage() {
 
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen bg-background text-foreground">
       <AppHeader />
-      <main className="flex-grow container mx-auto p-4 md:p-6 lg:p-8">
-        <div className="flex flex-col gap-4 lg:gap-6"> {/* Unified single column layout */}
-          <MealPlanForm
-            onMealPlanGenerated={handleMealPlanGenerated}
-            onGenerationError={handleGenerationError}
-          />
+      <main className="flex-1 container mx-auto p-4 space-y-6">
+        <h1 className="text-3xl font-bold tracking-tight text-center text-primary">Diabeatz Meal Planner</h1>
 
-          {/* Saved Plans and Medication Management, stacked and full-width */}
-          {isLoadingPlans && !hasMounted ? (
-            <div className="flex justify-center items-center h-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
-          ) : (
-            <SavedMealPlans
-              savedPlans={displayableSavedPlans}
-              onLoadPlan={handleLoadPlan}
-              onDeletePlan={handleDeletePlan}
-            />
-          )}
-          <MedicationManagementCard
-            medications={medications}
-            onAddMedication={handleOpenAddMedicationDialog}
-            onEditMedication={handleEditMedicationItem}
-            onDeleteMedication={handleDeleteMedicationItem}
-          />
+        {aiError && (
+          <Alert variant="destructive" className="my-4">
+            <Terminal className="h-4 w-4" />
+            <AlertTitle>Erreur de Génération IA</AlertTitle>
+            <AlertDescription>{aiError}</AlertDescription>
+          </Alert>
+        )}
 
-          {/* AI Error and Meal Plan Display */}
-          {aiError && (
-            <Alert variant="destructive" className="mb-4"> {/* mb-4 only if mealPlanDisplay follows directly */}
-              <Terminal className="h-4 w-4" />
-              <AlertTitle>Erreur de Génération AI</AlertTitle>
-              <AlertDescription>{aiError}</AlertDescription>
-            </Alert>
-          )}
-          <MealPlanDisplay
-            mealPlan={currentMealPlan}
-            mealPlanName={currentMealPlanName}
-            onSavePlan={handleOpenSaveDialog}
+        <MealPlanForm 
+          onMealPlanGenerated={handleMealPlanGenerated} 
+          onGenerationError={handleGenerationError} 
+          medications={medications} 
+        />
+
+        {currentMealPlan && (
+          <MealPlanDisplay 
+            mealPlan={currentMealPlan} 
+            onSavePlan={handleOpenSaveDialog} 
+            mealPlanName={currentMealPlanName} // Changed from planName to mealPlanName
           />
-        </div>
+        )}
+
+        <SavedMealPlans
+          savedPlans={displayableSavedPlans} // Changed from plans to savedPlans
+          onLoadPlan={handleLoadPlan}
+          onDeletePlan={handleDeletePlan}
+          isLoading={isLoadingPlans}
+        />
+
+        <MedicationManagementCard 
+          medications={medications}
+          onAddMedication={handleOpenAddMedicationDialog}
+          onEditMedication={handleEditMedicationItem}
+          onDeleteMedication={handleDeleteMedicationItem}
+        />
+
       </main>
       <SavePlanDialog
         isOpen={isSaveDialogOpen}
         onOpenChange={setIsSaveDialogOpen}
-        onSave={handleSavePlan}
-        initialName={currentMealPlanName || (currentMealPlan?.days?.length ? `Mon Plan ${new Date().toLocaleDateString('fr-FR')}`: "")}
+        onSave={handleSavePlan} // Ensure this matches the prop name in SavePlanDialog
+        currentPlanName={currentMealPlanName} // Pass currentMealPlanName
       />
-      <AddEditMedicationDialog
-        isOpen={isAddEditMedicationDialogOpen}
+      <AddEditMedicationDialog 
+        isOpen={isAddEditMedicationDialogOpen} 
         onOpenChange={setIsAddEditMedicationDialogOpen}
         onSave={handleSaveMedication}
         medicationToEdit={editingMedication}
       />
-       <footer className="text-center p-4 text-sm text-muted-foreground border-t">
-        © {new Date().getFullYear()} DiabEatz. Tous droits réservés.
-      </footer>
     </div>
   );
 }

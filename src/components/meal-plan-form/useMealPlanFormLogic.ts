@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
-import type { FormSettings, FoodCategory } from '@/lib/types';
+import type { FormSettings, FoodCategory, Medication } from '@/lib/types'; // Added Medication
 import { initialFoodCategories as baseInitialFoodCategories } from '@/lib/food-data';
 import { addDays, startOfDay, parseISO, isValid } from 'date-fns';
 import type { NewFoodData } from './types';
@@ -81,9 +81,10 @@ export interface UseMealPlanFormLogicProps {
   onMealPlanGenerated: (result: GenerateMealPlanOutput, planName?: string) => void;
   onGenerationError: (error: string) => void;
   setIsLoading: (isLoading: boolean) => void;
+  medications: Medication[]; // Added medications prop
 }
 
-export const useMealPlanFormLogic = ({ userId, defaultResearchSummary, onMealPlanGenerated, onGenerationError, setIsLoading }: UseMealPlanFormLogicProps) => {
+export const useMealPlanFormLogic = ({ userId, defaultResearchSummary, onMealPlanGenerated, onGenerationError, setIsLoading, medications }: UseMealPlanFormLogicProps) => {
   const [displayDurationFromDates, setDisplayDurationFromDates] = useState<string>("1 jour");
   const [displayEndDateFromDuration, setDisplayEndDateFromDuration] = useState<Date | undefined>(undefined);
   const [isClient, setIsClient] = useState(false);

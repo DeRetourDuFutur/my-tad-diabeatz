@@ -1,6 +1,15 @@
-import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
-import { getFirestore, type Firestore } from "firebase/firestore";
-// import { getAuth } from "firebase/auth"; // We'll add this later if auth is needed
+import { initializeApp, getApps, getApp } from "firebase/app";
+import { getFirestore } from "firebase/firestore";
+
+console.log(
+  "[firebase.ts] NEXT_PUBLIC_FIREBASE_PROJECT_ID:",
+  process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
+);
+console.log(
+  "[firebase.ts] NEXT_PUBLIC_FIREBASE_API_KEY:",
+  process.env.NEXT_PUBLIC_FIREBASE_API_KEY
+);
+// Add console logs for all other expected env vars here
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -9,18 +18,23 @@ const firebaseConfig = {
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID, // Optional
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-// Initialize Firebase
-let app: FirebaseApp;
+let app;
 if (!getApps().length) {
+  console.log("[firebase.ts] Initializing new Firebase app...");
   app = initializeApp(firebaseConfig);
 } else {
+  console.log("[firebase.ts] Using existing Firebase app.");
   app = getApp();
 }
 
-const db: Firestore = getFirestore(app);
-// const auth = getAuth(app); // We'll use this later if auth is needed
+const db = getFirestore(app);
 
-export { app, db /*, auth */ };
+console.log(
+  "[firebase.ts] Firebase App Initialized. Project ID from app.options:",
+  app.options.projectId
+);
+
+export { app, db };

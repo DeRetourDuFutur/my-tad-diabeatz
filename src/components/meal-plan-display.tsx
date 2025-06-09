@@ -1,11 +1,11 @@
 
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, type ReactNode, useRef, useState } from "react";
 import type { GenerateMealPlanOutput, DailyMealPlan, MealComponent, Breakfast, LunchDinner } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChefHat, Save, Utensils, Lightbulb, Clock, ClipboardList, GlassWater, Soup, Beef, Apple, Grape, Cookie, NotebookPen } from "lucide-react";
+import { ChefHat, Save, Utensils, Lightbulb, Clock, ClipboardList, GlassWater, Soup, Beef, Apple, Grape, Cookie, NotebookPen, ChevronLeft, ChevronRight } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -112,6 +112,39 @@ type MealDefinition = {
 
 
 export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlanDisplayProps) {
+  const tabsListRef = useRef<HTMLDivElement>(null);
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(false);
+
+  const handleScroll = () => {
+    if (tabsListRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = tabsListRef.current;
+      setShowLeftArrow(scrollLeft > 0);
+      setShowRightArrow(scrollLeft < scrollWidth - clientWidth -1); // -1 for precision
+    }
+  };
+
+  useEffect(() => {
+    const currentTabsList = tabsListRef.current;
+    if (currentTabsList) {
+      handleScroll(); // Initial check
+      currentTabsList.addEventListener("scroll", handleScroll);
+      // Check again after a short delay to ensure layout is stable
+      const timer = setTimeout(handleScroll, 100);
+      return () => {
+        currentTabsList.removeEventListener("scroll", handleScroll);
+        clearTimeout(timer);
+      };
+    }
+  }, [mealPlan]); // Re-check when mealPlan changes as it affects tabs
+
+  const scrollTabs = (direction: 'left' | 'right') => {
+    if (tabsListRef.current) {
+      const scrollAmount = direction === 'left' ? -200 : 200;
+      tabsListRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
+
   useEffect(() => {
     const styleId = "tabs-grid-style";
     if (typeof document !== 'undefined' && !document.getElementById(styleId)) {
@@ -184,13 +217,37 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
       </CardHeader>
       <CardContent>
         <Tabs defaultValue={mealPlan.days[0]?.dayIdentifier || "day-0"} className="w-full">
-          <TabsList className="grid w-full grid-cols-minmax-100px-auto gap-1 mb-4 h-auto flex-wrap justify-start">
-            {mealPlan.days.map((day, index) => (
-              <TabsTrigger key={day.dayIdentifier || `day-${index}`} value={day.dayIdentifier || `day-${index}`} className="flex-1 min-w-[100px] data-[state=active]:shadow-md">
-                {day.dayIdentifier || `Jour ${index + 1}`}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+          <div className="relative flex items-center mb-4">
+            {showLeftArrow && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute left-0 z-10 bg-background/50 hover:bg-background/80 text-white rounded-full h-8 w-8 p-0 mr-1"
+                onClick={() => scrollTabs('left')}
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+            )}
+            <div ref={tabsListRef} className="overflow-x-auto whitespace-nowrap p-1 rounded-md shadow-[0_0_15px_rgba(0,255,255,0.5)] border border-cyan-300/50 no-scrollbar mx-10 flex-grow">
+              <TabsList className="inline-flex items-center justify-start space-x-1 h-auto">
+                {mealPlan.days.map((day, index) => (
+                  <TabsTrigger key={day.dayIdentifier || `day-${index}`} value={day.dayIdentifier || `day-${index}`} className="flex-shrink-0 min-w-[100px] data-[state=active]:shadow-md">
+                    {day.dayIdentifier || `Jour ${index + 1}`}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
+            {showRightArrow && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-0 z-10 bg-background/50 hover:bg-background/80 text-white rounded-full h-8 w-8 p-0 ml-1"
+                onClick={() => scrollTabs('right')}
+              >
+                <ChevronRight className="h-5 w-5" />
+              </Button>
+            )}
+          </div>
           {/* La ScrollArea est modifiée ici pour que son contenu détermine sa hauteur */}
           <ScrollArea className="h-auto pr-3 -mr-3">
             {mealPlan.days.map((day, dayIndex) => {

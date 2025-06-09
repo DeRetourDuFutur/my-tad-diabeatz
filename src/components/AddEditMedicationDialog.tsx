@@ -39,6 +39,17 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CirclePicker, CompactPicker } from 'react-color'; // Using react-color for a simple color picker
 import { cn } from "@/lib/utils";
 
+// Placeholder for MedicationFormEnum - User should replace with actual definition
+const MedicationFormEnum = {
+  TABLET: 'tablet',
+  CAPSULE: 'capsule',
+  LIQUID: 'liquid',
+  INJECTION: 'injection',
+  INHALER: 'inhaler',
+  DROPS: 'drops',
+  CREAM: 'cream',
+  OTHER: 'other',
+} as const;
 
 const medicationFormSchema = z.object({
   name: z.string().min(1, { message: "Le nom est requis." }),
@@ -50,7 +61,7 @@ const medicationFormSchema = z.object({
   lowStockThreshold: z.coerce.number().min(0, { message: "Le seuil ne peut être négatif." }).optional().or(z.literal('')),
   instructions: z.string().min(1, { message: "Les instructions de prise sont requises." }),
   reminderFrequency: z.enum(['daily', 'everyXdays', 'specificDays', 'asNeeded']).optional(),
-  reminderIntervalDays: z.coerce.number().min(1).optional().or(z.literal('')),
+  reminderIntervalDays: z.coerce.number().min(1).optional().or(z.literal('')), // Ensure this can be undefined or a number
   reminderSpecificDays: z.array(z.enum(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])).optional(),
   reminderTimes: z.string().optional(), // Comma-separated times e.g., "08:00,20:00"
 });
@@ -175,14 +186,8 @@ export function AddEditMedicationDialog({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-      if (!open) {
-        handleCloseDialog();
-      } else {
-        onOpenChange(open);
-      }
-    }}>
-      <DialogContent className="sm:max-w-lg">
+    <Dialog open={isOpen} onOpenChange={onOpenChange}> {/* Changed handleOpenChange to onOpenChange */}
+      <DialogContent className="sm:max-w-lg bg-popover">
         <DialogHeader>
           <DialogTitle>
             {medicationToEdit ? "Modifier le médicament" : "Ajouter un médicament"}
@@ -230,18 +235,15 @@ export function AddEditMedicationDialog({
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Choisir une forme" />
+                        <SelectValue placeholder="Sélectionner la forme" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
-                      <SelectItem value="tablet">Comprimé</SelectItem>
-                      <SelectItem value="capsule">Gélule</SelectItem>
-                      <SelectItem value="liquid">Liquide/Sirop</SelectItem>
-                      <SelectItem value="injection">Injection</SelectItem>
-                      <SelectItem value="inhaler">Inhalateur</SelectItem>
-                      <SelectItem value="drops">Gouttes</SelectItem>
-                      <SelectItem value="cream">Crème/Pommade</SelectItem>
-                      <SelectItem value="other">Autre</SelectItem>
+                    <SelectContent className="bg-popover">
+                      {Object.values(MedicationFormEnum).map((formValue) => (
+                        <SelectItem key={formValue} value={formValue}>
+                          {formValue.charAt(0).toUpperCase() + formValue.slice(1).toLowerCase()} {/* Display formatted value */}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -377,8 +379,8 @@ export function AddEditMedicationDialog({
                                 <FormLabel>Intervalle (jours)</FormLabel>
                                 <FormControl>
                                     <Input type="number" placeholder="Ex: 2 (pour tous les 2 jours)" {...field}
-                                    value={field.value === undefined ? '' : String(field.value)}
-                                    onChange={e => field.onChange(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
+                                    value={field.value === undefined || field.value === null ? '' : String(field.value)}
+                                    onChange={e => field.onChange(e.target.value === '' ? undefined : parseInt(e.target.value, 10))}
                                      />
                                 </FormControl>
                                 <FormMessage />
