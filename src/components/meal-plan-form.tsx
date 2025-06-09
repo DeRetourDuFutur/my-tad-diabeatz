@@ -255,6 +255,47 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
     setIsClient(true);
   }, []);
 
+  useEffect(() => {
+    if (!isClient || isDataLoading) return;
+
+    let finalStartDate: Date | undefined = undefined;
+    let finalEndDate: Date | undefined = undefined;
+    let days = 0;
+
+    if (selectionMode === 'dates') {
+      if (startDate && endDate && isValid(startDate) && isValid(endDate) && !isBefore(startOfDay(endDate), startOfDay(startDate))) {
+        finalStartDate = startOfDay(startDate);
+        finalEndDate = startOfDay(endDate);
+        days = differenceInDays(finalEndDate, finalStartDate) + 1;
+      }
+    } else { // selectionMode === 'duration'
+      if (durationModeStartDate && isValid(durationModeStartDate) && durationInDays) {
+        const numDays = parseInt(durationInDays, 10);
+        if (numDays > 0) {
+          finalStartDate = startOfDay(durationModeStartDate);
+          finalEndDate = addDays(finalStartDate, numDays - 1);
+          days = numDays;
+        }
+      }
+    }
+
+    if (finalStartDate && finalEndDate && days > 0) {
+      const formattedStartDate = format(finalStartDate, "dd/MM", { locale: fr });
+      const formattedEndDate = format(finalEndDate, "dd/MM", { locale: fr });
+      form.setValue("planName", `Plan Alimentaire | ${formattedStartDate} - ${formattedEndDate} (${days} Jour${days > 1 ? 's' : ''})`);
+    } else if (days > 0 && selectionMode === 'duration') { // Case for duration mode if dates are not fully set but duration is valid
+        form.setValue("planName", `Plan Alimentaire Pour ${days} Jour${days > 1 ? 's' : ''}`);
+    } else {
+      // Fallback if dates are not valid or not set for 'dates' mode, or duration is invalid for 'duration' mode
+      // Check if there's an existing planName from loaded settings, otherwise set a very basic default or leave empty
+      const currentPlanName = form.getValues("planName");
+      if (!currentPlanName) { // Only set if truly empty, to not override loaded user input
+        form.setValue("planName", "Plan Alimentaire"); 
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isClient, isDataLoading, selectionMode, startDate, endDate, durationInDays, durationModeStartDate, form.setValue]);
+
   const handleLoadSettings = useCallback(() => {
     if (typeof window !== "undefined") {
         const storedSettingsString = localStorage.getItem("diabeatz-form-settings");
@@ -331,7 +372,7 @@ export function MealPlanForm({ onMealPlanGenerated, onGenerationError }: MealPla
         console.error("Error loading food preferences from localStorage:", error);
         currentFoodCategories = baseInitialFoodCategories.map(cat => ({...cat, items: [...cat.items].sort((a,b) => a.name.localeCompare(b.name))}));
       }
-      setFoodCategories(currentFoodCategories.sort((a,b) => a.categoryName.localeCompare(b.name)));
+      setFoodCategories(currentFoodCategories.sort((a,b) => a.categoryName.localeCompare(b.categoryName)));
 
       handleLoadSettings(); // Load form settings
       setIsDataLoading(false);

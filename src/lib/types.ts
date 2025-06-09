@@ -1,5 +1,6 @@
 
-import type { FoodCategory } from '@/lib/food-data';
+import type { FoodCategory, FoodItem } from '@/lib/food-data';
+export type { FoodCategory, FoodItem };
 import type { Timestamp } from 'firebase/firestore';
 
 // This represents a single dish or component of a meal

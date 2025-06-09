@@ -71,7 +71,7 @@ type AddEditMedicationDialogProps = {
   medicationToEdit?: Medication | null;
 };
 
-const daysOfWeekOptions: { id: MedicationReminder['specificDays'] extends (infer U)[] ? U : never; label: string }[] = [
+const daysOfWeekOptions: { id: NonNullable<MedicationReminder['specificDays']>[number]; label: string }[] = [
     { id: 'Mon', label: 'Lun' },
     { id: 'Tue', label: 'Mar' },
     { id: 'Wed', label: 'Mer' },
