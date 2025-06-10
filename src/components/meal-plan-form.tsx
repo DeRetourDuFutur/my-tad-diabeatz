@@ -69,6 +69,7 @@ import {
 } from "@/components/ui/select";
 import { Alert, AlertTitle, AlertDescription as AlertDescriptionShadcn } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext"; // Ajout de l'import pour useAuth
 import { Loader2, Wand2, AlertTriangle, ThumbsDown, Star, CalendarDays, Save, Upload, ListFilter, PlusCircle, BookOpenText, BarChart2, Apple, Carrot, Nut, Wheat, Bean, Beef, Milk, CookingPot as OilIcon, Blend, Utensils } from "lucide-react";
 
 const formSchema = z.object({
@@ -102,6 +103,7 @@ export function MealPlanForm({
   medications: medicationsProp
 }: MealPlanFormProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const { userProfile } = useAuth(); // Récupérer le profil utilisateur
   // const { toast } = useToast(); // Sera géré par le hook
   
   // const [isClient, setIsClient] = useState(false); // Géré par le hook
@@ -133,8 +135,8 @@ export function MealPlanForm({
   const [newFoodData, setNewFoodData] = useState<NewFoodData>(initialNewFoodData); // Assurez-vous que initialNewFoodData est bien importé
   const [addFoodFormError, setAddFoodFormError] = useState<string | null>(null);
 
-  // TODO: Implement proper user authentication and get userId
-  const userId = 'testUser'; // Replace with actual user ID from auth system
+  // Utiliser l'ID de l'utilisateur connecté
+  const userId = userProfile?.uid || 'testUser'; // Fallback sur testUser si l'utilisateur n'est pas connecté
 
   const handleGenerationError = (error: string) => {
     if (onGenerationErrorProp) {
@@ -231,22 +233,24 @@ export function MealPlanForm({
       }
     }
 
+    const basePlanName = userProfile?.firstName ? `Plan Alimentaire ${userProfile.firstName}` : "Plan Alimentaire";
+
     if (finalStartDate && finalEndDate && days > 0) {
       const formattedStartDate = format(finalStartDate, "dd/MM", { locale: fr });
       const formattedEndDate = format(finalEndDate, "dd/MM", { locale: fr });
-      form.setValue("planName", `Plan Alimentaire | ${formattedStartDate} - ${formattedEndDate} (${days} Jour${days > 1 ? 's' : ''})`);
+      form.setValue("planName", `${basePlanName} | ${formattedStartDate} - ${formattedEndDate} (${days} Jour${days > 1 ? 's' : ''})`);
     } else if (days > 0 && selectionMode === 'duration') { // Case for duration mode if dates are not fully set but duration is valid
-        form.setValue("planName", `Plan Alimentaire Pour ${days} Jour${days > 1 ? 's' : ''}`);
+        form.setValue("planName", `${basePlanName} Pour ${days} Jour${days > 1 ? 's' : ''}`);
     } else {
       // Fallback if dates are not valid or not set for 'dates' mode, or duration is invalid for 'duration' mode
       // Check if there's an existing planName from loaded settings, otherwise set a very basic default or leave empty
       const currentPlanName = form.getValues("planName");
       if (!currentPlanName) { // Only set if truly empty, to not override loaded user input
-        form.setValue("planName", "Plan Alimentaire"); 
+        form.setValue("planName", basePlanName); 
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClient, isDataLoading, selectionMode, startDate, endDate, durationInDays, durationModeStartDate, form.setValue]);
+  }, [isClient, isDataLoading, selectionMode, startDate, endDate, durationInDays, durationModeStartDate, form.setValue, userProfile]);
 
     // La logique de handleLoadSettingsAndPreferences et le useEffect associé sont maintenant dans useMealPlanFormLogic.
   // Le useEffect qui appelle handleLoadSettingsAndPreferences est également dans le hook.
@@ -470,6 +474,19 @@ export function MealPlanForm({
                 <AccordionContent className="pt-0">
                   <CardContent>
                     <div className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="planName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Nom du Plan (optionnel)</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Ex: Mon plan semaine 1" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                       <div className="space-y-2">
                         <RadioGroup
                           value={selectionMode}

@@ -19,7 +19,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const createInitialUserProfile = (user: User): UserProfile => ({
   uid: user.uid,
   email: user.email,
-  displayName: user.displayName,
+  displayName: user.displayName || undefined,
   photoURL: user.photoURL,
   emailVerified: user.emailVerified,
   isAnonymous: user.isAnonymous,

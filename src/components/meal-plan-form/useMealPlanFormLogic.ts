@@ -141,7 +141,6 @@ export const useMealPlanFormLogic = ({ userId, defaultResearchSummary, onMealPla
       return;
     }
     setIsDataLoading(true);
-    setIsGenerating(true);
     try {
       console.log(`Attempting to load settings for userId: ${userId}`);
       const settingsDocRef = doc(db, 'users', userId, 'formSettings', 'default');
@@ -483,7 +482,7 @@ export const useMealPlanFormLogic = ({ userId, defaultResearchSummary, onMealPla
     setFoodCategories(updatedCategories);
     if (userId) {
       setIsGenerating(true);
-    try {
+      try {
         const foodPrefsDocRef = doc(db, 'users', userId, 'foodPreferences', 'default');
         await setDoc(foodPrefsDocRef, { categories: updatedCategories }, { merge: true });
         // console.log("Food preferences saved to Firebase for user:", userId);
@@ -494,6 +493,8 @@ export const useMealPlanFormLogic = ({ userId, defaultResearchSummary, onMealPla
           description: "Impossible d'enregistrer les préférences alimentaires sur Firebase.",
           variant: "destructive",
         });
+      } finally {
+        setIsGenerating(false); // Ensure isGenerating is reset
       }
     } else if (typeof window !== "undefined") {
         localStorage.setItem("diabeatz-food-preferences", JSON.stringify(updatedCategories)); // Fallback
