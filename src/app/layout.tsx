@@ -14,8 +14,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'DiabEatz - Planificateur de Repas pour Diabète de Type 2',
-  description: 'Créez des plans de repas quotidiens pour le diabète de type 2 avec l\'IA.',
+  title:
+    "Ma Santé + | Planificateur de Repas adaptés pour Diabète Type 2 + Cholestérol",
+  description:
+    "Créez des plans de repas quotidiens adaptés pour Diabète Type 2 + Cholestérol avec l'IA.",
 };
 
 export default function RootLayout({

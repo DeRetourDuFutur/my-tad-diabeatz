@@ -1,4 +1,4 @@
-# **App Name**: DiabEatz
+# **App Name**: Ma Santé+
 
 ## Core Features:
 
