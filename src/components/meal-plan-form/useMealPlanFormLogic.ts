@@ -32,7 +32,29 @@ const formSchema = z.object({
   diabeticResearchSummary: z.string().min(20, { message: "Veuillez fournir un résumé de recherche pertinent." }),
 });
 
-export const defaultResearchSummary = `**Privilégiez la variété et la fraîcheur (en gras et bleu)**
+export const defaultResearchSummary = `**Principes Généraux (en gras et bleu)**
+- **Gestion Combinée :** Une alimentation équilibrée est cruciale pour gérer à la fois la glycémie (diabète) et le taux de cholestérol. 
+- **Variété et Fraîcheur :** Privilégiez des aliments frais, peu transformés, et variez les sources de nutriments. 
+- **Limitation :** Réduisez les produits ultra-transformés, les sucres ajoutés, les plats industriels et l'excès de sel. 
+
+**Choix des Aliments (en gras et bleu)**
+- **Légumes Abondants :** Consommez au moins 3-5 portions de légumes par jour (verts à feuilles, crucifères, colorés). Remplissez la moitié de l'assiette de légumes. 
+- **Céréales Complètes et Légumineuses :** Remplacez les céréales raffinées par des complètes (pain complet, riz brun, quinoa). Intégrez des légumineuses (lentilles, pois chiches) plusieurs fois par semaine. 
+- **Protéines Maigres :** Optez pour volaille sans peau, poissons (surtout gras comme saumon, sardine, maquereau riches en oméga-3), œufs. Limitez la viande rouge. 
+- **Bonnes Graisses :** Privilégiez les graisses insaturées : huiles végétales (olive, colza), avocats, noix, graines.  Limitez les graisses saturées (viandes grasses, beurre, produits laitiers entiers). 
+- **Fibres Essentielles :** Augmentez l'apport en fibres (fruits, légumes, céréales complètes, légumineuses). Les fibres aident à contrôler la glycémie et à réduire le cholestérol. 
+
+**Gestion des Repas (en gras et bleu)**
+- **Contrôle des Glucides :** Répartissez les glucides régulièrement. Privilégiez les aliments à IG bas ou moyen. 
+- **Portions et Satiété :** Maîtrisez les portions, écoutez vos signaux de faim et de satiété. 
+- **Repas Réguliers :** Prenez 3 repas principaux à horaires réguliers. Collations nutritives si besoin. 
+
+**Autres Recommandations (en gras et bleu)**
+- **Hydratation :** Buvez suffisamment d'eau. 
+- **Alcool avec Modération :** Limitez l'alcool et tenez compte de ses effets. 
+- **Activité Physique :** Une activité physique régulière est complémentaire à une bonne alimentation. 
+
+**Privilégiez la variété et la fraîcheur (en gras et bleu)**
 - Cuisinez autant que possible à partir d’aliments frais et peu transformés, en variant les sources de nutriments sur la semaine.
 - Aucun aliment n’est strictement interdit, mais il est préférable de limiter les produits ultra-transformés, les sucres ajoutés et les plats industriels.
 
@@ -73,7 +95,7 @@ export const defaultResearchSummary = `**Privilégiez la variété et la fraîch
 **Adaptez votre alimentation à votre mode de vie (en gras et bleu)**
 - Tenez compte de vos horaires, préférences alimentaires et activité physique pour construire des repas adaptés et durables.
 
-**N’hésitez pas à consulter un(e) diététicien(ne) pour un accompagnement personnalisé (en gras et rouge)**`;
+**N'hésitez pas à consulter un(e) diététicien(ne) pour un accompagnement personnalisé (en gras et rouge)**`;
 
 export interface UseMealPlanFormLogicProps {
   userId: string;
@@ -112,18 +134,40 @@ export const useMealPlanFormLogic = ({ userId, defaultResearchSummary, onMealPla
   }, []);
 
   const handleLoadSettingsAndPreferences = useCallback(async () => {
-    if (!userId || !isClient) return;
+    console.log(`handleLoadSettingsAndPreferences called. userId: ${userId}, isClient: ${isClient}`);
+    if (!userId || !isClient) {
+      console.log("handleLoadSettingsAndPreferences: Aborting, userId or isClient is not set.");
+      return;
+    }
     setIsDataLoading(true);
     try {
+      console.log(`Attempting to load settings for userId: ${userId}`);
       const settingsDocRef = doc(db, 'users', userId, 'formSettings', 'default');
       const settingsDocSnap = await getDoc(settingsDocRef);
+
       if (settingsDocSnap.exists()) {
         const loadedSettings = settingsDocSnap.data() as FormSettings;
-        console.log("Settings chargés depuis Firebase (hook):", loadedSettings);
+        console.log("Settings loaded from Firebase:", loadedSettings);
+        
+        const shouldUseStoredSummary = loadedSettings.diabeticResearchSummary && 
+                                     loadedSettings.diabeticResearchSummary !== defaultResearchSummary;
+        
         form.reset({
           planName: loadedSettings.planName || "",
-          diabeticResearchSummary: loadedSettings.diabeticResearchSummary || defaultResearchSummary,
+          diabeticResearchSummary: shouldUseStoredSummary ? loadedSettings.diabeticResearchSummary : defaultResearchSummary,
         });
+
+        if (!loadedSettings.diabeticResearchSummary || loadedSettings.diabeticResearchSummary !== defaultResearchSummary) {
+          console.log("Attempting to update defaultResearchSummary in Firestore as it's missing or different.");
+          try {
+            await setDoc(settingsDocRef, { diabeticResearchSummary: defaultResearchSummary }, { merge: true });
+            console.log("Successfully updated defaultResearchSummary in Firestore.");
+            toast({ title: "Conseils diététiques mis à jour", description: "Les derniers conseils ont été sauvegardés." });
+          } catch (error) {
+            console.error("Error updating defaultResearchSummary in Firestore:", error);
+            toast({ variant: "destructive", title: "Erreur Firestore", description: "Impossible de mettre à jour les conseils diététiques dans la base de données." });
+          }
+        }
         setSelectionMode(loadedSettings.selectionMode || 'dates');
         const tomorrow = startOfDay(addDays(new Date(), 1));
         setStartDate(typeof loadedSettings.startDate === 'string' && isValid(parseISO(loadedSettings.startDate)) ? startOfDay(parseISO(loadedSettings.startDate)) : tomorrow);
@@ -131,10 +175,21 @@ export const useMealPlanFormLogic = ({ userId, defaultResearchSummary, onMealPla
         setDurationInDays(loadedSettings.durationInDays || "1");
         setDurationModeStartDate(typeof loadedSettings.durationModeStartDate === 'string' && isValid(parseISO(loadedSettings.durationModeStartDate)) ? startOfDay(parseISO(loadedSettings.durationModeStartDate)) : tomorrow);
       } else {
+        console.log("No existing settings found in Firestore. Initializing with defaults.");
         const tomorrow = startOfDay(addDays(new Date(), 1));
         setStartDate(tomorrow); setEndDate(tomorrow); setDurationModeStartDate(tomorrow);
         setDurationInDays("1"); setSelectionMode('dates');
         form.reset({ planName: "", diabeticResearchSummary: defaultResearchSummary });
+        
+        console.log("Attempting to save initial defaultResearchSummary to Firestore.");
+        try {
+          await setDoc(settingsDocRef, { diabeticResearchSummary: defaultResearchSummary }, { merge: true });
+          console.log("Successfully saved initial defaultResearchSummary to Firestore.");
+          toast({ title: "Conseils diététiques sauvegardés", description: "Les conseils par défaut ont été sauvegardés pour la première fois." });
+        } catch (error) {
+          console.error("Error saving initial defaultResearchSummary to Firestore:", error);
+          toast({ variant: "destructive", title: "Erreur Firestore", description: "Impossible de sauvegarder les conseils diététiques initiaux." });
+        }
       }
 
       const foodPrefsDocRef = doc(db, 'users', userId, 'foodPreferences', 'default');
@@ -169,18 +224,20 @@ export const useMealPlanFormLogic = ({ userId, defaultResearchSummary, onMealPla
       setFoodCategories(currentFoodCategories.sort((a,b) => a.categoryName.localeCompare(b.categoryName)));
 
     } catch (error) {
-      console.error("Error loading settings or preferences from Firebase (hook):", error);
-      toast({ title: "Erreur de chargement", description: "Impossible de charger les données depuis Firebase.", variant: "destructive" });
+      console.error("Error loading user settings and preferences:", error);
+      toast({ variant: "destructive", title: "Erreur de chargement", description: "Impossible de charger les paramètres et préférences utilisateur." });
+      // Fallback to defaults in case of error
       const tomorrow = startOfDay(addDays(new Date(), 1));
       setStartDate(tomorrow); setEndDate(tomorrow); setDurationModeStartDate(tomorrow);
       setDurationInDays("1"); setSelectionMode('dates');
       form.reset({ planName: "", diabeticResearchSummary: defaultResearchSummary });
       setFoodCategories(baseInitialFoodCategories.map(cat => ({...cat, items: [...cat.items].sort((a,b) => a.name.localeCompare(b.name))})).sort((a,b) => a.categoryName.localeCompare(b.categoryName)));
     } finally {
+      console.log("handleLoadSettingsAndPreferences: Setting isDataLoading to false.");
       setIsDataLoading(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClient, userId, form.reset, toast]);
+  }, [isClient, userId, form.reset, toast, defaultResearchSummary]);
 
   const loadFormSettingsHistory = useCallback(async () => {
     if (!userId || !isClient) return;

@@ -1,5 +1,5 @@
 
-# MaSanté+ : Votre Assistant Personnalisé pour la Gestion du Diabète de Type 2 et du Cholestérol
+# MaSanté+ : Votre Assistant Personnalisé pour la Gestion du Diabète Type 2 + Cholestérol
 
 MaSanté+ est une application web moderne conçue pour aider les utilisateurs à gérer leur diabète de type 2 **et leur cholestérol** au quotidien. Elle intègre une planification de repas intelligente assistée par IA, un suivi des médicaments, et une interface utilisateur intuitive pour une meilleure prise en charge de la santé.
 
@@ -21,8 +21,9 @@ MaSanté+ est une application web moderne conçue pour aider les utilisateurs à
 
 ## Principe de l'Application
 
-L'objectif principal de MaSanté+ est de fournir aux personnes atteintes de diabète de type 2 et d'hypercholestérolémie des outils simples et efficaces pour :
-- **Planifier leurs repas** : Générer des plans de repas personnalisés, équilibrés et adaptés à leurs besoins spécifiques, en tenant compte de leurs préférences alimentaires, des recommandations nutritionnelles pour le diabète de type 2 et le cholestérol, et des dernières recommandations médicales.
+L'objectif principal de MaSanté+ est de fournir aux personnes atteintes de diabète de type 2 et/ou d'hypercholestérolémie des outils simples et efficaces pour :
+- **Planifier leurs repas** : Générer des plans de repas personnalisés, équilibrés et adaptés à leurs besoins spécifiques. Cela inclut la prise en compte des préférences alimentaires, des recommandations nutritionnelles pour le diabète de type 2 (contrôle des glucides, index glycémique bas) <mcreference link="https://www.lesfruitsetlegumesfrais.com/bien-manger/alimentation-cholesterol" index="1">1</mcreference> <mcreference link="https://www.ameli.fr/assure/sante/themes/trop-cholesterol-triglycerides-dans-sang-dyslipidemie/traitement" index="2">2</mcreference> <mcreference link="https://www.vidal.fr/maladies/coeur-circulation-veines/cholesterol/regimes-anti-cholesterol.html" index="3">3</mcreference>
+        et pour la gestion du cholestérol (privilégier les graisses insaturées, augmenter l'apport en fibres, limiter les graisses saturées) <mcreference link="https://www.lesfruitsetlegumesfrais.com/bien-manger/alimentation-cholesterol" index="1">1</mcreference> <mcreference link="https://www.ameli.fr/assure/sante/themes/trop-cholesterol-triglycerides-dans-sang-dyslipidemie/traitement" index="2">2</mcreference> <mcreference link="https://www.vidal.fr/maladies/coeur-circulation-veines/cholesterol/regimes-anti-cholesterol.html" index="3">3</mcreference>, ainsi que les dernières recommandations médicales.
 - **Gérer leurs traitements médicamenteux** : Suivre leurs médicaments, leurs stocks, et configurer des rappels pour améliorer l'observance du traitement.
 
 L'application utilise l'intelligence artificielle pour la génération des plans de repas, offrant une expérience personnalisée et évolutive.
@@ -32,7 +33,8 @@ L'application utilise l'intelligence artificielle pour la génération des plans
 - **Planification de Repas par IA** :
         - Génération de plans journaliers ou hebdomadaires.
         - Prise en compte des aliments disponibles, favoris, à éviter (allergies/dégoûts).
-        - Basé sur des recommandations nutritionnelles pour le diabète de type 2 et la gestion du cholestérol.
+        - Basé sur des recommandations nutritionnelles pour le diabète de type 2 (par exemple, contrôle de la quantité et de la qualité des glucides, apport suffisant en fibres) <mcreference link="https://www.lesfruitsetlegumesfrais.com/bien-manger/alimentation-cholesterol" index="1">1</mcreference> <mcreference link="https://www.ameli.fr/assure/sante/themes/trop-cholesterol-triglycerides-dans-sang-dyslipidemie/traitement" index="2">2</mcreference> <mcreference link="https://www.vidal.fr/maladies/coeur-circulation-veines/cholesterol/regimes-anti-cholesterol.html" index="3">3</mcreference>
+        et la gestion du cholestérol (par exemple, choix des bonnes matières grasses, consommation de poissons gras riches en oméga-3, apport en fibres via les fruits, légumes et céréales complètes) <mcreference link="https://www.lesfruitsetlegumesfrais.com/bien-manger/alimentation-cholesterol" index="1">1</mcreference> <mcreference link="https://www.ameli.fr/assure/sante/themes/trop-cholesterol-triglycerides-dans-sang-dyslipidemie/traitement" index="2">2</mcreference> <mcreference link="https://www.vidal.fr/maladies/coeur-circulation-veines/cholesterol/regimes-anti-cholesterol.html" index="3">3</mcreference>.
         - Détail des recettes, ingrédients, temps de préparation et conseils pour chaque plat.
 - **Gestion des Médicaments** :
         - Ajout, modification et suppression de médicaments.

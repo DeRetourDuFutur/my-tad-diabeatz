@@ -278,7 +278,7 @@ export default function HomePage() {
     <div className="flex flex-col min-h-screen bg-background text-foreground">
       <AppHeader />
       <main className="flex-1 container mx-auto p-4 space-y-6">
-        <h1 className="text-3xl font-bold tracking-tight text-center text-primary">Diabeatz Meal Planner</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-center text-primary">Tableau de bord </h1>
 
         {aiError && (
           <Alert variant="destructive" className="my-4">

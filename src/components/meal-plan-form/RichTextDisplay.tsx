@@ -1,69 +1,46 @@
 // RichTextDisplay.tsx
 import React from 'react';
+import ReactMarkdown from 'react-markdown';
 
 const RichTextDisplay: React.FC<{ text: string }> = ({ text }) => {
-  const lines = text.split('\n').filter(line => line.trim() !== '');
-  const elements: JSX.Element[] = [];
-  let currentListItems: string[] = [];
-  let currentSectionTitle: React.ReactNode = null;
-  let inList = false;
-
-  const flushList = () => {
-    if (currentListItems.length > 0) {
-      elements.push(
-        <div key={`section-list-${elements.length}`} className="mb-3">
-          {currentSectionTitle && <div className="mb-1">{currentSectionTitle}</div>}
-          <ul className="list-disc pl-5 space-y-0.5">
-            {currentListItems.map((item, idx) => (
-              <li key={`li-${elements.length}-${idx}`} className="text-sm">{item}</li>
-            ))}
-          </ul>
-        </div>
-      );
-      currentListItems = [];
-      currentSectionTitle = null;
-      inList = false;
-    } else if (currentSectionTitle) {
-        elements.push(<div key={`title-only-${elements.length}`} className="mb-1">{currentSectionTitle}</div>);
-        currentSectionTitle = null;
-    }
+  // Fonction pour nettoyer les balises <mcreference>
+  const cleanMcReferences = (text: string) => {
+    return text.replace(/<mcreference[^>]*>\d+<\/mcreference>/g, '');
   };
 
-  lines.forEach((line, index) => {
-    const titleMatch = line.match(/^\*\*(.*?)\*\*/);
-    const listItemMatch = line.match(/^- (.*)/);
+  // Nettoyer le texte des balises <mcreference>
+  const cleanedText = cleanMcReferences(text);
 
-    if (titleMatch) {
-      flushList();
-      let titleContent = titleMatch[1];
-      let titleClasses = "font-semibold text-foreground";
-      if (titleContent.includes("(en gras et bleu)")) {
-        titleClasses = "font-semibold text-primary";
-        titleContent = titleContent.replace("(en gras et bleu)", "").trim();
-      } else if (titleContent.includes("(en gras et rouge)")) {
-        titleClasses = "font-semibold text-destructive";
-        titleContent = titleContent.replace("(en gras et rouge)", "").trim();
-      } else if (titleContent.includes("(en gras)")) {
-         titleContent = titleContent.replace("(en gras)", "").trim();
-      }
-      currentSectionTitle = <p className={titleClasses}>{titleContent}</p>;
-    } else if (listItemMatch) {
-      if (!inList && currentSectionTitle) {
-        inList = true;
-      } else if (!inList) {
-        flushList(); 
-        inList = true;
-      }
-      currentListItems.push(listItemMatch[1]);
-    } else if (line.trim() !== "") { 
-      flushList(); 
-      elements.push(<p key={`p-${index}`} className="mb-1 text-sm">{line}</p>);
-    }
-  });
-
-  flushList(); 
-
-  return <div className="prose prose-sm dark:prose-invert max-w-none">{elements}</div>;
+  return (
+    <div className="prose prose-sm dark:prose-invert max-w-none">
+      <ReactMarkdown
+        components={{
+          h1: ({node, ...props}) => <h1 className="text-xl font-bold text-primary mb-4" {...props} />,
+          h2: ({node, ...props}) => <h2 className="text-lg font-semibold text-primary mb-3" {...props} />,
+          h3: ({node, ...props}) => <h3 className="text-base font-semibold text-primary mb-2" {...props} />,
+          p: ({node, ...props}) => <p className="mb-2 text-sm" {...props} />,
+          ul: ({node, ...props}) => <ul className="list-disc pl-5 space-y-1 mb-3" {...props} />,
+          li: ({node, ...props}) => <li className="text-sm" {...props} />,
+          strong: ({node, ...props}) => {
+            const text = props.children?.toString() || '';
+            let className = 'font-semibold';
+            
+            if (text.includes('(en gras et bleu)')) {
+              className += ' text-primary';
+              props.children = text.replace('(en gras et bleu)', '').trim();
+            } else if (text.includes('(en gras et rouge)')) {
+              className += ' text-destructive';
+              props.children = text.replace('(en gras et rouge)', '').trim();
+            }
+            
+            return <strong className={className} {...props} />;
+          }
+        }}
+      >
+        {cleanedText}
+      </ReactMarkdown>
+    </div>
+  );
 };
 
 export default RichTextDisplay;

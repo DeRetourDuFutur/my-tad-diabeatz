@@ -961,7 +961,8 @@ export function MealPlanForm({
             variant="outline"
             onClick={handleLoadSettingsAndPreferences} // Corrected function call
             className="w-full sm:flex-1"
-            disabled={ // Updated disabled logic for Firebase
+            disabled={
+              // Updated disabled logic for Firebase
               !isClient || !userId || isDataLoading
             }
           >
@@ -996,7 +997,7 @@ export function MealPlanForm({
                   <div className="flex items-center gap-2">
                     <BookOpenText className="h-5 w-5 text-secondary-foreground" />
                     <CardTitle className="text-lg font-semibold text-foreground">
-                      Conseils alimentaires optimisés pour Diabète de Type 2
+                      Conseils optimisés pour Diabète Type 2 + Cholestérol
                     </CardTitle>
                   </div>
                 </CardHeader>
@@ -1024,7 +1025,7 @@ export function MealPlanForm({
         open={isEditTipsDialogOpen}
         onOpenChange={setIsEditTipsDialogOpen}
       >
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[600px] bg-gradient-to-br from-blue-900 via-black to-black border border-cyan-400 shadow-[0_0_15px_5px_rgba(0,255,255,0.5)] rounded-lg">
           <DialogHeader>
             <DialogTitle>Modifier les Conseils Alimentaires</DialogTitle>
             <DialogDescriptionComponent>
@@ -1151,7 +1152,9 @@ export function MealPlanForm({
             </DialogDescriptionComponent>
             {/* Description removed as per request */}
           </DialogHeader>
-          <div className="grid gap-2 py-2 pr-1 pl-1 max-h-[calc(80vh-120px)] overflow-y-auto"> {/* Adjusted gap, py, pr, pl and max-h for better content fitting */}
+          <div className="grid gap-2 py-2 pr-1 pl-1 max-h-[calc(80vh-120px)] overflow-y-auto">
+            {" "}
+            {/* Adjusted gap, py, pr, pl and max-h for better content fitting */}
             {addFoodFormError && (
               <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
@@ -1161,7 +1164,9 @@ export function MealPlanForm({
                 </AlertDescriptionShadcn>
               </Alert>
             )}
-            <div className="grid grid-cols-5 items-center gap-2"> {/* Adjusted gap */}
+            <div className="grid grid-cols-5 items-center gap-2">
+              {" "}
+              {/* Adjusted gap */}
               <Label htmlFor="new-food-name" className="text-right col-span-1">
                 Nom*
               </Label>
@@ -1174,7 +1179,9 @@ export function MealPlanForm({
                 placeholder="Ex: Tomate cerise"
               />
             </div>
-            <div className="grid grid-cols-5 items-center gap-2"> {/* Adjusted gap */}
+            <div className="grid grid-cols-5 items-center gap-2">
+              {" "}
+              {/* Adjusted gap */}
               <Label
                 htmlFor="new-food-category"
                 className="text-right col-span-1"
@@ -1185,19 +1192,27 @@ export function MealPlanForm({
                 value={newFoodData.categoryName}
                 onValueChange={handleAddNewFoodCategoryChange}
               >
-                <SelectTrigger id="new-food-category" className="col-span-4 border border-cyan-400/50 shadow-[0_0_5px_1px_rgba(0,255,255,0.3)] focus:border-cyan-300 focus:shadow-[0_0_8px_2px_rgba(0,255,255,0.5)] transition-all duration-300">
+                <SelectTrigger
+                  id="new-food-category"
+                  className="col-span-4 border border-cyan-400/50 shadow-[0_0_5px_1px_rgba(0,255,255,0.3)] focus:border-cyan-300 focus:shadow-[0_0_8px_2px_rgba(0,255,255,0.5)] transition-all duration-300"
+                >
                   <SelectValue placeholder="Choisir une catégorie" />
                 </SelectTrigger>
                 <SelectContent className="bg-slate-900">
                   {foodCategories.map((category) => (
-                    <SelectItem key={category.categoryName} value={category.categoryName}>
+                    <SelectItem
+                      key={category.categoryName}
+                      value={category.categoryName}
+                    >
                       {category.categoryName}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-5 items-center gap-2"> {/* Adjusted gap */}
+            <div className="grid grid-cols-5 items-center gap-2">
+              {" "}
+              {/* Adjusted gap */}
               <Label htmlFor="new-food-ig" className="text-right col-span-1">
                 IG
               </Label>

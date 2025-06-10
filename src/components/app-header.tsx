@@ -12,7 +12,7 @@ export function AppHeader() {
       >
         <Leaf className="h-8 w-8 text-primary" />
         <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent neon-logo text-xl ">
-          DiabEatz
+          Ma Santé+
         </span> 
       </Link>
     </header>
