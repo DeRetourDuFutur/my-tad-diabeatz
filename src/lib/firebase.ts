@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 
 console.log(
   "[firebase.ts] NEXT_PUBLIC_FIREBASE_PROJECT_ID:",
@@ -31,10 +32,11 @@ if (!getApps().length) {
 }
 
 const db = getFirestore(app);
+const auth = getAuth(app);
 
 console.log(
   "[firebase.ts] Firebase App Initialized. Project ID from app.options:",
   app.options.projectId
 );
 
-export { app, db };
+export { app, db, auth };
