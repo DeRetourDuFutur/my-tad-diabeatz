@@ -87,3 +87,29 @@ export interface Medication {
   // nextDueDate?: string; // ISO string - pour une future fonctionnalité de rappel
 }
 
+export type UserRole = 'Admin' | 'Utilisateur';
+
+export interface UserProfile {
+  uid: string;
+  email: string | null;
+  firstName?: string;
+  lastName?: string;
+  displayName?: string; // Fallback if firstName or lastName is not set
+  photoURL?: string | null;
+  age?: number;
+  height?: number; // in cm
+  weight?: number; // in kg
+  bmi?: number; // Calculated
+  bio?: string;
+  phoneNumber?: string;
+  role: UserRole;
+  allergies?: string;
+  pathologies?: string;
+  // Firebase user properties that we might want to sync or use
+  emailVerified: boolean;
+  isAnonymous: boolean;
+  providerData: any[]; // from firebase.User.providerData
+  createdAt?: string; // from firebase.User.metadata.creationTime
+  lastLoginAt?: string; // from firebase.User.metadata.lastSignInTime
+}
+

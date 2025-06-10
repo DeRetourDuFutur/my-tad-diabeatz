@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { auth } from "@/lib/firebase";
 
 export function AppHeader() {
-  const { currentUser } = useAuth();
+  const { currentUser, userProfile } = useAuth(); 
   const { toast } = useToast();
 
   const handleLogout = async () => {
@@ -41,10 +41,38 @@ export function AppHeader() {
         </Link>
 
         <nav className="flex items-center gap-4">
-          {currentUser ? (
+          {currentUser && userProfile ? (
             <div className="flex items-center gap-4">
-              <span className="text-sm text-muted-foreground">
-                {currentUser.email}
+              <Link href="/" className="text-sm font-medium text-foreground/70 hover:text-foreground transition-colors">
+                Accueil
+              </Link>
+              <Link href="/profile" className="flex items-center gap-2">
+                <div 
+                  className={`
+                    w-8 h-8 rounded-full bg-blue-950 flex items-center justify-center text-sm font-semibold text-white border border-cyan-500/50 shadow-[0_0_8px_0_rgba(0,255,255,0.5)]
+                    ${userProfile.role === 'Admin' ? 'neon-cyan-initials' : ''}
+                  `}
+                >
+                  {userProfile.firstName && userProfile.lastName 
+                    ? `${userProfile.firstName.charAt(0)}${userProfile.lastName.charAt(0)}` 
+                    : currentUser.email?.charAt(0).toUpperCase()}
+                </div>
+              </Link>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                className="flex items-center gap-2"
+              >
+                <LogOut className="h-4 w-4" />
+                Déconnexion
+              </Button>
+            </div>
+          ) : currentUser ? (
+            // Fallback si userProfile n'est pas encore chargé mais currentUser existe
+            <div className="flex items-center gap-4">
+               <span className="text-sm text-muted-foreground">
+                {currentUser.email} 
               </span>
               <Button
                 variant="ghost"
