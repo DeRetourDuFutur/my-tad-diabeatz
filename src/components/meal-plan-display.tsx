@@ -404,7 +404,7 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
           <div>
             <CardTitle className="text-2xl mb-1 flex items-center">
               <NotebookPen className="mr-3 h-7 w-7 text-primary" />
-              {mealPlanName ? `Plan: ${mealPlanName}` : `Plan Repas (${mealPlan.days.length} jour${mealPlan.days.length > 1 ? 's' : ''})`}
+              {mealPlanName ? `${mealPlanName}` : `Plan Repas (${mealPlan.days.length} jour${mealPlan.days.length > 1 ? 's' : ''})`}
             </CardTitle>
             <CardDescription>Consultez votre plan repas personnalisé. Naviguez par jour, puis par type de repas.</CardDescription>
           </div>
@@ -436,7 +436,7 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
             <div ref={tabsListRef} className="overflow-x-auto whitespace-nowrap p-1 rounded-md shadow-[0_0_15px_rgba(0,255,255,0.5)] border border-cyan-300/50 no-scrollbar mx-10 flex-grow">
               <TabsList className="inline-flex items-center justify-start space-x-1 h-auto">
                 {mealPlan.days.map((day, index) => (
-                  <TabsTrigger key={day.dayIdentifier || `day-${index}`} value={day.dayIdentifier || `day-${index}`} className="flex-shrink-0 min-w-[100px] data-[state=active]:shadow-md">
+                  <TabsTrigger key={day.dayIdentifier || `day-${index}`} value={day.dayIdentifier || `day-${index}`} className="flex-shrink-0 min-w-[100px] data-[state=active]:shadow-md data-[state=active]:bg-sky-500 data-[state=active]:text-white">
                     {day.dayIdentifier || `Jour ${index + 1}`}
                   </TabsTrigger>
                 ))}
@@ -463,7 +463,7 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
                   icon: Utensils,
                   isAvailable: !!(day.breakfast && day.breakfast.mainItem && day.breakfast.mainItem.title),
                   content: day.breakfast && day.breakfast.mainItem && day.breakfast.mainItem.title && (
-                    <Card className="bg-card shadow-md border">
+                    <Card className="bg-slate-800 shadow-md border">
                       <CardHeader className="pb-2">
                         <CardTitle className="flex items-center text-lg font-semibold">
                           <Utensils className="mr-2.5 h-5 w-5 text-primary" /> Petit-déjeuner
@@ -486,7 +486,7 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
                   icon: Cookie,
                   isAvailable: !!(day.morningSnack && day.morningSnack.title),
                   content: day.morningSnack && day.morningSnack.title && (
-                    <Card className="bg-card shadow-md border">
+                    <Card className="bg-slate-800 shadow-md border">
                       <CardHeader className="pb-2">
                         <CardTitle className="flex items-center text-lg font-semibold">
                           <Cookie className="mr-2.5 h-5 w-5 text-primary" /> Collation du Matin
@@ -504,7 +504,7 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
                   icon: Utensils,
                    isAvailable: !!(day.lunch && day.lunch.mainCourse && day.lunch.mainCourse.title),
                   content: day.lunch && day.lunch.mainCourse && day.lunch.mainCourse.title && (
-                    <Card className="bg-card shadow-md border">
+                    <Card className="bg-slate-800 shadow-md border">
                       <CardHeader className="pb-2">
                         <CardTitle className="flex items-center text-lg font-semibold">
                           <Utensils className="mr-2.5 h-5 w-5 text-primary" /> Déjeuner
@@ -530,7 +530,7 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
                   icon: Cookie,
                   isAvailable: !!(day.afternoonSnack && day.afternoonSnack.title),
                   content: day.afternoonSnack && day.afternoonSnack.title && (
-                    <Card className="bg-card shadow-md border">
+                    <Card className="bg-slate-800 shadow-md border">
                      <CardHeader className="pb-2">
                         <CardTitle className="flex items-center text-lg font-semibold">
                           <Cookie className="mr-2.5 h-5 w-5 text-primary" /> Collation de l'Après-midi
@@ -548,7 +548,7 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
                   icon: Utensils,
                   isAvailable: !!(day.dinner && day.dinner.mainCourse && day.dinner.mainCourse.title),
                   content: day.dinner && day.dinner.mainCourse && day.dinner.mainCourse.title && (
-                     <Card className="bg-card shadow-md border">
+                     <Card className="bg-slate-800 shadow-md border">
                       <CardHeader className="pb-2">
                         <CardTitle className="flex items-center text-lg font-semibold">
                           <Utensils className="mr-2.5 h-5 w-5 text-primary" /> Dîner
@@ -579,7 +579,7 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
                     <Tabs defaultValue={defaultMealTab} className="w-full pt-2">
                       <TabsList className="grid w-full grid-cols-minmax-meal-tabs gap-1 mb-4 h-auto flex-wrap justify-start">
                         {availableMealsForDay.map(mealDef => (
-                          <TabsTrigger key={mealDef.key} value={mealDef.key}  className="flex-1 min-w-[120px] data-[state=active]:shadow-md">
+                          <TabsTrigger key={mealDef.key} value={mealDef.key}  className="flex-1 min-w-[120px] data-[state=active]:shadow-md data-[state=active]:bg-sky-500 data-[state=active]:text-white">
                             <mealDef.icon className="mr-2 h-4 w-4" />
                             {mealDef.label}
                           </TabsTrigger>
