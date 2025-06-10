@@ -164,29 +164,34 @@
   /* On peut simuler un léger flou sur le contenu derrière si la scrollbar est au-dessus d'un élément avec backdrop-filter */
 
   /* Assurer que le body a une couleur de fond pour que la transparence de la piste fonctionne bien */
-  body {
-    /* background-color: hsl(var(--background)); /* Déjà défini plus haut, mais pour rappel */
-  }
+  /* La couleur de fond du body est déjà définie dans les styles de base de Tailwind ou plus haut. */
 }
 
+
+/* --- STYLES GÉNÉRAUX POUR POPUPS (Dropdown, DatePicker, etc.) --- */
 /* --- POPUP CALENDRIER / DATEPICKER --- */
 @layer components {
   /* Calendrier popover (react-day-picker, radix, etc.) */
+  /* Style de base pour tous les popups avec effet néon */
+  .custom-popup-base {
+    background-color: #181f2a;
+    border: 1px solid #67e8f9;
+    border-radius: 0.75rem;
+    box-shadow: 0 0 10px #22d3ee;
+    color: #f8fafc;
+    z-index: 50;
+  }
+
+  /* Application du style de base aux différents types de popups */
   .rdp-popover,
   .react-datepicker-popper,
   .popover-content,
   .calendar-popover,
-  .datepicker-popover {
-    z-index: 9999 !important;
-    background: #181f2a !important;
-    border: 1.5px solid #22d3ee !important;
-    border-radius: 12px !important;
-    box-shadow: 0 0 24px #22d3ee88, 0 2px 24px #000a !important;
-    color: #e0f7fa !important;
+  .datepicker-popover,
+  [data-radix-popper-content-wrapper] > * {
+    @apply custom-popup-base;
     min-width: 260px;
     position: absolute !important;
-    left: 0;
-    top: 0;
   }
   /* Pour les cellules sélectionnées ou survolées */
   .rdp-day_selected,

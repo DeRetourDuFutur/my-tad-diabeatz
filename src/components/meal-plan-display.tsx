@@ -38,7 +38,7 @@ const MealComponentCard: React.FC<{ component: MealComponent; typeTitle?: string
 
 
   return (
-    <Card className="flex flex-col bg-card/60 dark:bg-card/80 shadow-md mt-4 first:mt-0 rounded-lg border-border/50">
+    <Card className="w-full flex flex-col bg-card/60 dark:bg-card/80 shadow-md mt-4 first:mt-0 rounded-lg border-border/50">
       <CardHeader className="pb-3 pt-4 px-4">
         <CardTitle className="flex items-center text-md font-semibold">
           <IconForType className="mr-2.5 h-5 w-5 text-primary" />
@@ -398,7 +398,7 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
   }
 
   return (
-    <Card className="shadow-xl">
+    <Card className="w-full shadow-xl">
       <CardHeader>
         <div className="flex justify-between items-start">
           <div>
@@ -463,7 +463,7 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
                   icon: Utensils,
                   isAvailable: !!(day.breakfast && day.breakfast.mainItem && day.breakfast.mainItem.title),
                   content: day.breakfast && day.breakfast.mainItem && day.breakfast.mainItem.title && (
-                    <Card className="bg-slate-800 shadow-md border">
+                    <Card className="w-full bg-slate-800 shadow-md border">
                       <CardHeader className="pb-2">
                         <CardTitle className="flex items-center text-lg font-semibold">
                           <Utensils className="mr-2.5 h-5 w-5 text-primary" /> Petit-déjeuner
@@ -486,7 +486,7 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
                   icon: Cookie,
                   isAvailable: !!(day.morningSnack && day.morningSnack.title),
                   content: day.morningSnack && day.morningSnack.title && (
-                    <Card className="bg-slate-800 shadow-md border">
+                    <Card className="w-full bg-slate-800 shadow-md border">
                       <CardHeader className="pb-2">
                         <CardTitle className="flex items-center text-lg font-semibold">
                           <Cookie className="mr-2.5 h-5 w-5 text-primary" /> Collation du Matin
@@ -504,7 +504,7 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
                   icon: Utensils,
                    isAvailable: !!(day.lunch && day.lunch.mainCourse && day.lunch.mainCourse.title),
                   content: day.lunch && day.lunch.mainCourse && day.lunch.mainCourse.title && (
-                    <Card className="bg-slate-800 shadow-md border">
+                    <Card className="w-full bg-slate-800 shadow-md border">
                       <CardHeader className="pb-2">
                         <CardTitle className="flex items-center text-lg font-semibold">
                           <Utensils className="mr-2.5 h-5 w-5 text-primary" /> Déjeuner
@@ -530,7 +530,7 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
                   icon: Cookie,
                   isAvailable: !!(day.afternoonSnack && day.afternoonSnack.title),
                   content: day.afternoonSnack && day.afternoonSnack.title && (
-                    <Card className="bg-slate-800 shadow-md border">
+                    <Card className="w-full bg-slate-800 shadow-md border">
                      <CardHeader className="pb-2">
                         <CardTitle className="flex items-center text-lg font-semibold">
                           <Cookie className="mr-2.5 h-5 w-5 text-primary" /> Collation de l'Après-midi
@@ -548,7 +548,7 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
                   icon: Utensils,
                   isAvailable: !!(day.dinner && day.dinner.mainCourse && day.dinner.mainCourse.title),
                   content: day.dinner && day.dinner.mainCourse && day.dinner.mainCourse.title && (
-                     <Card className="bg-slate-800 shadow-md border">
+                     <Card className="w-full bg-slate-800 shadow-md border">
                       <CardHeader className="pb-2">
                         <CardTitle className="flex items-center text-lg font-semibold">
                           <Utensils className="mr-2.5 h-5 w-5 text-primary" /> Dîner

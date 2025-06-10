@@ -13,6 +13,8 @@ import { SavePlanDialog } from "@/components/save-plan-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal, Loader2, ArrowUpCircle } from "lucide-react";
+import ProtectedRoute from '@/components/auth/ProtectedRoute'; // Ajout de l'importation
+// import { OptimizedTips } from '@/components/optimized-tips'; // Ajout de l'importation - Commenté car le composant n'existe pas
 
 import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, doc, deleteDoc, setDoc, query, orderBy, Timestamp } from 'firebase/firestore';
@@ -275,69 +277,77 @@ export default function HomePage() {
 
 
   return (
-    <div className="flex flex-col min-h-screen bg-background text-foreground">
-      <AppHeader />
-      <main className="flex-1 container mx-auto p-4 space-y-6">
-        <h1 className="text-3xl font-bold tracking-tight text-center text-primary">Tableau de bord </h1>
-
+    <ProtectedRoute>
+      <main className="min-h-screen bg-background pt-24 container mx-auto px-6">
+        <AppHeader />
         {aiError && (
-          <Alert variant="destructive" className="my-4">
+          <Alert variant="destructive">
             <Terminal className="h-4 w-4" />
-            <AlertTitle>Erreur de Génération IA</AlertTitle>
+            <AlertTitle>Erreur</AlertTitle>
             <AlertDescription>{aiError}</AlertDescription>
           </Alert>
         )}
-
-        <MealPlanForm 
-          onMealPlanGenerated={handleMealPlanGenerated} 
-          onGenerationError={handleGenerationError} 
-          medications={medications} 
-        />
-
-        {currentMealPlan && (
-          <MealPlanDisplay 
-            mealPlan={currentMealPlan} 
-            onSavePlan={handleOpenSaveDialog} 
-            mealPlanName={currentMealPlanName} // Changed from planName to mealPlanName
+        <div className="w-full mb-8">
+          <MealPlanForm
+            onMealPlanGenerated={handleMealPlanGenerated}
+            onGenerationError={handleGenerationError}
+            medications={medications}
           />
+        </div>
+        <div className="w-full mb-8">
+          <SavedMealPlans
+            savedPlans={displayableSavedPlans}
+            isLoading={isLoadingPlans}
+            onLoadPlan={handleLoadPlan}
+            onDeletePlan={handleDeletePlan}
+          />
+        </div>
+        <div className="w-full mb-8">
+          <MedicationManagementCard
+            medications={medications}
+            onAddMedication={() => {
+              setEditingMedication(null);
+              setIsAddEditMedicationDialogOpen(true);
+            }}
+            onEditMedication={handleEditMedicationItem}
+            onDeleteMedication={handleDeleteMedicationItem}
+          />
+        </div>
+        <div className="w-full mb-8">
+          <MealPlanDisplay
+            mealPlan={currentMealPlan}
+            mealPlanName={currentMealPlanName}
+            onSavePlan={handleOpenSaveDialog}
+          />
+        </div>
+        {showScrollTopButton && (
+          <button
+            onClick={scrollTop}
+            className="fixed bottom-8 right-8 bg-primary text-primary-foreground p-2 rounded-full shadow-lg hover:bg-primary/90 transition-colors"
+            aria-label="Retour en haut"
+          >
+            <ArrowUpCircle className="h-6 w-6" />
+          </button>
         )}
-
-        <SavedMealPlans
-          savedPlans={displayableSavedPlans} // Changed from plans to savedPlans
-          onLoadPlan={handleLoadPlan}
-          onDeletePlan={handleDeletePlan}
-          isLoading={isLoadingPlans}
+        <SavePlanDialog
+          isOpen={isSaveDialogOpen}
+          onOpenChange={setIsSaveDialogOpen}
+          onSave={handleSavePlan}
+          currentPlanName={currentMealPlanName}
         />
-
-        <MedicationManagementCard 
-          medications={medications}
-          onAddMedication={handleOpenAddMedicationDialog}
-          onEditMedication={handleEditMedicationItem}
-          onDeleteMedication={handleDeleteMedicationItem}
+        <AddEditMedicationDialog
+          isOpen={isAddEditMedicationDialogOpen}
+          onOpenChange={(isOpen) => {
+            setIsAddEditMedicationDialogOpen(isOpen);
+            if (!isOpen) setEditingMedication(null);
+          }}
+          onSave={handleSaveMedication}
+          medicationToEdit={editingMedication}
         />
-
-      {showScrollTopButton && (
-        <button 
-          onClick={scrollTop}
-          className="fixed bottom-8 right-8 z-50 p-3 bg-primary text-primary-foreground rounded-full shadow-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-opacity duration-300 opacity-100 hover:opacity-80"
-          aria-label="Retour en haut"
-        >
-          <ArrowUpCircle className="h-6 w-6" />
-        </button>
-      )}
+        <div className="w-full mt-8">
+          { /* <OptimizedTips /> */ }
+        </div>
       </main>
-      <SavePlanDialog
-        isOpen={isSaveDialogOpen}
-        onOpenChange={setIsSaveDialogOpen}
-        onSave={handleSavePlan} // Ensure this matches the prop name in SavePlanDialog
-        currentPlanName={currentMealPlanName} // Pass currentMealPlanName
-      />
-      <AddEditMedicationDialog 
-        isOpen={isAddEditMedicationDialogOpen} 
-        onOpenChange={setIsAddEditMedicationDialogOpen}
-        onSave={handleSaveMedication}
-        medicationToEdit={editingMedication}
-      />
-    </div>
+    </ProtectedRoute>
   );
 }

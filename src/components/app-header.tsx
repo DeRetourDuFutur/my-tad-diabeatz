@@ -28,8 +28,8 @@ export function AppHeader() {
   };
 
   return (
-    <header className="py-4 px-6 border-b border-border/50 shadow-lg shadow-primary/20">
-      <div className="flex justify-between items-center max-w-7xl mx-auto">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 py-4 border-b border-border/50 shadow-lg shadow-primary/20">
+      <div className="container mx-auto px-6 flex justify-between items-center">
         <Link
           href="/"
           className="flex items-center gap-2 text-2xl font-bold text-primary hover:opacity-90 transition-opacity hover:text-primary/80"

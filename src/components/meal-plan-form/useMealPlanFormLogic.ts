@@ -121,7 +121,8 @@ export const useMealPlanFormLogic = ({ userId, defaultResearchSummary, onMealPla
     },
   });
 
-  const [isDataLoading, setIsDataLoading] = useState(true);
+  const [isDataLoading, setIsDataLoading] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [selectionMode, setSelectionMode] = useState<"dates" | "duration">("dates");
   const [startDate, setStartDate] = useState<Date | undefined>(startOfDay(addDays(new Date(), 1)));
   const [endDate, setEndDate] = useState<Date | undefined>(startOfDay(addDays(new Date(), 1)));
@@ -140,6 +141,7 @@ export const useMealPlanFormLogic = ({ userId, defaultResearchSummary, onMealPla
       return;
     }
     setIsDataLoading(true);
+    setIsGenerating(true);
     try {
       console.log(`Attempting to load settings for userId: ${userId}`);
       const settingsDocRef = doc(db, 'users', userId, 'formSettings', 'default');
@@ -159,7 +161,8 @@ export const useMealPlanFormLogic = ({ userId, defaultResearchSummary, onMealPla
 
         if (!loadedSettings.diabeticResearchSummary || loadedSettings.diabeticResearchSummary !== defaultResearchSummary) {
           console.log("Attempting to update defaultResearchSummary in Firestore as it's missing or different.");
-          try {
+          setIsGenerating(true);
+    try {
             await setDoc(settingsDocRef, { diabeticResearchSummary: defaultResearchSummary }, { merge: true });
             console.log("Successfully updated defaultResearchSummary in Firestore.");
             toast({ title: "Conseils diététiques mis à jour", description: "Les derniers conseils ont été sauvegardés." });
@@ -182,7 +185,8 @@ export const useMealPlanFormLogic = ({ userId, defaultResearchSummary, onMealPla
         form.reset({ planName: "", diabeticResearchSummary: defaultResearchSummary });
         
         console.log("Attempting to save initial defaultResearchSummary to Firestore.");
-        try {
+        setIsGenerating(true);
+    try {
           await setDoc(settingsDocRef, { diabeticResearchSummary: defaultResearchSummary }, { merge: true });
           console.log("Successfully saved initial defaultResearchSummary to Firestore.");
           toast({ title: "Conseils diététiques sauvegardés", description: "Les conseils par défaut ont été sauvegardés pour la première fois." });
@@ -233,14 +237,16 @@ export const useMealPlanFormLogic = ({ userId, defaultResearchSummary, onMealPla
       form.reset({ planName: "", diabeticResearchSummary: defaultResearchSummary });
       setFoodCategories(baseInitialFoodCategories.map(cat => ({...cat, items: [...cat.items].sort((a,b) => a.name.localeCompare(b.name))})).sort((a,b) => a.categoryName.localeCompare(b.categoryName)));
     } finally {
-      console.log("handleLoadSettingsAndPreferences: Setting isDataLoading to false.");
+      console.log("handleLoadSettingsAndPreferences: Setting isDataLoading and isGenerating to false.");
       setIsDataLoading(false);
+      setIsGenerating(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isClient, userId, form.reset, toast, defaultResearchSummary]);
 
   const loadFormSettingsHistory = useCallback(async () => {
     if (!userId || !isClient) return;
+    setIsGenerating(true);
     try {
       const historyCollectionRef = collection(db, 'users', userId, 'formSettingsHistory');
       const historySnapshot = await getDocs(historyCollectionRef);
@@ -256,6 +262,8 @@ export const useMealPlanFormLogic = ({ userId, defaultResearchSummary, onMealPla
     } catch (error) {
       console.error("Error loading form settings history from Firebase:", error);
       toast({ title: "Erreur de chargement", description: "Impossible de charger l'historique des configurations.", variant: "destructive" });
+    } finally {
+      setIsGenerating(false);
     }
   }, [userId, isClient, toast]);
 
@@ -269,6 +277,7 @@ export const useMealPlanFormLogic = ({ userId, defaultResearchSummary, onMealPla
   const handleSaveConfiguration = async (name: string) => {
     if (!userId || !name.trim()) return;
     setIsDataLoading(true);
+    setIsGenerating(true);
     try {
       const currentSettings: FormSettings = {
         planName: form.getValues("planName"),
@@ -309,6 +318,7 @@ export const useMealPlanFormLogic = ({ userId, defaultResearchSummary, onMealPla
       toast({ title: "Erreur de sauvegarde", description: "Impossible de sauvegarder la configuration.", variant: "destructive" });
     } finally {
       setIsDataLoading(false);
+      setIsGenerating(false);
     }
   };
 
@@ -320,6 +330,7 @@ export const useMealPlanFormLogic = ({ userId, defaultResearchSummary, onMealPla
       return;
     }
     setIsDataLoading(true);
+    setIsGenerating(true);
     try {
       form.reset({
         planName: configToLoad.planName || "",
@@ -355,6 +366,7 @@ export const useMealPlanFormLogic = ({ userId, defaultResearchSummary, onMealPla
       toast({ title: "Erreur de chargement", description: "Impossible de charger les détails de la configuration.", variant: "destructive" });
     } finally {
       setIsDataLoading(false);
+      setIsGenerating(false);
     }
   };
 
@@ -364,6 +376,7 @@ export const useMealPlanFormLogic = ({ userId, defaultResearchSummary, onMealPla
     if (!configToDelete) return;
 
     setIsDataLoading(true);
+    setIsGenerating(true);
     try {
       const configDocRef = doc(db, 'users', userId, 'formSettingsHistory', configId);
       await deleteDoc(configDocRef);
@@ -383,6 +396,7 @@ export const useMealPlanFormLogic = ({ userId, defaultResearchSummary, onMealPla
       toast({ title: "Erreur de suppression", description: "Impossible de supprimer la configuration.", variant: "destructive" });
     } finally {
       setIsDataLoading(false);
+      setIsGenerating(false);
     }
   };
 
@@ -468,7 +482,8 @@ export const useMealPlanFormLogic = ({ userId, defaultResearchSummary, onMealPla
     );
     setFoodCategories(updatedCategories);
     if (userId) {
-      try {
+      setIsGenerating(true);
+    try {
         const foodPrefsDocRef = doc(db, 'users', userId, 'foodPreferences', 'default');
         await setDoc(foodPrefsDocRef, { categories: updatedCategories }, { merge: true });
         // console.log("Food preferences saved to Firebase for user:", userId);
@@ -500,6 +515,7 @@ export const useMealPlanFormLogic = ({ userId, defaultResearchSummary, onMealPla
       } else {
         toast({ title: "Dates invalides", description: "Veuillez sélectionner une date de début et de fin valides pour le mode 'Par Dates'.", variant: "destructive" });
         setIsLoading(false);
+      setIsGenerating(false);
         return;
       }
     } else { // selectionMode === 'duration'
@@ -510,6 +526,7 @@ export const useMealPlanFormLogic = ({ userId, defaultResearchSummary, onMealPla
       } else {
         toast({ title: "Configuration de durée invalide", description: "Veuillez entrer une durée valide (1-365 jours) et une date de début pour le mode 'Par Durée'.", variant: "destructive" });
         setIsLoading(false);
+      setIsGenerating(false);
         return;
       }
     }
@@ -517,6 +534,7 @@ export const useMealPlanFormLogic = ({ userId, defaultResearchSummary, onMealPla
     if (!planDurationForAI || !finalStartDateForAI) {
       toast({ title: "Configuration de période invalide", description: "Veuillez configurer la période du plan.", variant: "destructive" });
       setIsLoading(false);
+      setIsGenerating(false);
       return;
     }
     
@@ -524,6 +542,7 @@ export const useMealPlanFormLogic = ({ userId, defaultResearchSummary, onMealPla
     if (isBefore(startOfDay(finalStartDateForAI), today)) {
         toast({ title: "Date de début passée", description: "La date de début du plan ne peut pas être dans le passé.", variant: "destructive"});
         setIsLoading(false);
+      setIsGenerating(false);
         return;
     }
 
@@ -554,12 +573,14 @@ export const useMealPlanFormLogic = ({ userId, defaultResearchSummary, onMealPla
         variant: "destructive",
       });
       setIsLoading(false);
+      setIsGenerating(false);
       return;
     }
 
     const availableFoodsForAI = likedFoodsList.join("\n");
     const foodsToAvoidForAI = foodsToAvoidList.length > 0 ? foodsToAvoidList.join("\n") : undefined;
 
+    setIsGenerating(true);
     try {
       const mealPlanInput: GenerateMealPlanInput = {
         planName: values.planName,
@@ -590,6 +611,7 @@ export const useMealPlanFormLogic = ({ userId, defaultResearchSummary, onMealPla
       onGenerationError(errorMessage);
     } finally {
       setIsLoading(false);
+      setIsGenerating(false);
     }
   }
 
@@ -616,7 +638,8 @@ export const useMealPlanFormLogic = ({ userId, defaultResearchSummary, onMealPla
     displayEndDateFromDuration,
     handleDurationInputChange,
     handleDurationInputBlur,
-    handleFoodPreferenceChange, // Added export
-    onSubmit // Added export
+    handleFoodPreferenceChange,
+    onSubmit,
+    isGenerating
   };
 };

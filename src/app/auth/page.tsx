@@ -6,10 +6,19 @@ import { RegisterForm } from '@/components/auth/RegisterForm';
 import { PasswordResetForm } from '@/components/auth/PasswordResetForm';
 import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton';
 import { Button } from '@/components/ui/button';
+import AuthenticatedRoute from '@/components/auth/AuthenticatedRoute';
 
 type AuthMode = 'login' | 'register' | 'reset';
 
 export default function AuthPage() {
+  return (
+    <AuthenticatedRoute>
+      <AuthPageContent />
+    </AuthenticatedRoute>
+  );
+}
+
+function AuthPageContent() {
   const [mode, setMode] = useState<AuthMode>('login');
 
   return (
