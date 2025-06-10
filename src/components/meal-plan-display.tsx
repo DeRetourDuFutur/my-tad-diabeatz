@@ -5,7 +5,7 @@ import { useEffect, type ReactNode, useRef, useState } from "react";
 import type { GenerateMealPlanOutput, DailyMealPlan, MealComponent, Breakfast, LunchDinner } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChefHat, Save, Utensils, Lightbulb, Clock, ClipboardList, GlassWater, Soup, Beef, Apple, Grape, Cookie, NotebookPen, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChefHat, Save, Utensils, Lightbulb, Clock, ClipboardList, GlassWater, Soup, Beef, Apple, Grape, Cookie, NotebookPen, ChevronLeft, ChevronRight, FileDown } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -116,6 +116,160 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
 
+  const handleExportHTML = () => {
+    if (!mealPlan) return;
+
+    // Create a new document for the HTML export
+    const exportDoc = document.implementation.createHTMLDocument(mealPlanName || "Plan Repas");
+    const exportBody = exportDoc.body;
+    exportBody.style.fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+    exportBody.style.margin = "20px";
+    exportBody.style.backgroundColor = "#121212"; // Very dark grey, almost black
+    exportBody.style.color = "#e0e0e0"; // Light grey text
+    exportBody.style.lineHeight = "1.6";
+
+    const styleTag = exportDoc.createElement('style');
+    styleTag.textContent = `
+      a { color: #38bdf8; text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      h1, h2, h3, h4 { color: #00ffff; margin-top: 1.5em; margin-bottom: 0.5em; }
+      h1 { font-size: 2.2em; text-align: center; border-bottom: 2px solid #00ffff33; padding-bottom: 0.5em; }
+      h2 { font-size: 1.8em; border-bottom: 1px solid #00ffff22; padding-bottom: 0.3em; }
+      h3 { font-size: 1.4em; color: #7dd3fc; }
+      h4 { font-size: 1.1em; color: #e0e0e0; margin-bottom: 0.2em; }
+      p { margin-bottom: 0.8em; }
+      strong { color: #a5f3fc; }
+      .day-container { margin-bottom: 40px; padding: 25px; border: 1px solid #2a2a2a; border-radius: 12px; background-color: #1e1e1e; box-shadow: 0 4px 15px rgba(0, 255, 255, 0.05); }
+      .meal-container { margin-bottom: 25px; padding: 20px; border: 1px dashed #333; border-radius: 8px; background-color: #242424; }
+      .component-container { padding-left: 20px; margin-top: 15px; border-left: 4px solid #00ffff88; margin-bottom: 15px; }
+      .nav-container {
+        position: sticky;
+        top: 0;
+        background-color: #121212;
+        z-index: 1000;
+        padding: 15px 0;
+        margin-bottom: 30px; 
+        border-bottom: 1px solid #333; 
+        text-align: center; 
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      }
+      .nav-container a { margin: 0 12px; font-weight: bold; font-size: 1.1em; }
+      body { padding-top: 70px; } /* Add padding to body to prevent content from being hidden behind sticky nav */
+    `;
+    exportDoc.head.appendChild(styleTag);
+
+    const titleElement = exportDoc.createElement('h1');
+    titleElement.textContent = mealPlanName || "Plan Repas";
+    exportBody.appendChild(titleElement);
+    // Body padding will be adjusted by the nav height later if nav exists
+
+    const navElement = exportDoc.createElement('div');
+    navElement.className = 'nav-container';
+    mealPlan.days.forEach((day, index) => {
+      const dayLink = exportDoc.createElement('a');
+      dayLink.href = `#day-${day.dayIdentifier || index + 1}`;
+      dayLink.textContent = day.dayIdentifier || `Jour ${index + 1}`;
+      navElement.appendChild(dayLink);
+    });
+    exportBody.appendChild(navElement);
+    // Adjust body padding top based on navElement's height if it has content
+    if (mealPlan.days.length > 0) {
+      exportDoc.body.style.paddingTop = `${navElement.offsetHeight + 20}px`;
+    }
+
+
+    mealPlan.days.forEach((day, dayIndex) => {
+      const dayContainer = exportDoc.createElement('div');
+      dayContainer.id = `day-${day.dayIdentifier || dayIndex + 1}`;
+      dayContainer.className = 'day-container';
+
+      const dayTitle = exportDoc.createElement('h2');
+      dayTitle.textContent = day.dayIdentifier || `Jour ${dayIndex + 1}`;
+      dayContainer.appendChild(dayTitle);
+
+      const processMeal = (mealData: Breakfast | LunchDinner | MealComponent | undefined, mealName: string, isSnackOrBreakfast: boolean = false) => {
+        if (!mealData) return;
+        
+        const mealDiv = exportDoc.createElement('div');
+        mealDiv.className = 'meal-container';
+
+        const mealTitle = exportDoc.createElement('h3');
+        mealTitle.textContent = mealName;
+        mealDiv.appendChild(mealTitle);
+
+        const renderComponent = (component: MealComponent | undefined, componentTitle?: string) => {
+          if (!component || !component.title) return;
+          const compDiv = exportDoc.createElement('div');
+          compDiv.className = 'component-container';
+
+          const titleEl = exportDoc.createElement('h4');
+          titleEl.textContent = component.title + (componentTitle ? ` (${componentTitle})` : '');
+          compDiv.appendChild(titleEl);
+
+          const createParagraph = (strongText: string, normalText: string | undefined) => {
+            if (!normalText || normalText.trim() === "") return null;
+            const p = exportDoc.createElement('p');
+            p.innerHTML = `<strong>${strongText}:</strong> ${normalText.replace(/\n|\r\n|\r/g, '<br/>')}`;
+            return p;
+          };
+
+          const prepTimeEl = createParagraph('Temps de préparation', component.preparationTime);
+          if (prepTimeEl) compDiv.appendChild(prepTimeEl);
+          
+          const ingredientsEl = createParagraph('Ingrédients', component.ingredients);
+          if (ingredientsEl) compDiv.appendChild(ingredientsEl);
+
+          const recipeEl = createParagraph('Recette', component.recipe);
+          if (recipeEl) compDiv.appendChild(recipeEl);
+
+          const tipsEl = createParagraph('Conseils', component.tips);
+          if (tipsEl) compDiv.appendChild(tipsEl);
+          
+          mealDiv.appendChild(compDiv);
+        };
+
+        if (isSnackOrBreakfast && 'mainItem' in mealData && mealData.mainItem) { // Breakfast
+            renderComponent(mealData.mainItem);
+        } else if (isSnackOrBreakfast && 'title' in mealData) { // Snack
+            renderComponent(mealData as MealComponent);
+        } else if ('mainCourse' in mealData) { // Lunch or Dinner
+          renderComponent(mealData.starter, 'Entrée');
+          renderComponent(mealData.mainCourse, 'Plat Principal');
+          if (mealData.cheese) renderComponent(mealData.cheese, 'Fromage');
+          renderComponent(mealData.dessert, 'Dessert');
+        }
+
+        if ('waterToDrink' in mealData && mealData.waterToDrink) {
+          const hydrationEl = exportDoc.createElement('p');
+          hydrationEl.style.marginTop = '10px';
+          hydrationEl.style.fontStyle = 'italic';
+          hydrationEl.innerHTML = `<strong>Hydratation :</strong> ${mealData.waterToDrink}`;
+          mealDiv.appendChild(hydrationEl);
+        }
+        dayContainer.appendChild(mealDiv);
+      };
+
+      processMeal(day.breakfast, "Petit-déjeuner", true);
+      if (day.morningSnack) processMeal(day.morningSnack, "Collation (matin)", true);
+      processMeal(day.lunch, "Déjeuner");
+      if (day.afternoonSnack) processMeal(day.afternoonSnack, "Collation (après-midi)", true);
+      processMeal(day.dinner, "Dîner");
+
+      exportBody.appendChild(dayContainer);
+    });
+
+    const htmlString = new XMLSerializer().serializeToString(exportDoc);
+    const blob = new Blob([`<!DOCTYPE html>\n${htmlString}`], { type: "text/html;charset=utf-8" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    const fileName = (mealPlanName || "plan-repas").replace(/[^a-z0-9_\-\.]/gi, '_');
+    link.download = `${fileName}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+  };
+
   const handleScroll = () => {
     if (tabsListRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = tabsListRef.current;
@@ -209,10 +363,16 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
             </CardTitle>
             <CardDescription>Consultez votre plan repas personnalisé. Naviguez par jour, puis par type de repas.</CardDescription>
           </div>
-          <Button onClick={onSavePlan} size="sm" variant="outline" className="button-neon-glow">
-            <Save className="mr-2 h-4 w-4" />
-            Sauvegarder
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={onSavePlan} size="sm" variant="outline" className="button-neon-glow">
+              <Save className="mr-2 h-4 w-4" />
+              Sauvegarder
+            </Button>
+            <Button onClick={handleExportHTML} size="sm" variant="outline" className="button-neon-glow border-accent/70 text-accent hover:border-accent hover:text-accent">
+              <FileDown className="mr-2 h-4 w-4" />
+              Exporter HTML
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
