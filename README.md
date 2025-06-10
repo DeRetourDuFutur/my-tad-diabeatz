@@ -247,5 +247,85 @@ Si vous souhaitez contribuer au projet, veuillez suivre les bonnes pratiques hab
 
 ---
 
-N'hésitez pas à me demander si vous souhaitez des précisions sur une section ou si vous avez besoin d'aide pour la configuration !
+ ## Fonctionnalités Implémentées 
+ 1. Génération de Plans Repas via IA (Genkit) : 
+    
+    - Utilisation de `generateMealPlan` pour créer des plans alimentaires personnalisés. 
+    - Formulaire de configuration ( `meal-plan-form.tsx` ) permettant de spécifier : 
+      - Préférences alimentaires (aliments aimés, non aimés, exclus). 
+      - Objectifs (perte de poids, maintien, prise de masse). 
+      - Recommandations spécifiques (basées sur un résumé de recherche sur le diabète). 
+      - Durée du plan (par dates ou nombre de jours). 
+    - Affichage détaillé du plan généré ( `meal-plan-display.tsx` ) avec : 
+      - Navigation par onglets pour chaque jour. 
+      - Accordéons pour chaque type de repas (petit-déjeuner, déjeuner, dîner, collations). 
+      - Détails pour chaque plat : temps de préparation, ingrédients, recette, conseils. 
+ 2. Gestion des Plans Repas (Firestore) : 
+    
+    - Sauvegarde des plans générés dans Firestore (collection mealPlans dans `page.tsx` ). 
+    - Chaque plan sauvegardé inclut le nom du plan, les données du plan et une date de création ( Timestamp ). 
+    - Possibilité de mettre à jour un plan existant. 
+    - Affichage des plans sauvegardés ( `saved-meal-plans.tsx` ) avec : 
+      - Chargement des plans depuis Firestore. 
+      - Suppression de plans. 
+      - Indicateur de chargement. 
+ 3. Gestion des Médicaments (Firestore) : 
+    
+    - Affichage des médicaments dans `MedicationManagementCard.tsx` . 
+      - Layout en deux colonnes pour une meilleure lisibilité. 
+      - Dosage affiché à côté du nom du médicament. 
+      - Informations de stock et seuil en dessous. 
+    - Ajout et modification de médicaments via `AddEditMedicationDialog.tsx` . 
+    - Les données des médicaments sont stockées et récupérées depuis Firestore (collection medications dans `page.tsx` ). 
+ 4. Export HTML des Plans Repas : 
+    
+    - Bouton "Exporter HTML" dans `meal-plan-display.tsx` . 
+    - Génération d'un fichier HTML autonome du plan repas affiché. 
+    - Le fichier HTML inclut : 
+      - Un titre. 
+      - Une barre de navigation sticky en haut de page pour les jours. 
+      - Le contenu du plan structuré par jour et par repas. 
+      - Styles CSS de base pour la lisibilité et un thème sombre. 
+ 5. Interface Utilisateur et UX : 
+    
+    - Utilisation de Shadcn UI pour les composants ( `ui` ). 
+    - Design général avec un thème sombre et des effets néon. 
+    - Barre de défilement personnalisée (plus fine, effet cyan néon) dans `globals.css` . 
+    - Notifications (toasts) pour les actions utilisateur (sauvegarde, erreur, etc.) via `useToast` . 
+    - Gestion des états de chargement pour une meilleure expérience utilisateur. 
+    - Bouton "Scroll to Top" ( `page.tsx` ). 
+ ## Connexion à la Base de Données (Firestore vs LocalStorage) 
+ - Firestore : L'application est principalement connectée à Firestore pour la persistance des données critiques : 
+   - Les plans repas générés et sauvegardés sont stockés dans la collection mealPlans de Firestore (géré dans `page.tsx` ). 
+   - Les informations sur les médicaments sont stockées dans la collection medications de Firestore (géré dans `page.tsx` ). 
+   - La configuration de Firebase est définie dans `firebase.ts` et utilise les variables d'environnement (ex: NEXT_PUBLIC_FIREBASE_PROJECT_ID ). 
+ - LocalStorage : Le LocalStorage est utilisé, mais pour des aspects moins critiques ou des préférences utilisateur locales : 
+   - Le hook `useLocalStorage` est disponible. 
+   - Dans `meal-plan-form.tsx` , le hook useMealPlanFormLogic (qui utilise useLocalStorage ) sauvegarde et charge les préférences du formulaire (aliments, résumé de recherche, etc.) dans le LocalStorage pour pré-remplir le formulaire lors de visites ultérieures. Cela améliore l'expérience utilisateur en conservant les saisies précédentes. 
+ Conclusion sur la connexion : Votre application utilise Firestore comme base de données principale pour les données essentielles (plans, médicaments), et LocalStorage pour la persistance des préférences du formulaire côté client , ce qui est une bonne pratique. 
+ 
+ ## Fonctionnalités Non Implémentées ou Abandonnées 
+ 1. Export PDF des Plans Repas : 
+    
+    - Tentative d'implémentation avec html2canvas et jsPDF . 
+    - Le résultat initial n'était pas satisfaisant (simple capture d'écran en une page). 
+    - Abandonnée car la création d'un PDF multipage bien formaté et optimisé pour l'impression s'est avérée complexe et chronophage avec les outils choisis. L'export HTML existant offre une alternative viable. 
+ 2. Authentification Utilisateur Complète : 
+    
+    - Actuellement, un userId = 'testUser' est utilisé dans `meal-plan-form.tsx` pour la sauvegarde des plans dans une sous-collection Firestore. Une véritable authentification (par exemple avec Firebase Authentication) n'est pas encore implémentée pour gérer des utilisateurs distincts. 
+ 3. Gestion Avancée des Stocks de Médicaments : 
+    
+    - Bien que le stock et le seuil soient affichés, il n'y a pas de logique pour décrémenter automatiquement le stock ou pour générer des alertes de stock bas. 
+ 4. Suivi Nutritionnel Détaillé / Journal Alimentaire : 
+    
+    - L'application génère des plans, mais ne permet pas à l'utilisateur de suivre ce qu'il a réellement consommé ni de comparer avec les objectifs nutritionnels du plan. 
+ 5. Internationalisation (i18n) : 
+    
+    - L'application est actuellement en français. Aucune structure pour la traduction dans d'autres langues n'est en place. 
+ ## Pistes d'Amélioration Possibles (non exhaustif) 
+ - Mettre en place une authentification utilisateur robuste. 
+ - Améliorer la gestion des erreurs et des cas limites. 
+ - Ajouter des tests unitaires et d'intégration. 
+ - Optimiser les performances, notamment pour le chargement des données depuis Firestore. 
+ - Développer une section de profil utilisateur pour gérer les préférences globales.
 

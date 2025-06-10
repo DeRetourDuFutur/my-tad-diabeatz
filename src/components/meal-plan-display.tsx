@@ -5,7 +5,9 @@ import { useEffect, type ReactNode, useRef, useState } from "react";
 import type { GenerateMealPlanOutput, DailyMealPlan, MealComponent, Breakfast, LunchDinner } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChefHat, Save, Utensils, Lightbulb, Clock, ClipboardList, GlassWater, Soup, Beef, Apple, Grape, Cookie, NotebookPen, ChevronLeft, ChevronRight, FileDown } from "lucide-react";
+import { ChefHat, Save, Utensils, Lightbulb, Clock, ClipboardList, GlassWater, Soup, Beef, Apple, Grape, Cookie, NotebookPen, ChevronLeft, ChevronRight, FileDown, FileText } from "lucide-react";
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -177,7 +179,6 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
       exportDoc.body.style.paddingTop = `${navElement.offsetHeight + 20}px`;
     }
 
-
     mealPlan.days.forEach((day, dayIndex) => {
       const dayContainer = exportDoc.createElement('div');
       dayContainer.id = `day-${day.dayIdentifier || dayIndex + 1}`;
@@ -268,6 +269,50 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(link.href);
+  };
+
+  const handleExportPDF = async () => {
+    if (!mealPlan) return;
+
+    const mealPlanContent = document.getElementById('meal-plan-content-for-export');
+    if (!mealPlanContent) {
+      console.error("Element with ID 'meal-plan-content-for-export' not found.");
+      return;
+    }
+
+    try {
+      const canvas = await html2canvas(mealPlanContent, {
+        scale: 2, // Increase scale for better quality
+        useCORS: true, // If you have external images
+        logging: true,
+        backgroundColor: '#121212', // Match HTML export background
+        onclone: (document: Document) => {
+          // Apply print-specific styles or modifications to the cloned document if needed
+          // For example, ensure all accordions are open
+          document.querySelectorAll('div[data-state="closed"]').forEach(el => {
+            // This is a bit of a hack, ideally you'd trigger the open state
+            // or have a print-friendly version of the component
+            const trigger = el.querySelector('button[aria-expanded="false"]') as HTMLElement;
+            if(trigger) trigger.click(); // This might not work reliably in onclone
+            // A more robust way would be to ensure content is visible by default for PDF export
+          });
+        }
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'p',
+        unit: 'px',
+        format: [canvas.width, canvas.height] // Use canvas dimensions for PDF page size
+      });
+
+      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+      pdf.save(`${mealPlanName || 'plan-repas'}.pdf`);
+
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      // Optionally, inform the user with a toast notification
+    }
   };
 
   const handleScroll = () => {
@@ -409,7 +454,7 @@ export function MealPlanDisplay({ mealPlan, mealPlanName, onSavePlan }: MealPlan
             )}
           </div>
           {/* La ScrollArea est modifiée ici pour que son contenu détermine sa hauteur */}
-          <ScrollArea className="h-auto pr-3 -mr-3">
+          <ScrollArea className="h-[calc(100vh-280px)] lg:h-[calc(100vh-240px)] relative" id="meal-plan-content-for-export">
             {mealPlan.days.map((day, dayIndex) => {
               const mealDefinitions: MealDefinition[] = [
                 {
