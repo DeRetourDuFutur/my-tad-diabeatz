@@ -150,28 +150,6 @@ export function MealPlanForm({
     if (onMealPlanGeneratedProp) {
       onMealPlanGeneratedProp(result, planName);
     }
-
-    if (userId) {
-      try {
-        const mealPlansCollectionRef = collection(db, 'users', userId, 'mealPlans'); // Assurez-vous que 'collection', 'addDoc', 'serverTimestamp' sont importés de 'firebase/firestore'
-        await addDoc(mealPlansCollectionRef, {
-          ...result,
-          planName: planName || `Plan du ${format(new Date(), "dd/MM/yyyy HH:mm")}`,
-          createdAt: serverTimestamp(),
-        });
-        toast({
-          title: "Plan sauvegardé !",
-          description: "Votre nouveau plan alimentaire a été sauvegardé dans votre historique.",
-        });
-      } catch (error) {
-        console.error("Error saving meal plan to Firestore:", error);
-        toast({
-          title: "Erreur de sauvegarde Firestore",
-          description: "Impossible de sauvegarder le plan alimentaire.",
-          variant: "destructive",
-        });
-      }
-    }
   };
 
   const {

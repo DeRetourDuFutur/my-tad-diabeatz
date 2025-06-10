@@ -19,11 +19,13 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute'; // Ajout de l'imp
 import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, doc, deleteDoc, setDoc, query, orderBy, Timestamp } from 'firebase/firestore';
 import useLocalStorage from "@/hooks/use-local-storage";
+import { useAuth } from '@/contexts/AuthContext'; // Correction du chemin d'importation
 
 const initialSavedPlans: StoredMealPlan[] = [];
 const initialMedications: Medication[] = [];
 
 export default function HomePage() {
+  const { currentUser } = useAuth(); // Récupérer l'utilisateur actuel
   const [currentMealPlan, setCurrentMealPlan] = useState<GenerateMealPlanOutput | null>(null);
   const [currentMealPlanId, setCurrentMealPlanId] = useState<string | null>(null);
   const [currentMealPlanName, setCurrentMealPlanName] = useState<string>("");
@@ -65,8 +67,9 @@ export default function HomePage() {
   };
 
   const fetchMedications = async () => {
+    if (!currentUser) return;
     try {
-      const medicationsCollectionRef = collection(db, "medications");
+      const medicationsCollectionRef = collection(db, "users", currentUser.uid, "medications");
       const q = query(medicationsCollectionRef, orderBy("name"));
       const querySnapshot = await getDocs(q);
       const meds: Medication[] = [];
@@ -85,9 +88,10 @@ export default function HomePage() {
   };
 
   const fetchSavedPlans = async () => {
+    if (!currentUser) return;
     setIsLoadingPlans(true);
     try {
-      const plansCollectionRef = collection(db, "mealPlans");
+      const plansCollectionRef = collection(db, "users", currentUser.uid, "mealPlans");
       const q = query(plansCollectionRef, orderBy("createdAt", "desc"));
       const querySnapshot = await getDocs(q);
       const plans: StoredMealPlan[] = [];
@@ -137,36 +141,65 @@ export default function HomePage() {
   };
 
   const handleSavePlan = async (name: string) => {
-    if (!currentMealPlan) return;
+    if (!currentMealPlan || !currentUser) return;
     setIsLoadingPlans(true);
 
     const planDataToSave = {
       ...currentMealPlan,
       name,
-      createdAt: currentMealPlanId ? savedPlans.find(p=>p.id === currentMealPlanId)?.createdAt || Timestamp.now() : Timestamp.now(),
+      // Conserver le createdAt original lors de la mise à jour, sinon en créer un nouveau
+      createdAt: currentMealPlanId 
+        ? savedPlans.find(p => p.id === currentMealPlanId)?.createdAt || Timestamp.now() 
+        : Timestamp.now(),
     };
 
     try {
       if (currentMealPlanId) {
-        const planDocRef = doc(db, "mealPlans", currentMealPlanId);
-        const existingPlan = savedPlans.find(p => p.id === currentMealPlanId);
-        const updatedPlanData = { ...planDataToSave, createdAt: existingPlan?.createdAt || Timestamp.now() };
-        await setDoc(planDocRef, updatedPlanData);
+        const planDocRef = doc(db, "users", currentUser.uid, "mealPlans", currentMealPlanId);
+        // const existingPlan = savedPlans.find(p => p.id === currentMealPlanId); // Déjà utilisé pour createdAt
+        // const updatedPlanData = { ...planDataToSave, createdAt: existingPlan?.createdAt || Timestamp.now() };
+        await setDoc(planDocRef, planDataToSave); // planDataToSave contient déjà le bon createdAt
+        
+        // Mettre à jour l'état local
+        setSavedPlans(prevPlans => 
+          prevPlans.map(p => p.id === currentMealPlanId ? { ...planDataToSave, id: currentMealPlanId } as StoredMealPlan : p)
+        );
         toast({ title: "Plan Mis à Jour!", description: `Le plan repas "${name}" a été mis à jour.` });
       } else {
-        const plansCollectionRef = collection(db, "mealPlans");
+        const plansCollectionRef = collection(db, "users", currentUser.uid, "mealPlans");
         const docRef = await addDoc(plansCollectionRef, planDataToSave);
         setCurrentMealPlanId(docRef.id);
+        
+        // Mettre à jour l'état local
+        const newPlan = { ...planDataToSave, id: docRef.id } as StoredMealPlan;
+        setSavedPlans(prevPlans =>
+          [newPlan, ...prevPlans].sort((a, b) => {
+            const getMillisSafe = (dateVal: string | Timestamp | null | undefined): number => {
+              if (dateVal instanceof Timestamp) {
+                return dateVal.toMillis();
+              }
+              if (typeof dateVal === 'string') {
+                const d = new Date(dateVal);
+                return !isNaN(d.getTime()) ? d.getTime() : 0; // Handle invalid date strings
+              }
+              return 0; // Fallback for null, undefined, or other unexpected types
+            };
+            return getMillisSafe(b.createdAt) - getMillisSafe(a.createdAt);
+          })
+        );
+
         toast({ title: "Plan Sauvegardé!", description: `Le plan repas "${name}" a été sauvegardé.` });
       }
       setCurrentMealPlanName(name);
-      await fetchSavedPlans();
+      // Optionnel: appeler fetchSavedPlans pour resynchroniser, mais l'UI devrait être à jour
+      // await fetchSavedPlans(); 
     } catch (error) {
       console.error("Error saving plan:", error);
       toast({ title: "Erreur de Sauvegarde", description: "Impossible de sauvegarder le plan repas.", variant: "destructive" });
+    } finally {
+        setIsSaveDialogOpen(false);
+        setIsLoadingPlans(false);
     }
-    setIsSaveDialogOpen(false);
-    setIsLoadingPlans(false);
   };
 
   const handleLoadPlan = (planId: string) => {
@@ -182,9 +215,10 @@ export default function HomePage() {
   };
 
   const handleDeletePlan = async (planId: string) => {
+    if (!currentUser) return;
     setIsLoadingPlans(true);
     try {
-      const planDocRef = doc(db, "mealPlans", planId);
+      const planDocRef = doc(db, "users", currentUser.uid, "mealPlans", planId);
       await deleteDoc(planDocRef);
       toast({ title: "Plan Supprimé", description: "Le plan repas a été supprimé.", variant: "destructive" });
       if (currentMealPlanId === planId) {
@@ -208,12 +242,13 @@ export default function HomePage() {
   };
 
  const handleSaveMedication = async (medicationData: Omit<Medication, 'id'> | Medication) => {
+    if (!currentUser) return;
     try {
-      const medicationsCollectionRef = collection(db, "medications");
+      const medicationsCollectionRef = collection(db, "users", currentUser.uid, "medications");
       
       if ('id' in medicationData && medicationData.id) {
         // Mise à jour d'un médicament existant
-        const medicationDocRef = doc(db, "medications", medicationData.id);
+        const medicationDocRef = doc(db, "users", currentUser.uid, "medications", medicationData.id);
         await setDoc(medicationDocRef, medicationData);
         toast({ 
           title: "Médicament Modifié!", 
@@ -255,8 +290,9 @@ export default function HomePage() {
   };
 
   const handleDeleteMedicationItem = async (medicationId: string) => {
+    if (!currentUser) return;
     try {
-      const medicationDocRef = doc(db, "medications", medicationId);
+      const medicationDocRef = doc(db, "users", currentUser.uid, "medications", medicationId);
       await deleteDoc(medicationDocRef);
       toast({ 
         title: "Médicament Supprimé", 
