@@ -126,6 +126,48 @@
     min-height: 100vh;
   }
 }
+/* --- FIN STYLES CARTES --- */
+
+/* --- STYLES BARRE DE DÉFILEMENT PERSONNALISÉE --- */
+@layer base {
+  /* Pour les navigateurs WebKit (Chrome, Safari, Edge Chromium) */
+  ::-webkit-scrollbar {
+    width: 8px; /* Largeur de la barre de défilement */
+    height: 8px; /* Hauteur pour les barres horizontales */
+  }
+
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--background) / 0.5); /* Fond de la piste, semi-transparent */
+    border-radius: 10px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--primary)); /* Couleur cyan néon */
+    border-radius: 10px;
+    border: 2px solid hsl(var(--background)); /* Bordure pour un effet de flottement */
+    box-shadow: 0 0 8px hsl(var(--primary) / 0.7), 0 0 16px hsl(var(--primary) / 0.5); /* Effet néon/flou */
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--primary) / 0.8); /* Plus clair au survol */
+    box-shadow: 0 0 12px hsl(var(--primary)), 0 0 24px hsl(var(--primary) / 0.7); /* Effet néon intensifié */
+  }
+
+  /* Pour Firefox */
+  html {
+    scrollbar-width: thin; /* 'auto', 'thin', ou 'none' */
+    scrollbar-color: hsl(var(--primary)) hsl(var(--background) / 0.5); /* Couleur du pouce et de la piste */
+  }
+
+  /* Pour un effet de flou sur la piste (expérimental et peut ne pas fonctionner partout) */
+  /* Note: backdrop-filter ne fonctionne généralement pas directement sur les pseudo-éléments de la scrollbar */
+  /* On peut simuler un léger flou sur le contenu derrière si la scrollbar est au-dessus d'un élément avec backdrop-filter */
+
+  /* Assurer que le body a une couleur de fond pour que la transparence de la piste fonctionne bien */
+  body {
+    /* background-color: hsl(var(--background)); /* Déjà défini plus haut, mais pour rappel */
+  }
+}
 
 /* --- POPUP CALENDRIER / DATEPICKER --- */
 @layer components {

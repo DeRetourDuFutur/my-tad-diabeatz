@@ -12,7 +12,7 @@ import { AddEditMedicationDialog } from "@/components/AddEditMedicationDialog";
 import { SavePlanDialog } from "@/components/save-plan-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, Loader2 } from "lucide-react";
+import { Terminal, Loader2, ArrowUpCircle } from "lucide-react";
 
 import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, doc, deleteDoc, setDoc, query, orderBy, Timestamp } from 'firebase/firestore';
@@ -34,15 +34,53 @@ export default function HomePage() {
   const [aiError, setAiError] = useState<string | null>(null);
   const [hasMounted, setHasMounted] = useState(false);
 
-  const [medications, setMedications] = useLocalStorage<Medication[]>('diabeatz-medications', initialMedications);
+  const [medications, setMedications] = useState<Medication[]>(initialMedications);
   const [isAddEditMedicationDialogOpen, setIsAddEditMedicationDialogOpen] = useState(false);
   const [editingMedication, setEditingMedication] = useState<Medication | null>(null);
+  const [showScrollTopButton, setShowScrollTopButton] = useState(false);
 
   useEffect(() => {
     setHasMounted(true);
     fetchSavedPlans();
+    fetchMedications();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const checkScrollTop = () => {
+      if (!showScrollTopButton && window.pageYOffset > 400) {
+        setShowScrollTopButton(true);
+      } else if (showScrollTopButton && window.pageYOffset <= 400) {
+        setShowScrollTopButton(false);
+      }
+    };
+    window.addEventListener("scroll", checkScrollTop);
+    return () => window.removeEventListener("scroll", checkScrollTop);
+  }, [showScrollTopButton]);
+
+  const scrollTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const fetchMedications = async () => {
+    try {
+      const medicationsCollectionRef = collection(db, "medications");
+      const q = query(medicationsCollectionRef, orderBy("name"));
+      const querySnapshot = await getDocs(q);
+      const meds: Medication[] = [];
+      querySnapshot.forEach((doc) => {
+        meds.push({ id: doc.id, ...doc.data() } as Medication);
+      });
+      setMedications(meds);
+    } catch (error) {
+      console.error("Error fetching medications:", error);
+      toast({ 
+        title: "Erreur de chargement", 
+        description: "Impossible de charger les médicaments.", 
+        variant: "destructive" 
+      });
+    }
+  };
 
   const fetchSavedPlans = async () => {
     setIsLoadingPlans(true);
@@ -167,23 +205,44 @@ export default function HomePage() {
     setIsAddEditMedicationDialogOpen(true);
   };
 
- const handleSaveMedication = (medicationData: Omit<Medication, 'id'> | Medication) => {
-    if ('id' in medicationData && medicationData.id) {
-      setMedications(prevMeds =>
-        prevMeds.map(med => med.id === medicationData.id ? { ...med, ...medicationData } : med)
-        .sort((a, b) => a.name.localeCompare(b.name))
-      );
-      toast({ title: "Médicament Modifié!", description: `${medicationData.name} a été mis à jour.` });
-    } else {
-      const newMedication: Medication = {
-        id: `med-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-        ...medicationData,
-        color: medicationData.color || "#cccccc",
-        form: medicationData.form || 'other',
-      };
-      setMedications(prevMeds => [...prevMeds, newMedication].sort((a, b) => a.name.localeCompare(b.name)));
-      toast({ title: "Médicament Ajouté!", description: `${newMedication.name} a été ajouté à votre liste.` });
+ const handleSaveMedication = async (medicationData: Omit<Medication, 'id'> | Medication) => {
+    try {
+      const medicationsCollectionRef = collection(db, "medications");
+      
+      if ('id' in medicationData && medicationData.id) {
+        // Mise à jour d'un médicament existant
+        const medicationDocRef = doc(db, "medications", medicationData.id);
+        await setDoc(medicationDocRef, medicationData);
+        toast({ 
+          title: "Médicament Modifié!", 
+          description: `${medicationData.name} a été mis à jour.` 
+        });
+      } else {
+        // Ajout d'un nouveau médicament
+        const newMedicationData = {
+          ...medicationData,
+          color: medicationData.color || "#cccccc",
+          form: medicationData.form || 'other',
+          createdAt: Timestamp.now()
+        };
+        await addDoc(medicationsCollectionRef, newMedicationData);
+        toast({ 
+          title: "Médicament Ajouté!", 
+          description: `${medicationData.name} a été ajouté à votre liste.` 
+        });
+      }
+      
+      // Rafraîchir la liste des médicaments
+      await fetchMedications();
+    } catch (error) {
+      console.error("Error saving medication:", error);
+      toast({ 
+        title: "Erreur", 
+        description: "Impossible de sauvegarder le médicament.", 
+        variant: "destructive" 
+      });
     }
+    
     setIsAddEditMedicationDialogOpen(false);
     setEditingMedication(null);
   };
@@ -193,9 +252,25 @@ export default function HomePage() {
     setIsAddEditMedicationDialogOpen(true);
   };
 
-  const handleDeleteMedicationItem = (medicationId: string) => {
-    setMedications(prevMeds => prevMeds.filter(med => med.id !== medicationId));
-    toast({ title: "Médicament Supprimé", variant: "destructive" });
+  const handleDeleteMedicationItem = async (medicationId: string) => {
+    try {
+      const medicationDocRef = doc(db, "medications", medicationId);
+      await deleteDoc(medicationDocRef);
+      toast({ 
+        title: "Médicament Supprimé", 
+        description: "Le médicament a été supprimé avec succès.",
+        variant: "destructive" 
+      });
+      // Rafraîchir la liste des médicaments
+      await fetchMedications();
+    } catch (error) {
+      console.error("Error deleting medication:", error);
+      toast({ 
+        title: "Erreur", 
+        description: "Impossible de supprimer le médicament.", 
+        variant: "destructive" 
+      });
+    }
   };
 
 
@@ -241,6 +316,15 @@ export default function HomePage() {
           onDeleteMedication={handleDeleteMedicationItem}
         />
 
+      {showScrollTopButton && (
+        <button 
+          onClick={scrollTop}
+          className="fixed bottom-8 right-8 z-50 p-3 bg-primary text-primary-foreground rounded-full shadow-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-opacity duration-300 opacity-100 hover:opacity-80"
+          aria-label="Retour en haut"
+        >
+          <ArrowUpCircle className="h-6 w-6" />
+        </button>
+      )}
       </main>
       <SavePlanDialog
         isOpen={isSaveDialogOpen}

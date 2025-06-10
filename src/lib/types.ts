@@ -76,7 +76,8 @@ export interface Medication {
   name: string;
   description: string; // Rôle du médicament
   strength?: string; // ex: "500mg", "10mg/ml"
-  form?: 'tablet' | 'capsule' | 'liquid' | 'injection' | 'inhaler' | 'drops' | 'cream' | 'other'; // Forme du médicament
+  form?: 'comprimé' | 'gélule'; // Format du médicament
+  shape?: 'rond' | 'ovale' | 'rectangle' | 'losange' | 'carré' | 'triangle' | 'pentagone' | 'hexagone' | 'octogone' | 'sécable' | 'standard' | 'longue' | 'molle' | 'deux pièces' | 'oblongue'; // Aspect du médicament
   color?: string; // Couleur indicative du médicament (ex: "blue", "#FF5733")
   stock: number; // Quantité restante
   lowStockThreshold?: number; // Seuil pour alerte de stock bas

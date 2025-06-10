@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 // Icônes pour les formes de médicaments
-import { Tablet, Container as LiquidIcon, Syringe, SprayCan } from 'lucide-react';
+import { Tablet, Container as LiquidIcon, Syringe, SprayCan, Circle, Square, Triangle, PillIcon, Minus } from 'lucide-react';
 
 
 type MedicationManagementCardProps = {
@@ -26,25 +26,30 @@ type MedicationManagementCardProps = {
   onDeleteMedication: (medicationId: string) => void;
 };
 
-const FormIcon: React.FC<{ form?: Medication['form'] }> = ({ form }) => {
-  switch (form) {
-    case 'tablet':
-      return <Tablet className="h-4 w-4 mr-1.5 text-muted-foreground" />;
-    case 'capsule':
-      return <Pill className="h-4 w-4 mr-1.5 text-muted-foreground" />; // Pas d'icône capsule, Pill est le plus proche
-    case 'liquid':
-      return <LiquidIcon className="h-4 w-4 mr-1.5 text-muted-foreground" />;
-    case 'injection':
-      return <Syringe className="h-4 w-4 mr-1.5 text-muted-foreground" />;
-    case 'inhaler':
-      return <SprayCan className="h-4 w-4 mr-1.5 text-muted-foreground" />;
-    case 'drops': // Pas d'icône spécifique pour gouttes, on peut utiliser une icône générique ou Pill
-      return <Pill className="h-4 w-4 mr-1.5 text-muted-foreground" />; // Placeholder
-    case 'cream': // Pas d'icône spécifique pour crème
-       return <Pill className="h-4 w-4 mr-1.5 text-muted-foreground" />; // Placeholder
-    default:
-      return <HelpCircle className="h-4 w-4 mr-1.5 text-muted-foreground" />;
+const FormIcon: React.FC<{ form?: Medication['form'], shape?: Medication['shape'], color?: Medication['color'] }> = ({ form, shape, color }) => {
+  const iconProps = { className: "h-5 w-5 mr-1.5", style: { color: color || 'currentColor' } }; // Reduced icon size to h-5 w-5
+
+  if (form === 'comprimé') {
+    switch (shape) {
+      case 'rond': return <Circle {...iconProps} fill={color || 'currentColor'} />;
+      case 'ovale': return <svg viewBox='0 0 100 60' className={iconProps.className} style={iconProps.style} fill={color || 'currentColor'}><ellipse cx='50' cy='30' rx='48' ry='28'/></svg>;
+      case 'rectangle': return <Square {...iconProps} fill={color || 'currentColor'} />;
+      case 'losange': return <svg viewBox='0 0 100 100' className={iconProps.className} style={iconProps.style} fill={color || 'currentColor'}><polygon points='50,5 95,50 50,95 5,50'/></svg>;
+      case 'carré': return <Square {...iconProps} fill={color || 'currentColor'} />;
+      case 'triangle': return <Triangle {...iconProps} fill={color || 'currentColor'} />;
+      case 'pentagone': return <svg viewBox='0 0 100 100' className={iconProps.className} style={iconProps.style} fill={color || 'currentColor'}><polygon points='50,5 95,35 80,95 20,95 5,35'/></svg>;
+      case 'hexagone': return <svg viewBox='0 0 100 100' className={iconProps.className} style={iconProps.style} fill={color || 'currentColor'}><polygon points='30,5 70,5 95,50 70,95 30,95 5,50'/></svg>;
+      case 'octogone': return <svg viewBox='0 0 100 100' className={iconProps.className} style={iconProps.style} fill={color || 'currentColor'}><polygon points='35,5 65,5 90,30 90,70 65,95 35,95 10,70 10,30'/></svg>;
+      case 'sécable': return <div className="relative"><Circle {...iconProps} fill={color || 'currentColor'} /><Minus className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-3 w-3" style={{ color: color === '#ffffff' || color === '#fff' ? '#555555': 'white' }} /></div>;
+      default: return <Tablet {...iconProps} />;
+    }
+  } else if (form === 'gélule') {
+     // Pour les gélules, on peut utiliser PillIcon ou des SVG custom si besoin de plus de variations
+    return <PillIcon {...iconProps} fill={color || 'currentColor'} />;
   }
+
+  // Si la forme n'est ni comprimé ni gélule, ou si elle n'est pas définie, afficher une icône par défaut.
+  return <HelpCircle {...iconProps} />;
 };
 
 const formatFrequency = (reminder?: Medication['reminder']): string => {
@@ -91,15 +96,15 @@ export function MedicationManagementCard({
               <Button onClick={onAddMedication} className="w-full mb-4">
                 <PlusCircle className="mr-2 h-4 w-4" /> Ajouter un médicament
               </Button>
-              <ScrollArea className="h-[300px] pr-3">
+              <ScrollArea className="h-auto pr-3"> {/* Removed max-height to allow full list display */} 
                 {medications.length === 0 ? (
                   <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-6">
                     <Inbox className="h-12 w-12 mb-3" />
-                    <p className="font-medium">Aucun médicament</p>
+                    <div className="font-medium">Aucun médicament</div>
                     <p className="text-sm">Vos médicaments apparaîtront ici.</p>
                   </div>
                 ) : (
-                  <ul className="space-y-3">
+                  <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {medications.map((med) => {
                       const isLowStock =
                         med.lowStockThreshold !== undefined &&
@@ -115,27 +120,21 @@ export function MedicationManagementCard({
                         >
                           <div className="flex items-start justify-between mb-2">
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center mb-0.5">
-                                {med.color && (
-                                  <div
-                                    className="w-3 h-3 rounded-full mr-2 flex-shrink-0 border"
-                                    style={{ backgroundColor: med.color }}
-                                    title={`Couleur: ${med.color}`}
-                                  />
-                                )}
-                                <FormIcon form={med.form} />
+                              <div className="flex items-center">
+                                {/* Removed the color dot: med.color && ( ... ) */}
+                                <FormIcon form={med.form} shape={med.shape} color={med.color} />
                                 <h4
-                                  className="font-semibold text-sm truncate"
+                                  className="font-semibold text-sm truncate mr-2"
                                   title={med.name}
                                 >
                                   {med.name}
                                 </h4>
+                                {med.strength && (
+                                  <p className="text-xs text-muted-foreground whitespace-nowrap">
+                                    ({med.strength})
+                                  </p>
+                                )}
                               </div>
-                              {med.strength && (
-                                <p className="text-xs text-muted-foreground ml-6">
-                                  Dosage: {med.strength}
-                                </p>
-                              )}
                             </div>
                             <div className="flex gap-2 flex-shrink-0 ml-2">
                               <Button
@@ -158,7 +157,12 @@ export function MedicationManagementCard({
                               </Button>
                             </div>
                           </div>
-
+                          <div className="text-xs text-muted-foreground mt-1 mb-2 ml-6">
+                            Stock: {med.stock} unité(s)
+                            {med.lowStockThreshold !== undefined && (
+                              <span className={isLowStock ? "text-destructive font-semibold" : ""}> / Seuil: {med.lowStockThreshold}</span>
+                            )}
+                          </div>
                           <div className="space-y-1 text-xs">
                             <div className="flex items-start">
                               <Tag className="h-3.5 w-3.5 mr-1.5 mt-0.5 text-muted-foreground flex-shrink-0" />
@@ -206,31 +210,6 @@ export function MedicationManagementCard({
                               )}
                           </div>
 
-                          <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/50">
-                            <p
-                              className={cn(
-                                "text-xs font-medium",
-                                isLowStock
-                                  ? "text-destructive animate-pulse"
-                                  : "text-muted-foreground"
-                              )}
-                            >
-                              Stock: {med.stock} unité(s)
-                              {isLowStock && (
-                                <AlertTriangle className="inline-block h-3.5 w-3.5 ml-1 mb-0.5" />
-                              )}
-                            </p>
-                            {med.lowStockThreshold !== undefined && (
-                              <Badge
-                                variant={
-                                  isLowStock ? "destructive" : "secondary"
-                                }
-                                className="text-xs"
-                              >
-                                Seuil: {med.lowStockThreshold}
-                              </Badge>
-                            )}
-                          </div>
                         </li>
                       );
                     })}
